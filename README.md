@@ -14,3 +14,15 @@ tinge of nostalgia that comes with the terrain, from having grown up in pace wit
 phpBB forum communities of the mid naughties.
 
 It was written for the purpose of powering the nascent [Merveilles community forums](https://forum.merveilles.town).
+
+## Local development
+
+Install [golang](https://go.dev/).
+
+To launch a local instance of the forum, run those commands (linux):
+
+- `touch temp.txt`
+- `mkdir data`
+- `go run run.go --authkey 0 --allowlist temp.txt`
+
+It should respond `Serving forum on :8272`. Just go on [https:localhost:8272](https:localhost:8272).
