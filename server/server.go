@@ -366,6 +366,10 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	h.renderView(res, "about", TemplateData{LoggedIn: loggedIn})
 }
 
+func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
+  fmt.Fprintln(res, "User-agent: *\nDisallow: /")
+}
+
 func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	switch req.Method {
@@ -427,6 +431,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	http.HandleFunc("/register", handler.RegisterRoute)
 	http.HandleFunc("/thread/new/", handler.NewThreadRoute)
 	http.HandleFunc("/thread/", handler.ThreadRoute)
+	http.HandleFunc("/robots.txt", handler.RobotsRoute)
 	http.HandleFunc("/", handler.IndexRoute)
 
 	fileserver := http.FileServer(http.Dir("html/assets/"))
