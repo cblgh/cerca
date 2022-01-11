@@ -24,7 +24,8 @@
         <label for="username">Username:</label>
         <input type="text" required id="username" name="username">
         <label for="password">Password:</label>
-        <input type="password" minlength="9" required id="password" name="password">
+        <input type="password" minlength="9" required id="password" name="password" aria-describedby="password-help" style="margin-bottom:0;">
+        <div style="margin-bottom:1rem;"><small id="password-help">Must be at least 9 characters long.</small></div>
         <label for="verificationlink">Verification link:</label>
         <input type="text" required id="verification link" name="verificationlink">
         <input type="hidden" name="verificationcode" value="{{.Data.VerificationCode}}">
