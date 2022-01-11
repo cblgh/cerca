@@ -29,7 +29,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import (
 	"errors"
 	"fmt"
-	"forum.cblgh.org/util"
+	"cerca/util"
 	"net/http"
 
 	"github.com/gorilla/sessions"
