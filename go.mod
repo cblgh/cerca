@@ -1,4 +1,4 @@
-module forum.cblgh.org
+module cerca
 
 go 1.16
 
