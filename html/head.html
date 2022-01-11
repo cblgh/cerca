@@ -3,7 +3,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">        
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>Forum — {{ .Title }}</title>
 
@@ -40,7 +40,7 @@
             div { margin-bottom: 2rem; }
             textarea { min-height: 10rem; }
             div > p:first-of-type, form div, label { margin-bottom: 0; }
-            h1 a:visited, 
+            h1 a:visited,
             a:not([class]) {
                 color: black;
             }
@@ -85,18 +85,22 @@
         <!-- <link rel="search" type="application/opensearchdescription+xml" title="" href="/assets/opensearch.xml"> -->
     </head>
     <body>
-		<nav>
-			<ul type="menu">
-				<li><a href="/about">about</a></li>
-                {{ if .LoggedIn }} 
-				<li><a href="/logout">logout</a></li>
-                {{ else }}
-				<li><a href="/login">login</a></li>
-                {{ end }}
-			</ul>
-		</nav>
+        <header>
+            <a href="/" aria-label="Home">
+                <img src="/assets/merveilles.svg" id="logo">
+            </a>
+            <nav>
+                <ul type="menu">
+                    <li><a href="/about">about</a></li>
+                    {{ if .LoggedIn }}
+                    <li><a href="/logout">logout</a></li>
+                    {{ else }}
+                    <li><a href="/login">login</a></li>
+                    {{ end }}
+                </ul>
+            </nav>
+        </header>
 
-		<a href="/">
-            <img src="/assets/merveilles.svg" id="logo">
-		</a>
+
+
 {{ end }}
