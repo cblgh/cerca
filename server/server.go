@@ -364,7 +364,7 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
-  fmt.Fprintln(res, "User-agent: *\nDisallow: /")
+	fmt.Fprintln(res, "User-agent: *\nDisallow: /")
 }
 
 func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
