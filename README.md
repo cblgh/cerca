@@ -25,4 +25,4 @@ To launch a local instance of the forum, run those commands (linux):
 - `mkdir data`
 - `go run run.go --authkey 0 --allowlist temp.txt`
 
-It should respond `Serving forum on :8272`. Just go on [https:localhost:8272](https:localhost:8272).
+It should respond `Serving forum on :8272`. Just go on [https://localhost:8272](https://localhost:8272).
