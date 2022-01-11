@@ -1,10 +1,10 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"cerca/server"
 	"cerca/util"
+	"flag"
+	"fmt"
 	"os"
 	"strings"
 )

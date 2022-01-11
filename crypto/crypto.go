@@ -1,12 +1,12 @@
 package crypto
 
 import (
+	"cerca/util"
 	"crypto/ed25519"
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"cerca/util"
 	"github.com/synacor/argon2id"
 	rand "math/rand"
 )
