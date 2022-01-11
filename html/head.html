@@ -17,17 +17,18 @@
                 max-width: 50rem;
                 font-family: sans-serif;
             }
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
             #logo {
                 width: 48px;
                 height: 48px;
                 display: block;
             }
-            nav {
-                float: right;
-            }
 			ul[type="menu"] {
-				display: grid;
-				grid-template-columns: repeat(2, 1fr);
+				display: flex;
 				list-style-type: none;
 				margin: 0;
 				padding: 0;
