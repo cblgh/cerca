@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"forum.cblgh.org/server"
-	"forum.cblgh.org/util"
+	"cerca/server"
+	"cerca/util"
 	"os"
 	"strings"
 )
