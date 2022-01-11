@@ -1,0 +1,12 @@
+{{ template "head" . }}
+<h2> Login </h2>
+<div style="max-width: 20rem">
+{{ template "login-component" . }}
+</div>
+<p>This forum is for the <a href="https://wiki.xxiivv.com/site/merveilles.html">Merveilles</a> community. Don't have an account yet? <a href="/register">Register</a> one.</p>
+{{ template "footer" . }}
+{{ if .Data.FailedAttempt }}
+<p> <b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.</p>
+{{ else if .LoggedIn }}
+<p> You are already logged in. Would you like to <a href="/logout">log out</a>?</p>
+{{ end }}

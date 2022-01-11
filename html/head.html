@@ -1,0 +1,102 @@
+{{ define "head" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">        
+
+        <title>Forum — {{ .Title }}</title>
+
+         <style>
+            /* reset */
+            *,*::after,*::before{box-sizing:border-box}blockquote,body,dd,dl,figure,h1,h2,h3,h4,p{margin:0}ul[role='list'],ol[role='list']{list-style:none}html:focus-within{scroll-behavior:smooth}body{min-height:100vh;text-rendering:optimizeSpeed;line-height:1.5}a:not([class]){text-decoration-skip-ink:auto}img,picture{max-width:100%;display:block}button,input,select,textarea{font:inherit}@media (prefers-reduced-motion: reduce){html:focus-within{scroll-behavior:auto}*,*::after,*::before{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important}}
+            /* end reset */
+            /* below is the minimum viable css for simply getting the forum out the door; contributions, both in css and
+               design mockups, welcome from the community for v2,v3,...,vn :) */
+            html {
+                max-width: 50rem;
+                font-family: sans-serif;
+            }
+            #logo {
+                width: 48px;
+                height: 48px;
+                display: block;
+            }
+            nav {
+                float: right;
+            }
+			ul[type="menu"] {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				list-style-type: none;
+				margin: 0;
+				padding: 0;
+                grid-column-gap: 0.5rem;
+			}
+            li { margin-bottom: 0rem; }
+            ul { padding-left: 1rem; }
+            h1, h2 { margin-bottom: 1rem; }
+            p { margin-bottom: 1rem; }
+            div { margin-bottom: 2rem; }
+            textarea { min-height: 10rem; }
+            div > p:first-of-type, form div, label { margin-bottom: 0; }
+            h1 a:visited, 
+            a:not([class]) {
+                color: black;
+            }
+            a:visited {
+                color: #666; /* for lack of better imagination */
+            }
+            .selectable {
+                -webkit-touch-callout: all;
+                -webkit-user-select: all;
+                -khtml-user-select: all;
+                -moz-user-select: all;
+                -ms-user-select: all;
+                user-select: all;
+            }
+            pre { overflow: auto; }
+            .post-container { display: grid; max-width: 30rem; margin-top: 1rem; }
+            body { padding: 2rem; background: wheat; }
+            * { margin-bottom: 1rem; }
+        </style>
+
+        <!-- <link href="/assets/style.css" rel="stylesheet"> -->
+
+        <link rel="icon" href="/assets/favicon.png">
+        <!-- <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"> -->
+        <link rel="shortcut icon" href="/assets/favicon.png">
+        <link rel="apple-touch-icon" href="/assets/favicon.png">
+        <meta name="theme-color" content="#000000">
+
+        <!-- <meta name="description" content=""> -->
+
+        <!-- <meta property="og:title" content=""> -->
+        <!-- <meta property="og:description" content=""> -->
+        <!-- <meta property="og:image" content="/assets/favicon.png"> -->
+        <!-- <meta property="og:image:alt" content=""> -->
+        <!-- <meta property="og:locale" content="en_US"> -->
+        <!-- <meta property="og:type" content="website"> -->
+        <!-- <meta name="twitter:card" content=""> -->
+        <!-- <meta property="og:url" content=""> -->
+        <!--  -->
+        <!-- <link rel="canonical" href=""> -->
+
+        <!-- <link rel="search" type="application/opensearchdescription+xml" title="" href="/assets/opensearch.xml"> -->
+    </head>
+    <body>
+		<nav>
+			<ul type="menu">
+				<li><a href="/about">about</a></li>
+                {{ if .LoggedIn }} 
+				<li><a href="/logout">logout</a></li>
+                {{ else }}
+				<li><a href="/login">login</a></li>
+                {{ end }}
+			</ul>
+		</nav>
+
+		<a href="/">
+            <img src="/assets/merveilles.svg" id="logo">
+		</a>
+{{ end }}

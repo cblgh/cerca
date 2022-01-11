@@ -1,0 +1,10 @@
+{{ template "head" . }}
+<h2>Create thread</h2>
+        <form method="POST">
+            <div class="post-container" >
+                <input required name="title" type="text" placeholder="Title">
+                <textarea required name="content" placeholder="Tabula rasa"></textarea>
+                <button type="submit">Create</button>
+            </div>
+        </form>
+{{ template "footer" . }}

@@ -1,0 +1,6 @@
+{{ template "head" . }}
+<h2>{{ .Data.Title }}</h2>
+<p>{{ .Data.Message }}</p>
+{{ if .Data.Link }}
+<p>{{ .Data.LinkMessage }} <a href="{{.Data.Link}}">{{.Data.LinkText}}</a>.</p>
+{{ end }}

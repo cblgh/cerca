@@ -1,0 +1,18 @@
+{{ template "head" . }}
+    <h2>{{ .Data.Title }}</h2>
+    {{ range $index, $post := .Data.Posts }}
+    <div>
+        <p><b>{{ $post.Author }}</b></p>
+        {{ $post.Content }}
+    </div>
+    {{ end }}
+    {{ if .LoggedIn }}
+    <div>
+        <form method="POST">
+            <div class="post-container" >
+                <textarea required name="content" placeholder="Tabula rasa"></textarea>
+                <button type="submit">Post</button>
+            </div>
+        </form>
+    {{ end }}
+{{ template "footer" . }}
