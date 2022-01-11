@@ -1,9 +1,16 @@
 {{ define "login-component" }}
 <form method="post" action="/login">
     <div style="display: grid;">
-        <input type="text" placeholder="username" name="username">
-        <input type="password" placeholder="password" name="password">
-        <input type="submit" value="Enter">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" name="username" id="username">
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" style="margin-bottom:0;" aria-describedby="password-help">
+            <div><small id="password-help">Must be at least 9 characters long.</small></div>
+        </div>
+        <input type="submit" value="Enter" style="margin-top:1rem;">
     </div>
 </form>
 {{ end }}
