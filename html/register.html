@@ -1,6 +1,25 @@
 {{ template "head" . }}
 <main>
     <h1>Register</h1>
+
+    <p>This forum is for the <a href="https://wiki.xxiivv.com/site/merveilles.html">Merveilles</a> community. To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the
+    <a href="https://merveilles.town">Merveilles Fediverse instance</a>.
+    </p>
+
+    <p>Your verification code is <b>{{ .Data.VerificationCode }}</b></p>
+    <details>
+        <summary>Verification instructions</summary>
+        <p>You can use either your mastodon profile or your webring site to verify your registration.</p>
+        <ul>
+            <li><b>Mastodon:</b> temporarily add a new metadata item to <a
+                    href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
+                displayed above. Pass your profile as the verification link.</li>
+            <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
+                the verification code from above. Pass the link to the uploaded file as the verification link (make sure
+                it is viewable in a browser).</li>
+        </ul>
+    </details>
+
     <form method="post">
         <label for="username">Username:</label>
         <input type="text" required id="username" name="username">
@@ -22,9 +41,7 @@
         <input type="submit" value="Register">
     </form>
 
-    <p>This forum is for the <a href="https://wiki.xxiivv.com/site/merveilles.html">Merveilles</a> community. To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the
-    <a href="https://merveilles.town">Merveilles Fediverse instance</a>.
-    </p>
+
 
     {{ if .Data.ErrorMessage }}
     <div>
@@ -32,18 +49,5 @@
     </div>
     {{ end }}
 
-    <p>Your verification code is <b>{{ .Data.VerificationCode }}</b></p>
-    <details>
-        <summary>Verification instructions</summary>
-        <p>You can use either your mastodon profile or your webring site to verify your registration.</p>
-        <ul>
-            <li><b>Mastodon:</b> temporarily add a new metadata item to <a
-                    href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
-                displayed above. Pass your profile as the verification link.</li>
-            <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
-                the verification code from above. Pass the link to the uploaded file as the verification link (make sure
-                it is viewable in a browser).</li>
-        </ul>
-    </details>
 </main>
 {{ template "footer" . }}
