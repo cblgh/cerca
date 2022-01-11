@@ -1,18 +1,21 @@
 {{ template "head" . }}
-    <h2>{{ .Data.Title }}</h2>
+<main>
+    <h1>{{ .Data.Title }}</h1>
     {{ range $index, $post := .Data.Posts }}
-    <div>
+    <article>
         <p><b>{{ $post.Author }}</b></p>
         {{ $post.Content }}
-    </div>
+    </article>
     {{ end }}
     {{ if .LoggedIn }}
-    <div>
+    <section aria-label="Respond into this thread">
         <form method="POST">
             <div class="post-container" >
-                <textarea required name="content" placeholder="Tabula rasa"></textarea>
+                <label for="content">Respond into this thread:</label>
+                <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
                 <button type="submit">Post</button>
             </div>
         </form>
     {{ end }}
+</main>
 {{ template "footer" . }}
