@@ -3,7 +3,9 @@
     <h1>{{ .Data.Title }}</h1>
     {{ range $index, $post := .Data.Posts }}
     <article>
-        <p><b>{{ $post.Author }}</b></p>
+        <p>
+            <b>{{ $post.Author }}</b><span class="visually-hidden"> responded:</span>
+        </p>
         {{ $post.Content }}
     </article>
     {{ end }}
@@ -11,11 +13,12 @@
     <section aria-label="Respond into this thread">
         <form method="POST">
             <div class="post-container" >
-                <label for="content">Respond into this thread:</label>
+                <label class="visually-hidden" for="content">Your answer:</label>
                 <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
                 <button type="submit">Post</button>
             </div>
         </form>
+    </section>
     {{ end }}
 </main>
 {{ template "footer" . }}
