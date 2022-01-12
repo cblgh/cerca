@@ -12,6 +12,7 @@ import (
 
 	"cerca/crypto"
 	"cerca/database"
+	"cerca/html"
 	"cerca/server/session"
 	"cerca/util"
 
@@ -108,9 +109,9 @@ var (
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	view := fmt.Sprintf("html/%s.html", viewName)
-	tpl, err := template.New(view).Funcs(templateFuncs).ParseFiles(view)
+	tpl, err := template.New(view).Funcs(templateFuncs).ParseFS(html.templates)
 	if err != nil {
-		util.Check(err, "parsing %q view", view)
+		util.Check(err, "parsing views")
 	}
 
 	if data.Title == "" {
