@@ -109,7 +109,7 @@ var (
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	view := fmt.Sprintf("html/%s.html", viewName)
-	tpl, err := template.New(view).Funcs(templateFuncs).ParseFS(html.templates)
+	tpl, err := template.New(view).Funcs(templateFuncs).ParseFS(html.Templates)
 	if err != nil {
 		util.Check(err, "parsing views")
 	}
