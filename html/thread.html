@@ -3,9 +3,14 @@
     <h1>{{ .Data.Title }}</h1>
     {{ range $index, $post := .Data.Posts }}
     <article>
-        <div>
-            <p><span><b>{{ $post.Author }}</b><span class="visually-hidden"> responded:</span></span><span style="float: right;"><time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time></span></p>
-            {{ $post.Content }}
+        <section aria-label="Post meta">
+            <span class="visually-hidden">Author:</span>
+            <b><span aria-hidden="true">@</span>{{$post.Author}}</b>
+            <time style="float: right;" datetime="{{ $post.Publish | formatDate }}">
+                {{ $post.Publish | formatDateRelative }}
+            </time>
+        </section>
+        {{ $post.Content }}
     </article>
     {{ end }}
     {{ if .LoggedIn }}
