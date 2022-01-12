@@ -118,7 +118,6 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 }
 
 func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("thread route")
 	parts := strings.Split(strings.TrimSpace(req.URL.Path), "/")
 	// invalid route, redirect to index
 	if len(parts) < 2 || parts[2] == "" {
@@ -128,7 +127,16 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	loggedIn, userid := h.IsLoggedIn(req)
 
 	threadid, err := strconv.Atoi(parts[2])
-	ed.Check(err, "parse %s as id slug", parts[2])
+  if err != nil {
+    dump(err)
+    title := "Page not found"
+    data := GenericMessageData{
+      Title:   title,
+      Message: "The visited page does not exist (anymore?)",
+    }
+    h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+    return
+  }
 
 	if req.Method == "POST" && loggedIn {
 		// handle POST (=> add a reply, then show the thread)
