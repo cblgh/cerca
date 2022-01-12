@@ -186,8 +186,9 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		// * run sanitize step && strings.TrimSpace and check length **before** doing AddPost
 		// TODO(2022-01-09): send errors back to thread's posting view
 		h.db.AddPost(content, threadid, userid)
+		http.Redirect(res, req, req.URL.Path, http.StatusSeeOther)
+		return
 	}
-	// after handling a post, treat the request as if it was a get request
 	// TODO (2022-01-07):
 	// * handle error
 	thread := h.db.GetThread(threadid)
