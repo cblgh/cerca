@@ -105,20 +105,45 @@ var (
 			return t.Format("2006-01-02")
 		},
 	}
+
+	templates = template.Must(generateTemplates())
 )
 
-func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
-	view := fmt.Sprintf("html/%s.html", viewName)
-	tpl, err := template.New(view).Funcs(templateFuncs).ParseFS(html.Templates)
-	if err != nil {
-		util.Check(err, "parsing views")
+func generateTemplates() (*template.Template, error) {
+	views := []string{
+		"about",
+		"footer",
+		"generic-message",
+		"head",
+		"index",
+		"login",
+		"login-component",
+		"new-thread",
+		"register",
+		"register-success",
+		"thread",
 	}
 
+	tpl := template.New("root")
+
+	for _, view := range views {
+		newTpl, err := tpl.Funcs(templateFuncs).ParseFS(html.Templates, fmt.Sprintf("%s.html", view))
+		if err != nil {
+			return nil, fmt.Errorf("could not get files: %w", err)
+		}
+		tpl = newTpl
+	}
+
+	return tpl, nil
+}
+
+func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	if data.Title == "" {
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	if err := tpl.ExecuteTemplate(res, view, data); err != nil {
+	view := fmt.Sprintf("%s.html", viewName)
+	if err := templates.ExecuteTemplate(res, view, data); err != nil {
 		util.Check(err, "rendering %q view", view)
 	}
 }
