@@ -94,18 +94,7 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
-var views = []string{"index", "head", "footer", "login-component", "login", "register", "register-success", "thread", "new-thread", "generic-message", "about"}
-
-// wrap the contents of `views` to the format expected by template.ParseFiles()
-func wrapViews() []string {
-	for i, item := range views {
-		views[i] = fmt.Sprintf("html/%s.html", item)
-	}
-	return views
-}
-
 var (
-	templates     = template.Must(template.ParseFiles(wrapViews()...))
 	templateFuncs = template.FuncMap{
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
@@ -120,14 +109,17 @@ var (
 )
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
+	view := viewName + ".html"
+	tpl, err := template.New(view).Funcs(templateFuncs).ParseFile(view)
+	if err != nil {
+		util.Check(err, "parsing %q view", view)
+	}
+
 	if data.Title == "" {
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	errTemp := templates.Funcs(templateFuncs).ExecuteTemplate(res, viewName+".html", data)
-	if errors.Is(errTemp, syscall.EPIPE) {
-		fmt.Println("had a broken pipe, continuing")
-	} else {
+	if err := t.ExecuteTemplate(res, viewName+".html", data); err != nil {
 		util.Check(errTemp, "rendering %s view", viewName)
 	}
 }
