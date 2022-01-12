@@ -2,14 +2,12 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"cerca/crypto"
