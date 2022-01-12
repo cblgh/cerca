@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"syscall"
+	"time"
 
 	"cerca/crypto"
 	"cerca/database"
+	cercaHTML "cerca/html"
 	"cerca/server/session"
 	"cerca/util"
-	"html/template"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -93,27 +94,67 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
-var views = []string{"index", "head", "footer", "login-component", "login", "register", "register-success", "thread", "new-thread", "generic-message", "about"}
-
-// wrap the contents of `views` to the format expected by template.ParseFiles()
-func wrapViews() []string {
-	for i, item := range views {
-		views[i] = fmt.Sprintf("html/%s.html", item)
+var (
+	templateFuncs = template.FuncMap{
+		"formatDateTime": func(t time.Time) string {
+			return t.Format("2006-01-02 15:04:05")
+		},
+		"formatDateTimeRFC3339": func(t time.Time) string {
+			return t.Format(time.RFC3339Nano)
+		},
+		"formatDate": func(t time.Time) string {
+			return t.Format("2006-01-02")
+		},
+		"formatDateRelative": func(t time.Time) string {
+			diff := time.Since(t)
+			if diff < time.Hour*24 {
+				return "today"
+			} else if diff >= time.Hour*24 && diff < time.Hour*48 {
+				return "yesterday"
+			}
+			return t.Format("2006-01-02")
+		},
 	}
-	return views
-}
 
-var templates = template.Must(template.ParseFiles(wrapViews()...))
+	templates = template.Must(generateTemplates())
+)
+
+func generateTemplates() (*template.Template, error) {
+	views := []string{
+		"about",
+		"footer",
+		"generic-message",
+		"head",
+		"index",
+		"login",
+		"login-component",
+		"new-thread",
+		"register",
+		"register-success",
+		"thread",
+	}
+
+	rootTemplate := template.New("root")
+
+	for _, view := range views {
+		newTemplate, err := rootTemplate.Funcs(templateFuncs).ParseFS(cercaHTML.Templates, fmt.Sprintf("%s.html", view))
+		if err != nil {
+			return nil, fmt.Errorf("could not get files: %w", err)
+		}
+		rootTemplate = newTemplate
+	}
+
+	return rootTemplate, nil
+}
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	if data.Title == "" {
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
-	errTemp := templates.ExecuteTemplate(res, viewName+".html", data)
-	if errors.Is(errTemp, syscall.EPIPE) {
-		fmt.Println("had a broken pipe, continuing")
-	} else {
-		util.Check(errTemp, "rendering %s view", viewName)
+
+	view := fmt.Sprintf("%s.html", viewName)
+	if err := templates.ExecuteTemplate(res, view, data); err != nil {
+		util.Check(err, "rendering %q view", view)
 	}
 }
 
@@ -127,16 +168,16 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	loggedIn, userid := h.IsLoggedIn(req)
 
 	threadid, err := strconv.Atoi(parts[2])
-  if err != nil {
-    dump(err)
-    title := "Page not found"
-    data := GenericMessageData{
-      Title:   title,
-      Message: "The visited page does not exist (anymore?)",
-    }
-    h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
-    return
-  }
+	if err != nil {
+		dump(err)
+		title := "Page not found"
+		data := GenericMessageData{
+			Title:   title,
+			Message: "The visited page does not exist (anymore?)",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		return
+	}
 
 	if req.Method == "POST" && loggedIn {
 		// handle POST (=> add a reply, then show the thread)
