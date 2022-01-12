@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"cerca/server"
-	"cerca/util"
 	"os"
 	"strings"
+
+	"cerca/server"
+	"cerca/util"
 )
 
 func readAllowlist(location string) []string {
