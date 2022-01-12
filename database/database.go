@@ -1,14 +1,17 @@
 package database
 
 import (
-	"cerca/util"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/url"
+	"os"
 	"time"
+
+	"cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
 )
