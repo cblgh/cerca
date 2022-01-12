@@ -74,6 +74,51 @@
                  white-space: nowrap;
                  width: 1px;
             }
+
+            header nav {
+                float: right;
+            }
+
+            header ul > li {
+                display: inline-block;
+                margin-left: 0.5rem;
+            }
+
+            @supports (display: flex) {
+                header nav {
+                   float: unset;
+               }
+
+               header ul > li {
+                   display: unset;
+                   margin-left: unset;
+               }
+            }
+
+            header > a {
+                background-image: url('/assets/merveilles.png');
+                background-size: 100%;
+                background-repeat: no-repeat;
+                display: inline-block;
+                height: 48px;
+                width: 48px;
+            }
+
+            header svg {
+                display: none;
+            }
+
+            @supports (display: flex) {
+                header > a {
+                    background-image: none;
+                    background-size: unset;
+                    background-repeat: unset;
+                }
+
+                header svg {
+                    display: initial;
+                }
+            }
         </style>
 
         <!-- <link href="/assets/style.css" rel="stylesheet"> -->
