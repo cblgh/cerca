@@ -107,8 +107,8 @@ var (
 )
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
-	view := viewName + ".html"
-	tpl, err := template.New(view).Funcs(templateFuncs).ParseFile(view)
+	view := fmt.Sprintf("html/%s.html", viewName)
+	tpl, err := template.New(view).Funcs(templateFuncs).ParseFiles(view)
 	if err != nil {
 		util.Check(err, "parsing %q view", view)
 	}
@@ -117,8 +117,8 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	if err := t.ExecuteTemplate(res, viewName+".html", data); err != nil {
-		util.Check(errTemp, "rendering %s view", viewName)
+	if err := tpl.ExecuteTemplate(res, view, data); err != nil {
+		util.Check(err, "rendering %q view", view)
 	}
 }
 
