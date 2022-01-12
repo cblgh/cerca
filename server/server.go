@@ -241,7 +241,6 @@ func hasVerificationCode(link, verification string) bool {
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
-	errMessage := ""
 	if loggedIn {
 		data := GenericMessageData{
 			Title:       "Register",
@@ -254,30 +253,32 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	renderErr := func(verificationCode, errMessage string) {
+	var verificationCode string
+	renderErr := func(errFmt string, args ...interface{}) {
+		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage}})
 	}
+
+	var err error
 	switch req.Method {
 	case "GET":
 		// try to get the verification code from the session (useful in case someone refreshed the page)
-		verificationCode, err := h.session.GetVerificationCode(req)
+		verificationCode, err = h.session.GetVerificationCode(req)
 		// we had an error getting the verification code, generate a code and set it on the session
 		if err != nil {
 			verificationCode = fmt.Sprintf("MRV%06d\n", crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
-				errMessage = "Had troubles setting the verification code on session"
-				renderErr(verificationCode, errMessage)
+				renderErr("Had troubles setting the verification code on session")
 				return
 			}
 		}
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, ""}})
 	case "POST":
-		verificationCode, err := h.session.GetVerificationCode(req)
+		verificationCode, err = h.session.GetVerificationCode(req)
 		if err != nil {
-			errMessage = "There was no verification record for this browser session; missing data to compare against verification link content"
-			renderErr(verificationCode, errMessage)
+			renderErr("There was no verification record for this browser session; missing data to compare against verification link content")
 			return
 		}
 		username := req.PostFormValue("username")
@@ -287,61 +288,53 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
 		u, err := url.Parse(verificationLink)
 		if err != nil {
-			errMessage = "Had troubles parsing the verification link, are you sure it was a proper url?"
-			renderErr(verificationCode, errMessage)
+			renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
 			return
 		}
 		// check verification link domain against allowlist
 		if !util.Contains(h.allowlist, u.Host) {
 			fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
-			errMessage = fmt.Sprintf("Verification link's host (%s) is not in the allowlist", u.Host)
-			renderErr(verificationCode, errMessage)
+			renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
 			return
 		}
 
 		// parse out verification code from verification link and compare against verification code in session
 		has := hasVerificationCode(verificationLink, verificationCode)
 		if !has {
-			errMessage = fmt.Sprintf("Verification code from link (%s) does not match", verificationLink)
-			renderErr(verificationCode, errMessage)
+			renderErr("Verification code from link (%s) does not match", verificationLink)
 			return
 		}
 		// make sure username is not registered already
-		exists, err := h.db.CheckUsernameExists(username)
-		if err != nil {
-			errMessage = "Database had a problem when checking username"
-			renderErr(verificationCode, errMessage)
+		var exists bool
+		if exists, err = h.db.CheckUsernameExists(username); err != nil {
+			renderErr("Database had a problem when checking username")
+			return
+		} else if exists {
+			renderErr("Username %s appears to already exist, please pick another name", username)
 			return
 		}
-		if exists {
-			errMessage = fmt.Sprintf("Username %s appears to already exist, please pick another name", username)
-			renderErr(verificationCode, errMessage)
-			return
-		}
-		hash, err := crypto.HashPassword(password)
-		if err != nil {
+		var hash string
+		if hash, err = crypto.HashPassword(password); err != nil {
 			fmt.Println(ed.Eout(err, "hash password"))
-			errMessage = "Database had a problem when hashing password"
-			renderErr(verificationCode, errMessage)
+			renderErr("Database had a problem when hashing password")
 			return
 		}
-		userid, err := h.db.CreateUser(username, hash)
-		if err != nil {
-			errMessage = "Error in db when creating user"
-			renderErr(verificationCode, errMessage)
+		var userID int
+		if userID, err = h.db.CreateUser(username, hash); err != nil {
+			renderErr("Error in db when creating user")
 			return
 		}
 		// log the new user in
-		h.session.Save(req, res, userid)
+		h.session.Save(req, res, userID)
 		// log where the registration is coming from, in the case of indirect invites && for curiosity
-		err = h.db.AddRegistration(userid, verificationLink)
+		err = h.db.AddRegistration(userID, verificationLink)
 		if err = ed.Eout(err, "add registration"); err != nil {
 			dump(err)
 		}
 		// generate and pass public keypair
 		keypair, err := crypto.GenerateKeypair()
 		// record generated pubkey in database for eventual later use
-		err = h.db.AddPubkey(userid, keypair.Public)
+		err = h.db.AddPubkey(userID, keypair.Public)
 		if err = ed.Eout(err, "insert pubkey in db"); err != nil {
 			dump(err)
 		}
