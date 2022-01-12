@@ -1,10 +1,10 @@
 package database
 
 import (
+	"cerca/util"
 	"context"
 	"database/sql"
 	"fmt"
-	"cerca/util"
 	"html/template"
 	"log"
 	"net/url"
@@ -18,6 +18,14 @@ type DB struct {
 }
 
 func InitDB(filepath string) DB {
+	if _, err := os.Stat(filepath); errors.Is(err, os.ErrNotExist) {
+		file, err := os.Create(filepath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+	}
+
 	db, err := sql.Open("sqlite3", filepath)
 	util.Check(err, "opening sqlite3 database at %s", filepath)
 	if db == nil {
