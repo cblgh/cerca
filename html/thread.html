@@ -2,7 +2,7 @@
     <h2>{{ .Data.Title }}</h2>
     {{ range $index, $post := .Data.Posts }}
     <div>
-        <p><b>{{ $post.Author }}</b> &emdash; {{ $post.Publish | formatDateTime }}</p>
+        <p><b>{{ $post.Author }}</b> &emdash; <time datetime="{{ $post.Publish | formatDateTimeRFC3339 }}">{{ $post.Publish | formatDateTime }}</time></p>
         {{ $post.Content }}
     </div>
     {{ end }}
