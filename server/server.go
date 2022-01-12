@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -23,9 +22,10 @@ import (
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
 type TemplateData struct {
-	Data     interface{}
-	LoggedIn bool // TODO (2022-01-09): put this in a middleware || template function or sth?
-	Title    string
+	Data       interface{}
+	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
+	LoggedInID int
+	Title      string
 }
 
 type IndexData struct {
@@ -54,8 +54,9 @@ type LoginData struct {
 }
 
 type ThreadData struct {
-	Title string
-	Posts []database.Post
+	Title     string
+	Posts     []database.Post
+	ThreadURL string
 }
 
 type RequestHandler struct {
@@ -159,21 +160,14 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 }
 
 func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
-	parts := strings.Split(strings.TrimSpace(req.URL.Path), "/")
-	// invalid route, redirect to index
-	if len(parts) < 2 || parts[2] == "" {
-		IndexRedirect(res, req)
-		return
-	}
+	threadid, ok := util.GetURLPortion(req, 2)
 	loggedIn, userid := h.IsLoggedIn(req)
 
-	threadid, err := strconv.Atoi(parts[2])
-	if err != nil {
-		dump(err)
-		title := "Page not found"
+	if !ok {
+		title := "Thread not found"
 		data := GenericMessageData{
 			Title:   title,
-			Message: "The visited page does not exist (anymore?)",
+			Message: "The thread does not exist (anymore?)",
 		}
 		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
 		return
@@ -197,7 +191,7 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		thread[i].Content = util.Markup(post.Content)
 	}
 	title := thread[0].ThreadTitle
-	view := TemplateData{ThreadData{title, thread}, loggedIn, title}
+	view := TemplateData{Data: ThreadData{title, thread, req.URL.Path}, LoggedIn: loggedIn, LoggedInID: userid, Title: title}
 	h.renderView(res, "thread", view)
 }
 
@@ -219,7 +213,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	// show index listing
 	threads := h.db.ListThreads()
-	view := TemplateData{IndexData{threads}, loggedIn, "threads"}
+	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: "threads"}
 	h.renderView(res, "index", view)
 }
 
@@ -240,7 +234,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{LoginData{}, loggedIn, ""})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: ""})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
@@ -252,7 +246,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: ""})
 			return
 		}
 		// save user id in cookie
@@ -291,7 +285,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			LinkMessage: "Visit the",
 			LinkText:    "index",
 		}
-		h.renderView(res, "generic-message", TemplateData{data, loggedIn, "register"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "register"})
 		return
 	}
 
@@ -383,7 +377,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		ed.Check(err, "generate keypair")
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{RegisterSuccessData{string(kpJson)}, loggedIn, "registered successfully"})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: "registered successfully"})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
@@ -452,6 +446,56 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	}
 }
 
+func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Request) {
+	if req.Method == "GET" {
+		IndexRedirect(res, req)
+		return
+	}
+	threadURL := req.PostFormValue("thread")
+	postid, ok := util.GetURLPortion(req, 3)
+	loggedIn, userid := h.IsLoggedIn(req)
+
+	if !loggedIn || !ok {
+		title := "Unaccepted request"
+		data := GenericMessageData{
+			Title:       title,
+			Message:     "The post you tried to delete was not found, or you were not allowed to delete it",
+			LinkMessage: "Go back to",
+			Link:        threadURL,
+			LinkText:    "the thread",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		return
+	}
+
+	post, err := h.db.GetPost(postid)
+	authorized := post.AuthorID == userid
+	if !authorized || err != nil {
+		title := "Unaccepted request"
+		data := GenericMessageData{
+			Title:       title,
+			Message:     "You were not allowed to delete the post",
+			LinkMessage: "Go back to",
+			Link:        threadURL,
+			LinkText:    "the thread",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		return
+	}
+
+	switch req.Method {
+	case "POST":
+		if authorized {
+			// TODO (2022-01-12): receive error and render it
+      err = h.db.DeletePost(postid)
+      if err != nil {
+        dump(err)
+      }
+		}
+	}
+	http.Redirect(res, req, threadURL, http.StatusSeeOther)
+}
+
 func Serve(allowlist []string, sessionKey string, isdev bool) {
 	port := ":8272"
 	dbpath := "./data/forum.db"
@@ -469,6 +513,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	http.HandleFunc("/logout", handler.LogoutRoute)
 	http.HandleFunc("/login", handler.LoginRoute)
 	http.HandleFunc("/register", handler.RegisterRoute)
+	http.HandleFunc("/post/delete/", handler.DeletePostRoute)
 	http.HandleFunc("/thread/new/", handler.NewThreadRoute)
 	http.HandleFunc("/thread/", handler.ThreadRoute)
 	http.HandleFunc("/robots.txt", handler.RobotsRoute)

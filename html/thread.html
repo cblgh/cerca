@@ -1,10 +1,26 @@
 {{ template "head" . }}
 <main>
     <h1>{{ .Data.Title }}</h1>
+    {{ $userID := .LoggedInID }}
+    {{ $threadURL := .Data.ThreadURL }}
     {{ range $index, $post := .Data.Posts }}
     <article>
         <div>
-            <p><span><b>{{ $post.Author }}</b><span class="visually-hidden"> responded:</span></span><span style="float: right;"><time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time></span></p>
+            {{ if eq $post.AuthorID $userID }} 
+                <span style="float: right;" aria-label="Delete this post">
+                    <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}">
+                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit">delete</button>
+                        <input type="hidden" name="thread" value="{{ $threadURL }}">
+                    </form>
+                </span>
+            {{ end }}
+            <p>
+            <span><b>{{ $post.Author }}</b>
+                <span class="visually-hidden"> responded:</span></span>
+            <span style="margin-left: 0.5rem; font-style: italic;">
+                <time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
+            </span>
+            </p>
             {{ $post.Content }}
     </article>
     {{ end }}

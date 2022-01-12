@@ -162,9 +162,11 @@ func (d DB) CreateThread(title, content string, authorid, topicid int) (int, err
 // https://medium.com/aubergine-solutions/how-i-handled-null-possible-values-from-database-rows-in-golang-521fb0ee267
 // type NullTime sql.NullTime
 type Post struct {
+	ID          int
 	ThreadTitle string
 	Content     template.HTML
 	Author      string
+	AuthorID    int
 	Publish     time.Time
 	LastEdit    sql.NullTime // TODO: handle json marshalling with custom type
 }
@@ -182,7 +184,7 @@ func (d DB) GetThread(threadid int) []Post {
 	//    users table to get user name
 	//    threads table to get thread title
 	query := `
-  SELECT t.title, content, u.name, p.publishtime, p.lastedit
+  SELECT p.id, t.title, content, u.name, p.authorid, p.publishtime, p.lastedit
   FROM posts p 
   INNER JOIN users u ON u.id = p.authorid 
   INNER JOIN threads t ON t.id = p.threadid
@@ -200,12 +202,26 @@ func (d DB) GetThread(threadid int) []Post {
 	var data Post
 	var posts []Post
 	for rows.Next() {
-		if err := rows.Scan(&data.ThreadTitle, &data.Content, &data.Author, &data.Publish, &data.LastEdit); err != nil {
+		if err := rows.Scan(&data.ID, &data.ThreadTitle, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit); err != nil {
 			log.Fatalln(util.Eout(err, "get data for thread %d", threadid))
 		}
 		posts = append(posts, data)
 	}
 	return posts
+}
+
+func (d DB) GetPost(postid int) (Post, error) {
+	stmt := `
+  SELECT p.id, t.title, content, u.name, p.authorid, p.publishtime, p.lastedit
+  FROM posts p 
+  INNER JOIN users u ON u.id = p.authorid 
+  INNER JOIN threads t ON t.id = p.threadid
+  WHERE p.id = ?
+  `
+	var data Post
+	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
+	err = util.Eout(err, "get data for thread %d", postid)
+	return data, err
 }
 
 type Thread struct {
@@ -257,10 +273,10 @@ func (d DB) EditPost(content string, postid int) {
 	util.Check(err, "edit post %d", postid)
 }
 
-func (d DB) DeletePost(postid int) {
+func (d DB) DeletePost(postid int) error {
 	stmt := `DELETE FROM posts WHERE id = ?`
 	_, err := d.Exec(stmt, postid)
-	util.Check(err, "deleting post %d", postid)
+	return util.Eout(err, "deleting post %d", postid)
 }
 
 func (d DB) CreateTopic(title, description string) {
