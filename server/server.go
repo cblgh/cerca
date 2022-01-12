@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"cerca/crypto"
 	"cerca/database"
 	"cerca/server/session"
 	"cerca/util"
-	"html/template"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -106,13 +107,13 @@ func wrapViews() []string {
 var (
 	templates     = template.Must(template.ParseFiles(wrapViews()...))
 	templateFuncs = template.FuncMap{
-		"formatDateTime": func(dt time.Time) string {
+		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
 		},
-		"formatDateTimeRFC3339": func(dt time.Time) string {
+		"formatDateTimeRFC3339": func(t time.Time) string {
 			return t.Format(time.RFC3339Nano)
 		},
-		"formatDate": func(dt time.Time) string {
+		"formatDate": func(t time.Time) string {
 			return t.Format("2006-01-02")
 		},
 	}
