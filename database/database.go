@@ -1,10 +1,10 @@
 package database
 
 import (
+	"cerca/util"
 	"context"
 	"database/sql"
 	"fmt"
-	"cerca/util"
 	"html/template"
 	"log"
 	"net/url"

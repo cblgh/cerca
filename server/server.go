@@ -205,14 +205,11 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		// * hash received password and compare to stored hash
 		passwordHash, userid, err := h.db.GetPasswordHash(username)
 		// make sure user exists
-		if err = ed.Eout(err, "getting password hash and uid"); err != nil {
-			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
-			IndexRedirect(res, req)
-			return
+		if err = ed.Eout(err, "getting password hash and uid"); err == nil && !crypto.ValidatePasswordHash(password, passwordHash) {
+			err = errors.New("incorrect password")
 		}
-		if !crypto.ValidatePasswordHash(password, passwordHash) {
-			fmt.Println("incorrect password!")
+		if err != nil {
+			fmt.Println(err)
 			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
 			return
 		}
@@ -375,7 +372,7 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
-  fmt.Fprintln(res, "User-agent: *\nDisallow: /")
+	fmt.Fprintln(res, "User-agent: *\nDisallow: /")
 }
 
 func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
