@@ -1,10 +1,14 @@
 {{ template "head" . }}
-<h2>Create thread</h2>
-        <form method="POST">
-            <div class="post-container" >
-                <input required name="title" type="text" placeholder="Title">
-                <textarea required name="content" placeholder="Tabula rasa"></textarea>
-                <button type="submit">Create</button>
-            </div>
-        </form>
+<main>
+    <h1>Create thread</h1>
+    <form method="POST">
+        <div class="post-container" >
+            <label for="title">Title:</label>
+            <input required name="title" type="text" id="Title">
+            <label for="content">Content:</label>
+            <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
+            <button type="submit">Create</button>
+        </div>
+    </form>
+</main>
 {{ template "footer" . }}

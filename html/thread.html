@@ -1,19 +1,23 @@
 {{ template "head" . }}
-    <h2>{{ .Data.Title }}</h2>
+<main>
+    <h1>{{ .Data.Title }}</h1>
     {{ range $index, $post := .Data.Posts }}
-    <div>
-        <p ><span><b>{{ $post.Author }}</b></span><span style="float: right;"><time datetime="{{ $post.Publish | formatDate }}">{{
-                $post.Publish | formatDateRelative }}</time></span></p>
-        {{ $post.Content }}
-    </div>
+    <article>
+        <div>
+            <p><span><b>{{ $post.Author }}</b><span class="visually-hidden"> responded:</span></span><span style="float: right;"><time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time></span></p>
+            {{ $post.Content }}
+    </article>
     {{ end }}
     {{ if .LoggedIn }}
-    <div>
+    <section aria-label="Respond into this thread">
         <form method="POST">
             <div class="post-container" >
-                <textarea required name="content" placeholder="Tabula rasa"></textarea>
+                <label class="visually-hidden" for="content">Your answer:</label>
+                <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
                 <button type="submit">Post</button>
             </div>
         </form>
+    </section>
     {{ end }}
+</main>
 {{ template "footer" . }}

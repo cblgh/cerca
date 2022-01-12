@@ -3,7 +3,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">        
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>Forum — {{ .Title }}</title>
 
@@ -17,17 +17,21 @@
                 max-width: 50rem;
                 font-family: sans-serif;
             }
+            header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            label {
+                display: block;
+            }
             #logo {
                 width: 48px;
                 height: 48px;
                 display: block;
             }
-            nav {
-                float: right;
-            }
 			ul[type="menu"] {
-				display: grid;
-				grid-template-columns: repeat(2, 1fr);
+				display: flex;
 				list-style-type: none;
 				margin: 0;
 				padding: 0;
@@ -40,8 +44,8 @@
             blockquote { padding-left: 1rem; border-left: 3px solid black }
             div { margin-bottom: 2rem; }
             textarea { min-height: 10rem; }
-            div > p:first-of-type, form div, label { margin-bottom: 0; }
-            h1 a:visited, 
+            article > p:first-of-type, form div, label { margin-bottom: 0; }
+            h1 a:visited,
             a:not([class]) {
                 color: black;
             }
@@ -60,6 +64,16 @@
             .post-container { display: grid; max-width: 30rem; margin-top: 1rem; }
             body { padding: 2rem; background: wheat; }
             * { margin-bottom: 1rem; }
+
+            .visually-hidden {
+                clip: rect(0 0 0 0);
+                 clip-path: inset(50%);
+                 height: 1px;
+                 overflow: hidden;
+                 position: absolute;
+                 white-space: nowrap;
+                 width: 1px;
+            }
         </style>
 
         <!-- <link href="/assets/style.css" rel="stylesheet"> -->
@@ -86,18 +100,27 @@
         <!-- <link rel="search" type="application/opensearchdescription+xml" title="" href="/assets/opensearch.xml"> -->
     </head>
     <body>
-		<nav>
-			<ul type="menu">
-				<li><a href="/about">about</a></li>
-                {{ if .LoggedIn }} 
-				<li><a href="/logout">logout</a></li>
-                {{ else }}
-				<li><a href="/login">login</a></li>
-                {{ end }}
-			</ul>
-		</nav>
+        <header>
+            <a style="margin-bottom: 0; height: 48px;"  href="/" aria-label="Home">
+                <svg aria-hidden="true" style="margin-bottom: 0;" width="48" height="48" fill="black" stroke="none" viewBox="60 60 200 200" xmlns="http://www.w3.org/2000/svg">
+                  <g>
+                    <path d="M185,65 A60,60 0 0,0 125,125 L185,125 Z M125,245 A60,60 0 0,0 185,185 L125,185 Z M95,125 A30,30 0 0,1 125,155 A30,30 0 0,1 95,185 A30,30 0 0,1 65,155 A30,30 0 0,1 95,125 Z M155,125 A30,30 0 0,1 185,155 A30,30 0 0,1 155,185 A30,30 0 0,1 125,155 A30,30 0 0,1 155,125 Z M215,125 A30,30 0 0,1 245,155 A30,30 0 0,1 215,185 A30,30 0 0,1 185,155 A30,30 0 0,1 215,125 "/>
+                    <path d="M125,65 A60,60 0 0,1 185,125 L125,125 Z M185,245 A60,60 0 0,1 125,185 L185,185 Z M65,65 A60,60 0 0,1 125,125 L65,125 Z M65,245 A60,60 0 0,0 125,185 L65,185 Z M245,65 A60,60 0 0,0 185,125 L245,125 Z M245,245 A60,60 0 0,1 185,185 L245,185 Z"/>
+                  </g>
+                </svg>
+            </a>
+            <nav>
+                <ul type="menu">
+                    <li><a href="/about">about</a></li>
+                    {{ if .LoggedIn }}
+                    <li><a href="/logout">logout</a></li>
+                    {{ else }}
+                    <li><a href="/login">login</a></li>
+                    {{ end }}
+                </ul>
+            </nav>
+        </header>
 
-		<a href="/">
-            <img src="/assets/merveilles.svg" id="logo">
-		</a>
+
+
 {{ end }}
