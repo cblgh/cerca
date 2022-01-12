@@ -103,13 +103,24 @@ func wrapViews() []string {
 	return views
 }
 
-var templates = template.Must(template.ParseFiles(wrapViews()...))
+var (
+	templates     = template.Must(template.ParseFiles(wrapViews()...))
+	templateFuncs = template.FuncMap{
+		"formatDateTime": func(dt time.Time) string {
+			return t.Format(time.RFC3339)
+		},
+		"formatDate": func(dt time.Time) string {
+			return t.Format("2006-01-02")
+		},
+	}
+)
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	if data.Title == "" {
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
-	errTemp := templates.ExecuteTemplate(res, viewName+".html", data)
+
+	errTemp := templates.Funcs(templateFuncs).ExecuteTemplate(res, viewName+".html", data)
 	if errors.Is(errTemp, syscall.EPIPE) {
 		fmt.Println("had a broken pipe, continuing")
 	} else {
