@@ -2,7 +2,7 @@
     <h2>{{ .Data.Title }}</h2>
     {{ range $index, $post := .Data.Posts }}
     <div>
-        <p style="display: grid; grid-auto-flow: column; justify-content: space-between;"><span><b>{{ $post.Author }}</b></span><span><time datetime="{{ $post.Publish | formatDate }}">{{
+        <p ><span><b>{{ $post.Author }}</b></span><span style="float: right;"><time datetime="{{ $post.Publish | formatDate }}">{{
                 $post.Publish | formatDateRelative }}</time></span></p>
         {{ $post.Content }}
     </div>
