@@ -67,7 +67,17 @@
                 user-select: all;
             }
             pre { overflow: auto; }
-            .post-container { display: grid; max-width: 30rem; margin-top: 1rem; }
+
+            .post-container {
+                max-width: 30rem;
+                margin-top: 1rem;
+            }
+            .post-container > * {
+                display: block;
+            }
+            .post-container textarea {
+                width: 100%;
+            }
             body { padding: 2rem; background: wheat; }
             * { margin-bottom: 1rem; }
 
