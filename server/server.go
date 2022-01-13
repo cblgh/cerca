@@ -455,42 +455,45 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 	postid, ok := util.GetURLPortion(req, 3)
 	loggedIn, userid := h.IsLoggedIn(req)
 
+	// generic error message base, with specifics being swapped out depending on the error
+	genericErr := GenericMessageData{
+		Title:       "Unaccepted request",
+		LinkMessage: "Go back to",
+		Link:        threadURL,
+		LinkText:    "the thread",
+	}
+
+	renderErr := func(msg string) {
+		fmt.Println(msg)
+		genericErr.Message = msg
+		h.renderView(res, "generic-message", TemplateData{Data: genericErr, LoggedIn: loggedIn})
+	}
+
 	if !loggedIn || !ok {
-		title := "Unaccepted request"
-		data := GenericMessageData{
-			Title:       title,
-			Message:     "The post you tried to delete was not found, or you were not allowed to delete it",
-			LinkMessage: "Go back to",
-			Link:        threadURL,
-			LinkText:    "the thread",
-		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		renderErr("Invalid post id, or you were not allowed to delete it")
 		return
 	}
 
 	post, err := h.db.GetPost(postid)
-	authorized := post.AuthorID == userid
-	if !authorized || err != nil {
-		title := "Unaccepted request"
-		data := GenericMessageData{
-			Title:       title,
-			Message:     "You were not allowed to delete the post",
-			LinkMessage: "Go back to",
-			Link:        threadURL,
-			LinkText:    "the thread",
-		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+	if err != nil {
+		dump(err)
+		renderErr("The post you tried to delete was not found")
 		return
 	}
 
+	authorized := post.AuthorID == userid
 	switch req.Method {
 	case "POST":
 		if authorized {
-			// TODO (2022-01-12): receive error and render it
-      err = h.db.DeletePost(postid)
-      if err != nil {
-        dump(err)
-      }
+			err = h.db.DeletePost(postid)
+			if err != nil {
+				dump(err)
+				renderErr("Error happened while deleting the post")
+				return
+			}
+		} else {
+			renderErr("That's not your post to delete? Sorry buddy!")
+			return
 		}
 	}
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
