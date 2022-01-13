@@ -179,8 +179,8 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		// TODO (2022-01-09): make sure rendered content won't be empty after sanitizing:
 		// * run sanitize step && strings.TrimSpace and check length **before** doing AddPost
 		// TODO(2022-01-09): send errors back to thread's posting view
-		h.db.AddPost(content, threadid, userid)
-		http.Redirect(res, req, req.URL.Path, http.StatusSeeOther)
+		postID := h.db.AddPost(content, threadid, userid)
+		http.Redirect(res, req, fmt.Sprintf("%s#%d", req.URL.Path, postID), http.StatusFound)
 		return
 	}
 	// TODO (2022-01-07):
