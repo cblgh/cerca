@@ -1,14 +1,15 @@
 package crypto
 
 import (
-	"cerca/util"
+	"cerca/logger"
 	"crypto/ed25519"
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/synacor/argon2id"
 	rand "math/rand"
+
+	"github.com/synacor/argon2id"
 )
 
 type Keypair struct {
@@ -17,10 +18,9 @@ type Keypair struct {
 }
 
 func GenerateKeypair() (Keypair, error) {
-	ed := util.Describe("generate public keypair")
 	pub, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
-		return Keypair{}, ed.Eout(err, "generating key")
+		return Keypair{}, fmt.Errorf("generating public keypair: %w", err)
 	}
 	return Keypair{Public: fmt.Sprintf("%x", pub), Private: fmt.Sprintf("%x", priv)}, nil
 }
@@ -28,7 +28,7 @@ func GenerateKeypair() (Keypair, error) {
 func (kp *Keypair) Marshal() ([]byte, error) {
 	jason, err := json.MarshalIndent(kp, "", " ")
 	if err != nil {
-		return []byte{}, util.Eout(err, "marshal keypair")
+		return []byte{}, fmt.Errorf("marshalling keypair: %w", err)
 	}
 	return jason, nil
 }
@@ -36,16 +36,15 @@ func (kp *Keypair) Marshal() ([]byte, error) {
 func (kp *Keypair) Unmarshal(input []byte) error {
 	err := json.Unmarshal(input, &kp)
 	if err != nil {
-		return util.Eout(err, "unmarshal keypair")
+		return fmt.Errorf("unmarshaling keypair: %w", err)
 	}
 	return nil
 }
 
 func HashPassword(s string) (string, error) {
-	ed := util.Describe("hash password")
 	hash, err := argon2id.DefaultHashPassword(s)
 	if err != nil {
-		return "", ed.Eout(err, "hashing with argon2id")
+		return "", fmt.Errorf("hashing with argon2id: %w", err)
 	}
 	return hash, nil
 }
@@ -75,7 +74,7 @@ func (s cryptoSource) Int63() int64 {
 func (s cryptoSource) Uint64() (v uint64) {
 	err := binary.Read(crand.Reader, binary.BigEndian, &v)
 	if err != nil {
-		util.Check(err, "generate random verification code")
+		logger.Fatal("failed to generate random verification code: %w", err)
 	}
 	return v
 }

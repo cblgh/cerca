@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"cerca/crypto"
 	"cerca/database"
 	cercaHTML "cerca/html"
+	"cerca/logger"
 	"cerca/server/session"
 	"cerca/util"
 
@@ -64,29 +64,19 @@ type RequestHandler struct {
 	allowlist []string // allowlist of domains valid for forum registration
 }
 
-var developing bool
-
-func dump(err error) {
-	if developing {
-		fmt.Println(err)
-	}
-}
-
 // returns true if logged in, and the userid of the logged in user.
 // returns false (and userid set to -1) if not logged in
 func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
-	ed := util.Describe("IsLoggedIn")
 	userid, err := h.session.Get(req)
-	err = ed.Eout(err, "getting userid from session cookie")
 	if err != nil {
-		dump(err)
+		logger.Debug("failed to check if user is logged in: %v", err)
 		return false, -1
 	}
 
 	// make sure the user from the cookie actually exists
 	userExists, err := h.db.CheckUserExists(userid)
 	if err != nil {
-		dump(ed.Eout(err, "check userid in db"))
+		logger.Debug("failed to check if user exists: %v", err)
 		return false, -1
 	} else if !userExists {
 		return false, -1
@@ -154,7 +144,7 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 
 	view := fmt.Sprintf("%s.html", viewName)
 	if err := templates.ExecuteTemplate(res, view, data); err != nil {
-		util.Check(err, "rendering %q view", view)
+		logger.Fatal("rendering view %q: %v", view, err)
 	}
 }
 
@@ -169,7 +159,7 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 
 	threadid, err := strconv.Atoi(parts[2])
 	if err != nil {
-		dump(err)
+		logger.Error("failed to convert thread ID %s to integer: %v", parts[2], err)
 		title := "Page not found"
 		data := GenericMessageData{
 			Title:   title,
@@ -236,7 +226,6 @@ func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("LoginRoute")
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
@@ -246,21 +235,23 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		password := req.PostFormValue("password")
 		// * hash received password and compare to stored hash
 		passwordHash, userid, err := h.db.GetPasswordHash(username)
-		// make sure user exists
-		if err = ed.Eout(err, "getting password hash and uid"); err == nil && !crypto.ValidatePasswordHash(password, passwordHash) {
-			err = errors.New("incorrect password")
-		}
 		if err != nil {
-			fmt.Println(err)
+			logger.Error("LoginRoute - failed getting password hash and uid: %v", err)
+			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
+			return
+		} else if !crypto.ValidatePasswordHash(password, passwordHash) {
+			logger.Error("LoginRoute - incorrect password")
 			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
 			return
 		}
 		// save user id in cookie
 		err = h.session.Save(req, res, userid)
-		ed.Check(err, "saving session cookie")
+		if err != nil {
+			logger.Fatal("LoginRoute - failed to save session cookie", err)
+		}
 		IndexRedirect(res, req)
 	default:
-		fmt.Println("non get/post method, redirecting to index")
+		logger.Info("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
 	}
 }
@@ -273,7 +264,7 @@ func hasVerificationCode(link, verification string) bool {
 		ToString(&linkBody).
 		Fetch(context.Background())
 	if err != nil {
-		fmt.Println(util.Eout(err, "HasVerificationCode"))
+		logger.Error("failed to get verification code: %v", err)
 		return false
 	}
 
@@ -281,7 +272,6 @@ func hasVerificationCode(link, verification string) bool {
 }
 
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	if loggedIn {
 		data := GenericMessageData{
@@ -295,14 +285,14 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		return
 	}
 
+	var err error
 	var verificationCode string
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
-		fmt.Println(errMessage)
+		logger.Error("register route %s: %v", errMessage, err)
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage}})
 	}
 
-	var err error
 	switch req.Method {
 	case "GET":
 		// try to get the verification code from the session (useful in case someone refreshed the page)
@@ -327,7 +317,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		password := req.PostFormValue("password")
 		// read verification code from form
 		verificationLink := req.PostFormValue("verificationlink")
-		// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
+		// logger.Debug("user: %s, verilink: %s\n", username, verificationLink)
 		u, err := url.Parse(verificationLink)
 		if err != nil {
 			renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
@@ -335,7 +325,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		// check verification link domain against allowlist
 		if !util.Contains(h.allowlist, u.Host) {
-			fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
+			logger.Info("%s %s %v", h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
 			renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
 			return
 		}
@@ -357,7 +347,6 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		var hash string
 		if hash, err = crypto.HashPassword(password); err != nil {
-			fmt.Println(ed.Eout(err, "hash password"))
 			renderErr("Database had a problem when hashing password")
 			return
 		}
@@ -370,22 +359,27 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		h.session.Save(req, res, userID)
 		// log where the registration is coming from, in the case of indirect invites && for curiosity
 		err = h.db.AddRegistration(userID, verificationLink)
-		if err = ed.Eout(err, "add registration"); err != nil {
-			dump(err)
+		if err != nil {
+			logger.Fatal("failed to add registration: %v", err)
 		}
 		// generate and pass public keypair
 		keypair, err := crypto.GenerateKeypair()
+		if err != nil {
+			logger.Fatal("failed to generate key pair: %v", err)
+		}
+
 		// record generated pubkey in database for eventual later use
 		err = h.db.AddPubkey(userID, keypair.Public)
-		if err = ed.Eout(err, "insert pubkey in db"); err != nil {
-			dump(err)
+		if err != nil {
+			logger.Fatal("failed to insert public key into database: %v", err)
 		}
-		ed.Check(err, "generate keypair")
 		kpJson, err := keypair.Marshal()
-		ed.Check(err, "marshal keypair")
+		if err != nil {
+			logger.Fatal("failed to marshal keypair: %v", err)
+		}
 		h.renderView(res, "register-success", TemplateData{RegisterSuccessData{string(kpJson)}, loggedIn, "registered successfully"})
 	default:
-		fmt.Println("non get/post method, redirecting to index")
+		logger.Info("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
 	}
 }
@@ -447,7 +441,7 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 		slug := fmt.Sprintf("thread/%d/%s/", threadid, util.SanitizeURL(title))
 		http.Redirect(res, req, "/"+slug, http.StatusSeeOther)
 	default:
-		fmt.Println("non get/post method, redirecting to index")
+		logger.Info("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
 	}
 }
@@ -456,13 +450,13 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	port := ":8272"
 	dbpath := "./data/forum.db"
 	if isdev {
-		developing = true
+		logger.SetLevel(logger.LevelDebug)
 		dbpath = "./data/forum.test.db"
 		port = ":8277"
 	}
 
 	db := database.InitDB(dbpath)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
+	handler := RequestHandler{&db, session.New(sessionKey, isdev), allowlist}
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	http.HandleFunc("/about", handler.AboutRoute)
@@ -477,6 +471,6 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	fileserver := http.FileServer(http.Dir("html/assets/"))
 	http.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
 
-	fmt.Println("Serving forum on", port)
+	logger.Info("Serving forum on %s", port)
 	http.ListenAndServe(port, nil)
 }

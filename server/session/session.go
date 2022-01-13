@@ -27,8 +27,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"cerca/util"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -62,15 +60,17 @@ func New(authKey string, developing bool) *Session {
 }
 
 func (s *Session) Delete(res http.ResponseWriter, req *http.Request) error {
-	ed := util.Describe("delete session cookie")
 	clearSession := func(store *sessions.CookieStore) error {
 		session, err := store.Get(req, cookieName)
 		if err != nil {
-			return ed.Eout(err, "get session")
+			return fmt.Errorf("delete session cookie - get session: %w", err)
 		}
 		session.Options.MaxAge = -1
 		err = session.Save(req, res)
-		return ed.Eout(err, "save expired session")
+		if err != nil {
+			return fmt.Errorf("delete session cookie - save expired session: %w", err)
+		}
+		return nil
 	}
 	err := clearSession(s.Store)
 	if err != nil {
@@ -87,8 +87,7 @@ func getValueFromSession(req *http.Request, store *sessions.CookieStore, key str
 	}
 	value, ok := session.Values[key]
 	if !ok {
-		err := errors.New(fmt.Sprintf("extracting %s from session; no such value", key))
-		return nil, util.Eout(err, "get session")
+		return nil, fmt.Errorf("extracting %s from session: no such value", key)
 	}
 	return value, nil
 }

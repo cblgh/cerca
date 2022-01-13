@@ -2,18 +2,18 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 
+	"cerca/logger"
 	"cerca/server"
-	"cerca/util"
 )
 
 func readAllowlist(location string) []string {
-	ed := util.Describe("read allowlist")
 	data, err := os.ReadFile(location)
-	ed.Check(err, "read file")
+	if err != nil {
+		logger.Fatal("failed to read allowlist at %s: %v", location, err)
+	}
 	list := strings.Split(strings.TrimSpace(string(data)), "\n")
 	for i, fullpath := range list {
 		list[i] = strings.TrimPrefix(strings.TrimPrefix(fullpath, "https://"), "http://")
@@ -22,7 +22,7 @@ func readAllowlist(location string) []string {
 }
 
 func complain(msg string) {
-	fmt.Printf("cerca: %s\n", msg)
+	logger.Info("cerca: %s\n", msg)
 	os.Exit(0)
 }
 

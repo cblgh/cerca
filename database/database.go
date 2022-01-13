@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log"
 	"net/url"
 	"os"
 	"time"
 
+	"cerca/logger"
 	"cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -24,15 +24,16 @@ func InitDB(filepath string) DB {
 	if _, err := os.Stat(filepath); errors.Is(err, os.ErrNotExist) {
 		file, err := os.Create(filepath)
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal("failed to initialize database: %v", err)
 		}
 		defer file.Close()
 	}
 
 	db, err := sql.Open("sqlite3", filepath)
-	util.Check(err, "opening sqlite3 database at %s", filepath)
-	if db == nil {
-		log.Fatalln("db is nil")
+	if err != nil {
+		logger.Fatal("failed to open sqlite3 database at %s: %v", filepath, err)
+	} else if db == nil {
+		logger.Fatal("db is nil")
 	}
 	createTables(db)
 	return DB{db}
@@ -108,7 +109,7 @@ func createTables(db *sql.DB) {
 
 	for _, query := range queries {
 		if _, err := db.Exec(query); err != nil {
-			log.Fatalln(util.Eout(err, "creating database table %s", query))
+			logger.Fatal("failed to create database table with query %s: %v", query, err)
 		}
 	}
 }
@@ -129,10 +130,11 @@ func (d DB) Exec(stmt string, args ...interface{}) (sql.Result, error) {
 }
 
 func (d DB) CreateThread(title, content string, authorid, topicid int) (int, error) {
-	ed := util.Describe("create thread")
 	// create the new thread in a transaction spanning two statements
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
-	ed.Check(err, "start transaction")
+	if err != nil {
+		logger.Fatal("failed to start transaction: %v", err)
+	}
 	// first, create the new thread
 	publish := time.Now()
 	threadStmt := `INSERT INTO threads (title, publishtime, topicid, authorid) VALUES (?, ?, ?, ?)
@@ -140,20 +142,22 @@ func (d DB) CreateThread(title, content string, authorid, topicid int) (int, err
 	replyStmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?)`
 	var threadid int
 	err = tx.QueryRow(threadStmt, title, publish, topicid, authorid).Scan(&threadid)
-	if err = ed.Eout(err, "add thread %s by %d in topic %d", title, authorid, topicid); err != nil {
+	if err != nil {
 		_ = tx.Rollback()
-		log.Println(err, "rolling back")
+		logger.Error("failed to add thread %s by %d in topic %d, rolling back: %v", title, authorid, topicid, err)
 		return -1, err
 	}
 	// then add the content as the first reply to the thread
 	_, err = tx.Exec(replyStmt, content, publish, threadid, authorid)
-	if err = ed.Eout(err, "add initial reply for thread %d", threadid); err != nil {
+	if err != nil {
 		_ = tx.Rollback()
-		log.Println(err, "rolling back")
+		logger.Error("failed to add initial reply for thread %d, rolling back: %v", threadid, err)
 		return -1, err
 	}
 	err = tx.Commit()
-	ed.Check(err, "commit transaction")
+	if err != nil {
+		logger.Fatal("failed to commit transaction: %v", err)
+	}
 	// finally return the id of the created thread, so we can do a friendly redirect
 	return threadid, nil
 }
@@ -190,18 +194,22 @@ func (d DB) GetThread(threadid int) []Post {
   ORDER BY p.publishtime
   `
 	stmt, err := d.db.Prepare(query)
-	util.Check(err, "get thread: prepare query")
+	if err != nil {
+		logger.Fatal("failed to get thread - preparing query: %v", err)
+	}
 	defer stmt.Close()
 
 	rows, err := stmt.Query(threadid)
-	util.Check(err, "get thread: query")
+	if err != nil {
+		logger.Fatal("failed to get thread - running query: %v", err)
+	}
 	defer rows.Close()
 
 	var data Post
 	var posts []Post
 	for rows.Next() {
 		if err := rows.Scan(&data.ThreadTitle, &data.Content, &data.Author, &data.Publish, &data.LastEdit); err != nil {
-			log.Fatalln(util.Eout(err, "get data for thread %d", threadid))
+			logger.Fatal("failed to get data for thread %d: %v", threadid, err)
 		}
 		posts = append(posts, data)
 	}
@@ -224,18 +232,22 @@ func (d DB) ListThreads() []Thread {
   ORDER BY t.publishtime DESC
   `
 	stmt, err := d.db.Prepare(query)
-	util.Check(err, "list threads: prepare query")
+	if err != nil {
+		logger.Fatal("failed to list threads - prepare query: %v", err)
+	}
 	defer stmt.Close()
 
 	rows, err := stmt.Query()
-	util.Check(err, "list threads: query")
+	if err != nil {
+		logger.Fatal("failed to list threads - run query: %v", err)
+	}
 	defer rows.Close()
 
 	var data Thread
 	var threads []Thread
 	for rows.Next() {
 		if err := rows.Scan(&data.Title, &data.ID, &data.Author); err != nil {
-			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
+			logger.Fatal("failed to list threads - scanning rows: %v", err)
 		}
 		data.Slug = fmt.Sprintf("%d/%s/", data.ID, util.SanitizeURL(data.Title))
 		threads = append(threads, data)
@@ -247,44 +259,58 @@ func (d DB) AddPost(content string, threadid, authorid int) {
 	stmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?)`
 	publish := time.Now()
 	_, err := d.Exec(stmt, content, publish, threadid, authorid)
-	util.Check(err, "add post to thread %d (author %d)", threadid, authorid)
+	if err != nil {
+		logger.Fatal("failed to add post to thread %d (author %d): %v", threadid, authorid, err)
+	}
 }
 
 func (d DB) EditPost(content string, postid int) {
 	stmt := `UPDATE posts set content = ?, lastedit = ? WHERE id = ?`
 	edit := time.Now()
 	_, err := d.Exec(stmt, content, edit, postid)
-	util.Check(err, "edit post %d", postid)
+	if err != nil {
+		logger.Fatal("failed to edit post %d: %v", postid, err)
+	}
 }
 
 func (d DB) DeletePost(postid int) {
 	stmt := `DELETE FROM posts WHERE id = ?`
 	_, err := d.Exec(stmt, postid)
-	util.Check(err, "deleting post %d", postid)
+	if err != nil {
+		logger.Fatal("failed to delete post %d: %v", postid, err)
+	}
 }
 
 func (d DB) CreateTopic(title, description string) {
 	stmt := `INSERT INTO topics (name, description) VALUES (?, ?)`
 	_, err := d.Exec(stmt, title, description)
-	util.Check(err, "creating topic %s", title)
+	if err != nil {
+		logger.Fatal("failed to create topic %s: %v", title, err)
+	}
 }
 
 func (d DB) UpdateTopicName(topicid int, newname string) {
 	stmt := `UPDATE topics SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, topicid)
-	util.Check(err, "changing topic %d's name to %s", topicid, newname)
+	if err != nil {
+		logger.Fatal("failed to change topic (%d) name to %s: %v", topicid, newname, err)
+	}
 }
 
 func (d DB) UpdateTopicDescription(topicid int, newdesc string) {
 	stmt := `UPDATE topics SET description = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newdesc, topicid)
-	util.Check(err, "changing topic %d's description to %s", topicid, newdesc)
+	if err != nil {
+		logger.Fatal("failed to change topic (%d) description to %s: %v", topicid, newdesc, err)
+	}
 }
 
 func (d DB) DeleteTopic(topicid int) {
 	stmt := `DELETE FROM topics WHERE id = ?`
 	_, err := d.Exec(stmt, topicid)
-	util.Check(err, "deleting topic %d", topicid)
+	if err != nil {
+		logger.Fatal("failed to delete topic: %d", topicid, err)
+	}
 }
 
 func (d DB) CreateUser(name, hash string) (int, error) {
@@ -292,7 +318,7 @@ func (d DB) CreateUser(name, hash string) (int, error) {
 	var userid int
 	err := d.db.QueryRow(stmt, name, hash).Scan(&userid)
 	if err != nil {
-		return -1, util.Eout(err, "creating user %s", name)
+		return -1, fmt.Errorf("creating user %s: %w", name, err)
 	}
 	return userid, nil
 }
@@ -303,7 +329,7 @@ func (d DB) GetPasswordHash(username string) (string, int, error) {
 	var userid int
 	err := d.db.QueryRow(stmt, username).Scan(&hash, &userid)
 	if err != nil {
-		return "", -1, util.Eout(err, "get password hash")
+		return "", -1, fmt.Errorf("get password hash: %w", err)
 	}
 	return hash, userid, nil
 }
@@ -313,7 +339,7 @@ func (d DB) existsQuery(substmt string, args ...interface{}) (bool, error) {
 	var exists bool
 	err := d.db.QueryRow(stmt, args...).Scan(&exists)
 	if err != nil {
-		return false, util.Eout(err, "exists: %s", substmt)
+		return false, fmt.Errorf("exists %s: %w", substmt, err)
 	}
 	return exists, nil
 }
@@ -331,42 +357,46 @@ func (d DB) CheckUsernameExists(username string) (bool, error) {
 func (d DB) UpdateUserName(userid int, newname string) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, userid)
-	util.Check(err, "changing user %d's name to %s", userid, newname)
+	if err != nil {
+		logger.Fatal("failed to change user (%d) name to %s: %v", userid, newname, err)
+	}
 }
 
 func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	stmt := `UPDATE users SET passwordhash = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newhash, userid)
-	util.Check(err, "changing user %d's description to %s", userid, newhash)
+	if err != nil {
+		logger.Fatal("failed to change user (%d) description to %s: %v", userid, newhash, err)
+	}
 }
 
 func (d DB) DeleteUser(userid int) {
 	stmt := `DELETE FROM users WHERE id = ?`
 	_, err := d.Exec(stmt, userid)
-	util.Check(err, "deleting user %d", userid)
+	if err != nil {
+		logger.Fatal("failed to delete user %d: %v", userid, err)
+	}
 }
 
 func (d DB) AddPubkey(userid int, pubkey string) error {
-	ed := util.Describe("add pubkey")
 	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
 	_, err := d.Exec(stmt, userid, pubkey)
-	if err = ed.Eout(err, "inserting record"); err != nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("add public key - inserting record: %w", err)
 	}
 	return nil
 }
 
 func (d DB) AddRegistration(userid int, verificationLink string) error {
-	ed := util.Describe("add registration")
 	stmt := `INSERT INTO registrations (userid, host, link, time) VALUES (?, ?, ?, ?)`
 	t := time.Now()
 	u, err := url.Parse(verificationLink)
-	if err = ed.Eout(err, "parse url"); err != nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("add registration - parse url: %w", err)
 	}
 	_, err = d.Exec(stmt, userid, u.Host, verificationLink, t)
-	if err = ed.Eout(err, "add registration"); err != nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("add registration - run query: %w", err)
 	}
 	return nil
 }
