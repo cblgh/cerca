@@ -71,18 +71,27 @@
             th, td { text-align:left; padding: 2px 7px; border: 1px solid; }
             th { font-weight: bold; }
             tr:hover td { background:#e2cca2; }
-            .post-container { display: grid; max-width: 30rem; margin-top: 1rem; }
+
+            .post-container {
+                max-width: 30rem;
+                margin-top: 1rem;
+            }
+            .post-container > * {
+                display: block;
+                width: 100%;
+            }
+
             body { padding: 2rem; background: wheat; }
             * { margin-bottom: 1rem; }
 
             .visually-hidden {
                 clip: rect(0 0 0 0);
-                 clip-path: inset(50%);
-                 height: 1px;
-                 overflow: hidden;
-                 position: absolute;
-                 white-space: nowrap;
-                 width: 1px;
+                clip-path: inset(50%);
+                height: 1px;
+                overflow: hidden;
+                position: absolute;
+                white-space: nowrap;
+                width: 1px;
             }
 
             header nav {
