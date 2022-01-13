@@ -262,11 +262,12 @@ func (d DB) ListThreads() []Thread {
 	return threads
 }
 
-func (d DB) AddPost(content string, threadid, authorid int) {
-	stmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?)`
+func (d DB) AddPost(content string, threadid, authorid int) (postID int) {
+	stmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?) RETURNING id`
 	publish := time.Now()
-	_, err := d.Exec(stmt, content, publish, threadid, authorid)
+	err := d.db.QueryRow(stmt, content, publish, threadid, authorid).Scan(&postID)
 	util.Check(err, "add post to thread %d (author %d)", threadid, authorid)
+	return
 }
 
 func (d DB) EditPost(content string, postid int) {
