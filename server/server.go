@@ -192,7 +192,7 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		thread[i].Content = util.Markup(post.Content)
 	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
-	view := TemplateData{Data: &data, QuickNav: true, LoggedIn: loggedIn, LoggedInID: userid}
+	view := TemplateData{Data: &data, QuickNav: loggedIn, LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle
 		view.Title = data.Title
