@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
@@ -97,4 +99,19 @@ func SanitizeURL(input string) string {
 	input = url.PathEscape(input)
 	// TODO(2022-01-08): evaluate use of strict content guardian?
 	return strings.ToLower(input)
+}
+
+// returns an id from a url path, and a boolean. the boolean is true if we're returning what we expect; false if the
+// operation failed
+func GetURLPortion(req *http.Request, index int) (int, bool) {
+	var desiredID int
+	parts := strings.Split(strings.TrimSpace(req.URL.Path), "/")
+	if len(parts) < index || parts[index] == "" {
+		return -1, false
+	}
+	desiredID, err := strconv.Atoi(parts[index])
+	if err != nil {
+		return -1, false
+	}
+	return desiredID, true
 }
