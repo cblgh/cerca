@@ -4,8 +4,8 @@
     {{ $userID := .LoggedInID }}
     {{ $threadURL := .Data.ThreadURL }}
     {{ range $index, $post := .Data.Posts }}
-    <article>
-        <div id="{{ $post.ID }}">
+    <article id="{{ $post.ID }}">
+        <section aria-label="Post meta">
             {{ if eq $post.AuthorID $userID }} 
                 <span style="float: right;" aria-label="Delete this post">
                     <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}"
@@ -16,7 +16,7 @@
                     </form>
                 </span>
             {{ end }}
-            <p>
+            <span class="visually-hidden">Author:</span>
             <span><b>{{ $post.Author }}</b>
                 <span class="visually-hidden"> responded:</span>
             </span>
@@ -25,8 +25,8 @@
                     <time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
                 </span>
             </a>
-            </p>
-            {{ $post.Content }}
+        </section>
+        {{ $post.Content }}
     </article>
     {{ end }}
     {{ if .LoggedIn }}
