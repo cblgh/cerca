@@ -235,8 +235,10 @@ type Thread struct {
 // get a list of threads
 func (d DB) ListThreads() []Thread {
 	query := `
-  SELECT t.title, t.id, u.name FROM threads t 
+  SELECT count(t.id), t.title, t.id, u.name FROM threads t
   INNER JOIN users u on u.id = t.authorid
+  INNER JOIN posts p ON t.id = p.threadid
+  GROUP BY t.id
   ORDER BY t.publishtime DESC
   `
 	stmt, err := d.db.Prepare(query)
@@ -247,13 +249,14 @@ func (d DB) ListThreads() []Thread {
 	util.Check(err, "list threads: query")
 	defer rows.Close()
 
+	var postCount int
 	var data Thread
 	var threads []Thread
 	for rows.Next() {
-		if err := rows.Scan(&data.Title, &data.ID, &data.Author); err != nil {
+		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Author); err != nil {
 			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
 		}
-		data.Slug = fmt.Sprintf("%d/%s/", data.ID, util.SanitizeURL(data.Title))
+		data.Slug = fmt.Sprintf("%d/%s-%d/", data.ID, util.SanitizeURL(data.Title), postCount)
 		threads = append(threads, data)
 	}
 	return threads
