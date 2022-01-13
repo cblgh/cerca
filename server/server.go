@@ -337,8 +337,10 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		// parse out verification code from verification link and compare against verification code in session
 		has := hasVerificationCode(verificationLink, verificationCode)
 		if !has {
-			renderErr("Verification code from link (%s) does not match", verificationLink)
-			return
+			if !developing {
+				renderErr("Verification code from link (%s) does not match", verificationLink)
+				return
+			}
 		}
 		// make sure username is not registered already
 		var exists bool
