@@ -23,6 +23,7 @@ import (
 
 type TemplateData struct {
 	Data       interface{}
+	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
 	LoggedInID int
 	Title      string
@@ -190,8 +191,12 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	for i, post := range thread {
 		thread[i].Content = util.Markup(post.Content)
 	}
-	title := thread[0].ThreadTitle
-	view := TemplateData{Data: ThreadData{title, thread, req.URL.Path}, LoggedIn: loggedIn, LoggedInID: userid, Title: title}
+	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
+	view := TemplateData{Data: &data, QuickNav: true, LoggedIn: loggedIn, LoggedInID: userid}
+	if len(thread) > 0 {
+		data.Title = thread[0].ThreadTitle
+		view.Title = data.Title
+	}
 	h.renderView(res, "thread", view)
 }
 

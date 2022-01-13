@@ -115,6 +115,9 @@
             </a>
             <nav>
                 <ul type="menu">
+                    {{ if .QuickNav }}
+                    <li><a href="#bottom">bottom</a></li>
+                    {{end}}
                     <li><a href="/about">about</a></li>
                     {{ if .LoggedIn }}
                     <li><a href="/logout">logout</a></li>
