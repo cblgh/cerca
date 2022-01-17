@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -15,10 +16,15 @@ func readAllowlist(location string) []string {
 	data, err := os.ReadFile(location)
 	ed.Check(err, "read file")
 	list := strings.Split(strings.TrimSpace(string(data)), "\n")
-	for i, fullpath := range list {
-		list[i] = strings.TrimPrefix(strings.TrimPrefix(fullpath, "https://"), "http://")
+	var processed []string
+	for _, fullpath := range list {
+		u, err := url.Parse(fullpath)
+		if err != nil {
+			continue
+		}
+		processed = append(processed, u.Host)
 	}
-	return list
+	return processed
 }
 
 func complain(msg string) {
