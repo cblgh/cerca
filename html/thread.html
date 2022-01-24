@@ -1,18 +1,44 @@
 {{ template "head" . }}
-    <h2>{{ .Data.Title }}</h2>
+<main>
+    <h1>{{ .Data.Title }}</h1>
+    {{ $userID := .LoggedInID }}
+    {{ $threadURL := .Data.ThreadURL }}
     {{ range $index, $post := .Data.Posts }}
-    <div>
-        <p><b>{{ $post.Author }}</b></p>
+    <article id="{{ $post.ID }}">
+        <section aria-label="Post meta">
+            {{ if eq $post.AuthorID $userID }} 
+                <span style="float: right;" aria-label="Delete this post">
+                    <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}"
+                            onsubmit="return confirm('Delete post for all posterity?');"
+                        >
+                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit">delete</button>
+                        <input type="hidden" name="thread" value="{{ $threadURL }}">
+                    </form>
+                </span>
+            {{ end }}
+            <span class="visually-hidden">Author:</span>
+            <span><b>{{ $post.Author }}</b>
+                <span class="visually-hidden"> responded:</span>
+            </span>
+            <a href="#{{ $post.ID }}">
+                <span style="margin-left: 0.5rem; font-style: italic;">
+                    <time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
+                </span>
+            </a>
+        </section>
         {{ $post.Content }}
-    </div>
+    </article>
     {{ end }}
     {{ if .LoggedIn }}
-    <div>
+    <section aria-label="Respond into this thread">
         <form method="POST">
-            <div class="post-container" >
-                <textarea required name="content" placeholder="Tabula rasa"></textarea>
+            <div id="bottom" class="post-container" >
+                <label class="visually-hidden" for="content">Your answer:</label>
+                <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
                 <button type="submit">Post</button>
             </div>
         </form>
+    </section>
     {{ end }}
+</main>
 {{ template "footer" . }}

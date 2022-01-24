@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"syscall"
+	"time"
 
 	"cerca/crypto"
 	"cerca/database"
+	cercaHTML "cerca/html"
 	"cerca/server/session"
 	"cerca/util"
-	"html/template"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -22,9 +22,11 @@ import (
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
 type TemplateData struct {
-	Data     interface{}
-	LoggedIn bool // TODO (2022-01-09): put this in a middleware || template function or sth?
-	Title    string
+	Data       interface{}
+	QuickNav   bool
+	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
+	LoggedInID int
+	Title      string
 }
 
 type IndexData struct {
@@ -53,8 +55,9 @@ type LoginData struct {
 }
 
 type ThreadData struct {
-	Title string
-	Posts []database.Post
+	Title     string
+	Posts     []database.Post
+	ThreadURL string
 }
 
 type RequestHandler struct {
@@ -93,42 +96,83 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
-var views = []string{"index", "head", "footer", "login-component", "login", "register", "register-success", "thread", "new-thread", "generic-message", "about"}
-
-// wrap the contents of `views` to the format expected by template.ParseFiles()
-func wrapViews() []string {
-	for i, item := range views {
-		views[i] = fmt.Sprintf("html/%s.html", item)
+var (
+	templateFuncs = template.FuncMap{
+		"formatDateTime": func(t time.Time) string {
+			return t.Format("2006-01-02 15:04:05")
+		},
+		"formatDateTimeRFC3339": func(t time.Time) string {
+			return t.Format(time.RFC3339Nano)
+		},
+		"formatDate": func(t time.Time) string {
+			return t.Format("2006-01-02")
+		},
+		"formatDateRelative": func(t time.Time) string {
+			diff := time.Since(t)
+			if diff < time.Hour*24 {
+				return "today"
+			} else if diff >= time.Hour*24 && diff < time.Hour*48 {
+				return "yesterday"
+			}
+			return t.Format("2006-01-02")
+		},
 	}
-	return views
-}
 
-var templates = template.Must(template.ParseFiles(wrapViews()...))
+	templates = template.Must(generateTemplates())
+)
+
+func generateTemplates() (*template.Template, error) {
+	views := []string{
+		"about",
+		"footer",
+		"generic-message",
+		"head",
+		"index",
+		"login",
+		"login-component",
+		"new-thread",
+		"register",
+		"register-success",
+		"thread",
+	}
+
+	rootTemplate := template.New("root")
+
+	for _, view := range views {
+		newTemplate, err := rootTemplate.Funcs(templateFuncs).ParseFS(cercaHTML.Templates, fmt.Sprintf("%s.html", view))
+		if err != nil {
+			return nil, fmt.Errorf("could not get files: %w", err)
+		}
+		rootTemplate = newTemplate
+	}
+
+	return rootTemplate, nil
+}
 
 func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, data TemplateData) {
 	if data.Title == "" {
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
-	errTemp := templates.ExecuteTemplate(res, viewName+".html", data)
-	if errors.Is(errTemp, syscall.EPIPE) {
-		fmt.Println("had a broken pipe, continuing")
-	} else {
-		util.Check(errTemp, "rendering %s view", viewName)
+
+	view := fmt.Sprintf("%s.html", viewName)
+	if err := templates.ExecuteTemplate(res, view, data); err != nil {
+		util.Check(err, "rendering %q view", view)
 	}
 }
 
 func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("thread route")
-	parts := strings.Split(strings.TrimSpace(req.URL.Path), "/")
-	// invalid route, redirect to index
-	if len(parts) < 2 || parts[2] == "" {
-		IndexRedirect(res, req)
-		return
-	}
+	threadid, ok := util.GetURLPortion(req, 2)
 	loggedIn, userid := h.IsLoggedIn(req)
 
-	threadid, err := strconv.Atoi(parts[2])
-	ed.Check(err, "parse %s as id slug", parts[2])
+	if !ok {
+		title := "Thread not found"
+		data := GenericMessageData{
+			Title:   title,
+			Message: "The thread does not exist (anymore?)",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		return
+	}
 
 	if req.Method == "POST" && loggedIn {
 		// handle POST (=> add a reply, then show the thread)
@@ -136,9 +180,10 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		// TODO (2022-01-09): make sure rendered content won't be empty after sanitizing:
 		// * run sanitize step && strings.TrimSpace and check length **before** doing AddPost
 		// TODO(2022-01-09): send errors back to thread's posting view
-		h.db.AddPost(content, threadid, userid)
+		postID := h.db.AddPost(content, threadid, userid)
+		http.Redirect(res, req, fmt.Sprintf("%s#%d", req.URL.Path, postID), http.StatusFound)
+		return
 	}
-	// after handling a post, treat the request as if it was a get request
 	// TODO (2022-01-07):
 	// * handle error
 	thread := h.db.GetThread(threadid)
@@ -146,8 +191,12 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	for i, post := range thread {
 		thread[i].Content = util.Markup(post.Content)
 	}
-	title := thread[0].ThreadTitle
-	view := TemplateData{ThreadData{title, thread}, loggedIn, title}
+	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
+	view := TemplateData{Data: &data, QuickNav: loggedIn, LoggedIn: loggedIn, LoggedInID: userid}
+	if len(thread) > 0 {
+		data.Title = thread[0].ThreadTitle
+		view.Title = data.Title
+	}
 	h.renderView(res, "thread", view)
 }
 
@@ -169,7 +218,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	// show index listing
 	threads := h.db.ListThreads()
-	view := TemplateData{IndexData{threads}, loggedIn, "threads"}
+	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: "threads"}
 	h.renderView(res, "index", view)
 }
 
@@ -190,22 +239,19 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{LoginData{}, loggedIn, ""})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: ""})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
 		// * hash received password and compare to stored hash
 		passwordHash, userid, err := h.db.GetPasswordHash(username)
 		// make sure user exists
-		if err = ed.Eout(err, "getting password hash and uid"); err != nil {
-			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
-			IndexRedirect(res, req)
-			return
+		if err = ed.Eout(err, "getting password hash and uid"); err == nil && !crypto.ValidatePasswordHash(password, passwordHash) {
+			err = errors.New("incorrect password")
 		}
-		if !crypto.ValidatePasswordHash(password, passwordHash) {
-			fmt.Println("incorrect password!")
-			h.renderView(res, "login", TemplateData{LoginData{FailedAttempt: true}, loggedIn, ""})
+		if err != nil {
+			fmt.Println(err)
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: ""})
 			return
 		}
 		// save user id in cookie
@@ -236,7 +282,6 @@ func hasVerificationCode(link, verification string) bool {
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
-	errMessage := ""
 	if loggedIn {
 		data := GenericMessageData{
 			Title:       "Register",
@@ -245,34 +290,36 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			LinkMessage: "Visit the",
 			LinkText:    "index",
 		}
-		h.renderView(res, "generic-message", TemplateData{data, loggedIn, "register"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "register"})
 		return
 	}
 
-	renderErr := func(verificationCode, errMessage string) {
+	var verificationCode string
+	renderErr := func(errFmt string, args ...interface{}) {
+		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage}})
 	}
+
+	var err error
 	switch req.Method {
 	case "GET":
 		// try to get the verification code from the session (useful in case someone refreshed the page)
-		verificationCode, err := h.session.GetVerificationCode(req)
+		verificationCode, err = h.session.GetVerificationCode(req)
 		// we had an error getting the verification code, generate a code and set it on the session
 		if err != nil {
 			verificationCode = fmt.Sprintf("MRV%06d\n", crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
-				errMessage = "Had troubles setting the verification code on session"
-				renderErr(verificationCode, errMessage)
+				renderErr("Had troubles setting the verification code on session")
 				return
 			}
 		}
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, ""}})
 	case "POST":
-		verificationCode, err := h.session.GetVerificationCode(req)
+		verificationCode, err = h.session.GetVerificationCode(req)
 		if err != nil {
-			errMessage = "There was no verification record for this browser session; missing data to compare against verification link content"
-			renderErr(verificationCode, errMessage)
+			renderErr("There was no verification record for this browser session; missing data to compare against verification link content")
 			return
 		}
 		username := req.PostFormValue("username")
@@ -282,68 +329,62 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
 		u, err := url.Parse(verificationLink)
 		if err != nil {
-			errMessage = "Had troubles parsing the verification link, are you sure it was a proper url?"
-			renderErr(verificationCode, errMessage)
+			renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
 			return
 		}
 		// check verification link domain against allowlist
 		if !util.Contains(h.allowlist, u.Host) {
 			fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
-			errMessage = fmt.Sprintf("Verification link's host (%s) is not in the allowlist", u.Host)
-			renderErr(verificationCode, errMessage)
+			renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
 			return
 		}
 
 		// parse out verification code from verification link and compare against verification code in session
 		has := hasVerificationCode(verificationLink, verificationCode)
 		if !has {
-			errMessage = fmt.Sprintf("Verification code from link (%s) does not match", verificationLink)
-			renderErr(verificationCode, errMessage)
-			return
+			if !developing {
+				renderErr("Verification code from link (%s) does not match", verificationLink)
+				return
+			}
 		}
 		// make sure username is not registered already
-		exists, err := h.db.CheckUsernameExists(username)
-		if err != nil {
-			errMessage = "Database had a problem when checking username"
-			renderErr(verificationCode, errMessage)
+		var exists bool
+		if exists, err = h.db.CheckUsernameExists(username); err != nil {
+			renderErr("Database had a problem when checking username")
+			return
+		} else if exists {
+			renderErr("Username %s appears to already exist, please pick another name", username)
 			return
 		}
-		if exists {
-			errMessage = fmt.Sprintf("Username %s appears to already exist, please pick another name", username)
-			renderErr(verificationCode, errMessage)
-			return
-		}
-		hash, err := crypto.HashPassword(password)
-		if err != nil {
+		var hash string
+		if hash, err = crypto.HashPassword(password); err != nil {
 			fmt.Println(ed.Eout(err, "hash password"))
-			errMessage = "Database had a problem when hashing password"
-			renderErr(verificationCode, errMessage)
+			renderErr("Database had a problem when hashing password")
 			return
 		}
-		userid, err := h.db.CreateUser(username, hash)
-		if err != nil {
-			errMessage = "Error in db when creating user"
-			renderErr(verificationCode, errMessage)
+		var userID int
+		if userID, err = h.db.CreateUser(username, hash); err != nil {
+			renderErr("Error in db when creating user")
 			return
 		}
 		// log the new user in
-		h.session.Save(req, res, userid)
+		h.session.Save(req, res, userID)
 		// log where the registration is coming from, in the case of indirect invites && for curiosity
-		err = h.db.AddRegistration(userid, verificationLink)
+		err = h.db.AddRegistration(userID, verificationLink)
 		if err = ed.Eout(err, "add registration"); err != nil {
 			dump(err)
 		}
 		// generate and pass public keypair
 		keypair, err := crypto.GenerateKeypair()
 		// record generated pubkey in database for eventual later use
-		err = h.db.AddPubkey(userid, keypair.Public)
+		err = h.db.AddPubkey(userID, keypair.Public)
 		if err = ed.Eout(err, "insert pubkey in db"); err != nil {
 			dump(err)
 		}
 		ed.Check(err, "generate keypair")
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{RegisterSuccessData{string(kpJson)}, loggedIn, "registered successfully"})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: "registered successfully"})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
@@ -367,7 +408,7 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
-  fmt.Fprintln(res, "User-agent: *\nDisallow: /")
+	fmt.Fprintln(res, "User-agent: *\nDisallow: /")
 }
 
 func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
@@ -412,6 +453,59 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	}
 }
 
+func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Request) {
+	if req.Method == "GET" {
+		IndexRedirect(res, req)
+		return
+	}
+	threadURL := req.PostFormValue("thread")
+	postid, ok := util.GetURLPortion(req, 3)
+	loggedIn, userid := h.IsLoggedIn(req)
+
+	// generic error message base, with specifics being swapped out depending on the error
+	genericErr := GenericMessageData{
+		Title:       "Unaccepted request",
+		LinkMessage: "Go back to",
+		Link:        threadURL,
+		LinkText:    "the thread",
+	}
+
+	renderErr := func(msg string) {
+		fmt.Println(msg)
+		genericErr.Message = msg
+		h.renderView(res, "generic-message", TemplateData{Data: genericErr, LoggedIn: loggedIn})
+	}
+
+	if !loggedIn || !ok {
+		renderErr("Invalid post id, or you were not allowed to delete it")
+		return
+	}
+
+	post, err := h.db.GetPost(postid)
+	if err != nil {
+		dump(err)
+		renderErr("The post you tried to delete was not found")
+		return
+	}
+
+	authorized := post.AuthorID == userid
+	switch req.Method {
+	case "POST":
+		if authorized {
+			err = h.db.DeletePost(postid)
+			if err != nil {
+				dump(err)
+				renderErr("Error happened while deleting the post")
+				return
+			}
+		} else {
+			renderErr("That's not your post to delete? Sorry buddy!")
+			return
+		}
+	}
+	http.Redirect(res, req, threadURL, http.StatusSeeOther)
+}
+
 func Serve(allowlist []string, sessionKey string, isdev bool) {
 	port := ":8272"
 	dbpath := "./data/forum.db"
@@ -429,6 +523,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	http.HandleFunc("/logout", handler.LogoutRoute)
 	http.HandleFunc("/login", handler.LoginRoute)
 	http.HandleFunc("/register", handler.RegisterRoute)
+	http.HandleFunc("/post/delete/", handler.DeletePostRoute)
 	http.HandleFunc("/thread/new/", handler.NewThreadRoute)
 	http.HandleFunc("/thread/", handler.ThreadRoute)
 	http.HandleFunc("/robots.txt", handler.RobotsRoute)

@@ -1,8 +1,12 @@
 {{ template "head" . }}
-{{ range $index, $thread := .Data.Threads }}
-<h2><a href="/thread/{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
-{{ end }}
+<main>
+	{{ range $index, $thread := .Data.Threads }}
+	<h2><a href="/thread/{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
+	{{ end }}
+</main>
 {{ if .LoggedIn }}
-<p> <a href="/thread/new">Start a new thread</a></p>
+<aside>
+	<p> <a href="/thread/new">Start a new thread</a></p>
+</aside>
 {{ end }}
 {{ template "footer" . }}
