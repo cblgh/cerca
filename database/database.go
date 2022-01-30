@@ -256,7 +256,7 @@ func (d DB) ListThreads() []Thread {
 		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Author); err != nil {
 			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
 		}
-		data.Slug = fmt.Sprintf("%d/%s-%d/", data.ID, util.SanitizeURL(data.Title), postCount)
+		data.Slug = util.GetThreadSlug(data.ID, data.Title, postCount)
 		threads = append(threads, data)
 	}
 	return threads
