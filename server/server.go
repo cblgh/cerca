@@ -180,8 +180,14 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		// TODO (2022-01-09): make sure rendered content won't be empty after sanitizing:
 		// * run sanitize step && strings.TrimSpace and check length **before** doing AddPost
 		// TODO(2022-01-09): send errors back to thread's posting view
-		postID := h.db.AddPost(content, threadid, userid)
-		http.Redirect(res, req, fmt.Sprintf("%s#%d", req.URL.Path, postID), http.StatusFound)
+		_ = h.db.AddPost(content, threadid, userid)
+		// we want to effectively redirect to <#posts+1> to mark the thread as read in the thread index
+		// TODO(2022-01-30): find a solution for either:
+		// * scrolling to thread bottom (and maintaining the same slug, important for visited state in browser)
+		// * passing data to signal "your post was successfully added" (w/o impacting visited state / url)
+		posts := h.db.GetThread(threadid)
+		newSlug := util.GetThreadSlug(threadid, posts[0].ThreadTitle, len(posts))
+		http.Redirect(res, req, newSlug, http.StatusFound)
 		return
 	}
 	// TODO (2022-01-07):

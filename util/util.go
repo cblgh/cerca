@@ -93,6 +93,10 @@ func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
 }
 
+func GetThreadSlug(threadid int, title string, threadLen int) string {
+	return fmt.Sprintf("/thread/%d/%s-%d/", threadid, SanitizeURL(title), threadLen)
+}
+
 // make a string be suitable for use as part of a url
 func SanitizeURL(input string) string {
 	input = strings.ReplaceAll(input, " ", "-")
