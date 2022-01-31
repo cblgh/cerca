@@ -222,8 +222,15 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	loggedIn, _ := h.IsLoggedIn(req)
+	var mostRecentPost bool
+
+	params := req.URL.Query()
+	if q, exists := params["sort"]; exists {
+		sortby := q[0]
+		mostRecentPost = sortby == "posts"
+	}
 	// show index listing
-	threads := h.db.ListThreads()
+	threads := h.db.ListThreads(mostRecentPost)
 	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: "threads"}
 	h.renderView(res, "index", view)
 }

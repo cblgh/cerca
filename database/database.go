@@ -233,14 +233,21 @@ type Thread struct {
 }
 
 // get a list of threads
-func (d DB) ListThreads() []Thread {
+func (d DB) ListThreads(sortByPost bool) []Thread {
 	query := `
   SELECT count(t.id), t.title, t.id, u.name FROM threads t
   INNER JOIN users u on u.id = t.authorid
   INNER JOIN posts p ON t.id = p.threadid
   GROUP BY t.id
-  ORDER BY t.publishtime DESC
+  %s
   `
+	orderBy := `ORDER BY t.publishtime DESC`
+	// get a list of threads by ordering them based on most recent post
+	if sortByPost {
+		orderBy = `ORDER BY max(p.id) DESC`
+	}
+	query = fmt.Sprintf(query, orderBy)
+
 	stmt, err := d.db.Prepare(query)
 	util.Check(err, "list threads: prepare query")
 	defer stmt.Close()
