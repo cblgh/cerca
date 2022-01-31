@@ -21,6 +21,7 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                margin-bottom: 2rem;
             }
             label {
                 display: block;
@@ -127,6 +128,16 @@
                 display: none;
             }
 
+            header details, header details summary {
+                margin-bottom: unset;
+            }
+            header details ul {
+                position: absolute;
+            }
+            header details ul > li {
+                display: block;
+            }
+
             @supports (display: flex) {
                 header > a {
                     background-image: none;
@@ -175,6 +186,18 @@
             </a>
             <nav>
                 <ul type="menu">
+
+                {{ if eq .Title "threads" }}
+                <li> 
+                    <details>
+                        <summary>sort</summary>
+                        <ul>
+                            <li> <a href="/?sort=posts">recent posts</a></li>
+                            <li> <a href="/">most recent thread</a></li>
+                        </ul>
+                    </details>
+                </li>
+                {{ end }}
                     {{ if .QuickNav }}
                     <li><a href="#bottom">bottom</a></li>
                     {{end}}
