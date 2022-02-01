@@ -15,6 +15,11 @@ phpBB forum communities of the mid naughties.
 
 It was written for the purpose of powering the nascent [Merveilles community forums](https://forum.merveilles.town).
 
+## Contributing
+If you want to join the fun, first have a gander at the [CONTRIBUTING.md](/CONTRIBUTING.md)
+document. It lays out the overall idea of the project, and outlines what kind of contributions
+will help improve the project.
+
 ## Local development
 
 Install [golang](https://go.dev/).
