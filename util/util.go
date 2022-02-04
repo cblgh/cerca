@@ -1,6 +1,8 @@
 package util
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"log"
@@ -95,6 +97,15 @@ func SanitizeStringStrict(s string) string {
 
 func GetThreadSlug(threadid int, title string, threadLen int) string {
 	return fmt.Sprintf("/thread/%d/%s-%d/", threadid, SanitizeURL(title), threadLen)
+}
+
+func Hex2Base64(s string) (string, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return "", err
+	}
+	b64 := base64.StdEncoding.EncodeToString(b)
+	return b64, nil
 }
 
 // make a string be suitable for use as part of a url
