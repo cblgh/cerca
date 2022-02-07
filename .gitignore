@@ -2,3 +2,5 @@
 *.db
 data/
 data/.gitkeep
+pwtool
+*.json
