@@ -55,6 +55,12 @@ func createTables(db *sql.DB) {
   );
   `,
 		`
+  CREATE TABLE IF NOT EXISTS nonces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nonce TEXT NOT NULL UNIQUE
+  );
+  `,
+		`
   CREATE TABLE IF NOT EXISTS pubkeys (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     pubkey TEXT NOT NULL UNIQUE,
@@ -324,6 +330,16 @@ func (d DB) CreateUser(name, hash string) (int, error) {
 	return userid, nil
 }
 
+func (d DB) GetUserID(name string) (int, error) {
+	stmt := `SELECT id FROM users where name = ?`
+	var userid int
+	err := d.db.QueryRow(stmt, name).Scan(&userid)
+	if err != nil {
+		return -1, util.Eout(err, "get user id")
+	}
+	return userid, nil
+}
+
 func (d DB) GetPasswordHash(username string) (string, int, error) {
 	stmt := `SELECT passwordhash, id FROM users where name = ?`
 	var hash string
@@ -348,6 +364,11 @@ func (d DB) existsQuery(substmt string, args ...interface{}) (bool, error) {
 func (d DB) CheckUserExists(userid int) (bool, error) {
 	stmt := `SELECT 1 FROM users WHERE id = ?`
 	return d.existsQuery(stmt, userid)
+}
+
+func (d DB) CheckNonceExists(nonce string) (bool, error) {
+	stmt := `SELECT 1 FROM nonces WHERE nonce = ?`
+	return d.existsQuery(stmt, nonce)
 }
 
 func (d DB) CheckUsernameExists(username string) (bool, error) {
@@ -375,10 +396,34 @@ func (d DB) DeleteUser(userid int) {
 
 func (d DB) AddPubkey(userid int, pubkey string) error {
 	ed := util.Describe("add pubkey")
+	// TODO (2022-02-03): the insertion order is wrong >.<
 	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
 	_, err := d.Exec(stmt, userid, pubkey)
 	if err = ed.Eout(err, "inserting record"); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (d DB) GetPubkey(userid int) (pubkey string, err error) {
+	ed := util.Describe("get pubkey")
+	// due to a mishap in the query in AddPubkey the column `pubkey` contains the userid
+	// and the column `userid` contains the pubkey
+	// :'))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+	// TODO (2022-02-03): when we have migration logic, fix this mishap
+	stmt := `SELECT userid from pubkeys where pubkey = ?`
+	err = d.db.QueryRow(stmt, userid).Scan(&pubkey)
+	err = ed.Eout(err, "query & scan")
+	return
+}
+
+// TODO (2022-02-04): extend mrv verification code length and reuse nonce scheme to fix registration bug?
+func (d DB) AddNonce(nonce string) error {
+	ed := util.Describe("add nonce")
+	stmt := `INSERT INTO nonces (nonce) VALUES (?)`
+	_, err := d.Exec(stmt, nonce)
+	if err != nil {
+		return ed.Eout(err, "insert nonce")
 	}
 	return nil
 }

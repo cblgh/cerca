@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
@@ -27,6 +28,12 @@ type TemplateData struct {
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
 	LoggedInID int
 	Title      string
+}
+
+type PasswordResetData struct {
+	Action       string
+	Username     string
+	Payload      string
 }
 
 type IndexData struct {
@@ -134,6 +141,7 @@ func generateTemplates() (*template.Template, error) {
 		"register",
 		"register-success",
 		"thread",
+		"password-reset",
 	}
 
 	rootTemplate := template.New("root")
@@ -292,6 +300,136 @@ func hasVerificationCode(link, verification string) bool {
 	return strings.Contains(strings.TrimSpace(linkBody), strings.TrimSpace(verification))
 }
 
+func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("password proof route")
+	loggedIn, _ := h.IsLoggedIn(req)
+	if loggedIn {
+		data := GenericMessageData{
+			Title:    "Reset password",
+			Message:  "You are logged in, log out to reset password using proof",
+			Link:     "/logout",
+			LinkText: "Logout",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "Reset password"})
+		return
+	}
+
+	renderErr := func(errFmt string, args ...interface{}) {
+		errMessage := fmt.Sprintf(errFmt, args...)
+		fmt.Println(errMessage)
+			data := GenericMessageData{
+				Title:       "Reset password",
+				Message:     errMessage,
+				Link:        "/reset",
+				LinkText:    "Go back",
+			}
+      h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+	}
+
+	switch req.Method {
+	case "GET":
+		switch req.URL.Path {
+		case "/reset/submit":
+			params := req.URL.Query()
+			getParam := func(key string) string {
+				if q, exists := params[key]; exists {
+					return q[0]
+				}
+				fmt.Println("can't find param", key)
+				return ""
+			}
+			username := getParam("username")
+			payload := getParam("payload")
+			h.renderView(res, "password-reset", TemplateData{Data: PasswordResetData{Action: "/reset/submit", Username: username, Payload: payload}})
+		default:
+			h.renderView(res, "password-reset", TemplateData{Data: PasswordResetData{Action: "/reset/generate"}})
+		}
+	case "POST":
+		username := req.PostFormValue("username")
+		switch req.URL.Path {
+		case "/reset/generate":
+			constructProofPayload := func() string {
+				return fmt.Sprintf("%s::%s", username, crypto.GenerateNonce())
+			}
+			payload := constructProofPayload()
+			params := fmt.Sprintf("?payload=%s&username=%s", payload, username)
+			http.Redirect(res, req, "/reset/submit"+params, http.StatusSeeOther)
+		case "/reset/submit":
+			password := req.PostFormValue("password")
+			proofString := req.PostFormValue("proof")
+			payload := req.PostFormValue("payload")
+
+			// make sure the user exists
+			userid, err := h.db.GetUserID(username)
+			if err != nil {
+				renderErr("Wrong username, or a non-existent user")
+				return
+			}
+
+			// make sure the nonce / payload is not being reused
+			nonceExisted, err := h.db.CheckNonceExists(payload)
+			if err != nil {
+				dump(ed.Eout(err, "check nonce existed"))
+				return
+			}
+			if nonceExisted {
+				renderErr("This payload has already been used, please generate a new one")
+				return
+			}
+
+			// get the pubkey, as it is saved in the database for the corresponding user
+			pubkeyString, err := h.db.GetPubkey(userid)
+			if err != nil {
+				renderErr("No matching pubkey found")
+				return
+			}
+			// convert to ed25519.PublicKey
+			pubkey := crypto.PublicKeyFromString(pubkeyString)
+
+			proof, err := hex.DecodeString(proofString)
+			if err != nil {
+				renderErr("The proof format was incorrect")
+				return
+			}
+
+			correct := crypto.VerifyProof(pubkey, []byte(payload), proof)
+			if !correct {
+				renderErr("The proof was incorrect")
+				return
+			}
+			// proof was correct!
+			// save the nonce, so it's not reused
+			err = h.db.AddNonce(payload)
+			if err != nil {
+				dump(ed.Eout(err, "insert nonce into database"))
+				return
+			}
+			// let's set the new password in the database. first, hash it
+			pwhash, err := crypto.HashPassword(password)
+			if err != nil {
+				dump(ed.Eout(err, "hash password during reset"))
+				return
+			}
+			h.db.UpdateUserPasswordHash(userid, pwhash)
+			// render a success message & show a link to the login page :')
+			data := GenericMessageData{
+				Title:       "Reset password—success!",
+				Message:     "You reset your password!",
+				Link:        "/login",
+				LinkMessage: "Give it a try and",
+				LinkText:    "login",
+			}
+			h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+		default:
+			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
+			IndexRedirect(res, req)
+		}
+	default:
+		fmt.Println("non get/post method, redirecting to index")
+		IndexRedirect(res, req)
+	}
+}
+
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
@@ -389,12 +527,17 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		// generate and pass public keypair
 		keypair, err := crypto.GenerateKeypair()
+		ed.Check(err, "generate keypair")
 		// record generated pubkey in database for eventual later use
-		err = h.db.AddPubkey(userID, keypair.Public)
+		pub, err := keypair.PublicString()
+		if err = ed.Eout(err, "convert pubkey to string"); err != nil {
+			dump(err)
+		}
+		ed.Check(err, "stringify pubkey")
+		err = h.db.AddPubkey(userID, pub)
 		if err = ed.Eout(err, "insert pubkey in db"); err != nil {
 			dump(err)
 		}
-		ed.Check(err, "generate keypair")
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
 		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: "registered successfully"})
@@ -532,6 +675,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
+	http.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	http.HandleFunc("/about", handler.AboutRoute)
 	http.HandleFunc("/logout", handler.LogoutRoute)
 	http.HandleFunc("/login", handler.LoginRoute)
