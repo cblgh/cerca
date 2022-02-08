@@ -16,6 +16,9 @@ func main () {
   var insideClass bool
   var insideVars bool
   var identifier string
+  // keep generated class names in a list to keep order stable across executions
+  classNames := make([]string, 0)
+  classDeclarations := make(map[string][]string)
   for _, line := range lines {
     // empty
     if strings.HasPrefix(line, "{") {
@@ -23,6 +26,17 @@ func main () {
     }
     // reset block
     if strings.HasPrefix(line, "}") {
+      if insideClass {
+        for _, id := range classNames {
+          fmt.Printf("%s {\n", id)
+          for _, declaration := range classDeclarations[id] {
+            fmt.Println("\t", declaration)
+          }
+          fmt.Println("}")
+        }
+        classDeclarations = make(map[string][]string)
+        classNames = make([]string, 0)
+      }
       insideClass = false
       insideVars = false
     }
@@ -54,7 +68,13 @@ func main () {
       varName := matches[1]
       unit := matches[2]
       for key, val := range vars[varName] {
-        fmt.Printf(".%s-%s { %s: %s%s; }\n", identifier, key, property, val, unit)
+        id := fmt.Sprintf(".%s-%s", identifier, key)
+        declaration := fmt.Sprintf("%s: %s%s;", property, val, unit)
+        if _, exist := classDeclarations[id]; !exist {
+          classNames = append(classNames, id)
+          classDeclarations[id] = make([]string, 0)
+        }
+        classDeclarations[id] = append(classDeclarations[id], declaration)
       }
     }
     // declare new css class
