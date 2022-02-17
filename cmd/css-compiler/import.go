@@ -21,7 +21,9 @@ func main () {
   }
 }
 
+// matches: @import "navigation.css"; 
 var importPattern = regexp.MustCompile(`@import\s*"(\S+)";`)
+// matches: @import url("navigation.css"); 
 var altImportPattern = regexp.MustCompile(`@import\s*url\("(\S+)"\);`)
 func collectImports(input string) []string {
   paths := make([]string, 0)
