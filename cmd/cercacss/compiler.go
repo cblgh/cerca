@@ -29,30 +29,33 @@ func main () {
   var htmlPath string
   var cssPath string
   var outputFile string
-  flag.StringVar(&cssPath, "css", "", "path to folder containing css (include config.css)")
+  var configName string
+  flag.StringVar(&cssPath, "css", "", "path to folder containing css (including config.css)")
+  flag.StringVar(&configName, "config", "config.css", "specify an alternate name of the css config file")
+  // TODO (2022-03-04): include a recursive limit for html folders? default to max 5 levels deep?
   flag.StringVar(&htmlPath, "html", "", "path to folder containing html templates")
   flag.StringVar(&outputFile, "out", "final.css", "the resulting css file")
 
   flag.Parse()
 
   // read the custom css config, used to generate our design tokens
-  b, err := os.ReadFile(filepath.Join(cssPath, "config.css"))
+  // it also contains any css @import statements
+  b, err := os.ReadFile(filepath.Join(cssPath, configName))
   util.Check(err, "read config.css")
   lines := strings.Split(string(b), "\n")
 
-  designTokens := generateDesignTokens(lines)
-
-  html := readHTML(htmlPath)
-  foundTokens, tokenMap := getTokensFromHTML(html)
-  fmt.Println("found tokens", len(foundTokens), foundTokens)
-
-  tokenMap["pad-01"] = true
-  tokenMap["text-main"] = true
-
-  filteredGeneratedCSS := filterDesignTokens(strings.Join(designTokens, "\n"), tokenMap)
+  var filteredGeneratedCSS []string
+  if htmlPath == "" {
+    log("--html param is empty; skipping reading tokens from html files")
+  } else {
+    html := readHTML(htmlPath)
+    designTokens := generateDesignTokens(lines)
+    _, tokenMap := getTokensFromHTML(html)
+    filteredGeneratedCSS = filterDesignTokens(strings.Join(designTokens, "\n"), tokenMap)
+  }
 
   importedCSS := readImportedCSS(cssPath, lines)
-  outputCSS(append(filteredGeneratedCSS, importedCSS...)...)
+  outputCSS(outputFile, append(filteredGeneratedCSS, importedCSS...)...)
 }
 
 // read a custom css-based markup & generate css classes (aka design tokens) using the markup's scales, values, and classes
@@ -144,8 +147,13 @@ func readHTML (dir string) []string {
   files, err := os.ReadDir(dir)
   ed.Check(err, "list subfolders")
   var html []string
-  // TODO(2022-03-03): recursively descend into subsubfolders
   for _, file := range files {
+    if file.IsDir() {
+      // recursively descend into subsubfolders
+      subdir := filepath.Join(dir, file.Name())
+      html = append(html, readHTML(subdir)...)
+      continue
+    }
     if filepath.Ext(file.Name()) != ".html" {
       continue
     }
@@ -262,14 +270,36 @@ func readImportedCSS (cssPath string, lines []string) []string {
   for _, filename := range collectImports(lines) {
     b, err := os.ReadFile(filepath.Join(cssPath, filename))
     util.Check(err, "read @imported file")
-    css = append(css, string(b))
+    importedCSS := string(b)
+    // add the css that was just imported
+    css = append(css, importedCSS)
+    // recursively look for more imports, from the just imported file
+    more := readImportedCSS(cssPath, strings.Split(importedCSS, "\n"))
+    if len(more) > 0 {
+      css = append(css, more...)
+    }
   }
   return css
 }
 
 // output the final css: the result of token generation, imports, filtering generated tokens by what are used
-func outputCSS (css ...string) {
-  for _, line := range css {
-    fmt.Println(line)
+func outputCSS (outfile string, css ...string) {
+  if filepath.Ext(outfile) != ".css" {
+    outfile = filepath.Join(outfile, "final.css")
   }
+  var output []string
+  for _, line := range css {
+    output = append(output, line)
+  }
+  if outfile == "" {
+    fmt.Println(output)
+  } else {
+    err := os.WriteFile(outfile, []byte(strings.Join(output, "\n")), 0644)
+    util.Check(err, "write final css")
+    log("wrote " + outfile)
+  }
+}
+
+func log(msg string) {
+  fmt.Printf("compiler: %s\n", msg)
 }
