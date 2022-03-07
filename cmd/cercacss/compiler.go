@@ -55,7 +55,7 @@ func main () {
   }
 
   importedCSS := readImportedCSS(cssPath, lines)
-  outputCSS(outputFile, append(filteredGeneratedCSS, importedCSS...)...)
+  outputCSS(outputFile, append(importedCSS, filteredGeneratedCSS...)...)
 }
 
 // read a custom css-based markup & generate css classes (aka design tokens) using the markup's scales, values, and classes
