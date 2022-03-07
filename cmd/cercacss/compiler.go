@@ -112,7 +112,7 @@ func generateDesignTokens (lines []string) []string {
     if insideClass {
       parts := strings.Split(strings.TrimSpace(line), ":")
       property := parts[0]
-      varNamePattern := regexp.MustCompile(`.+--(\w+)\)(\w*);`)
+      varNamePattern := regexp.MustCompile(`.+--(\w+)\)\s*(\w*);`)
       matches := varNamePattern.FindStringSubmatch(parts[1])
       if len(matches) == 0 {
         continue
