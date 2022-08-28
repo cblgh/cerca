@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,9 +34,9 @@ type TemplateData struct {
 }
 
 type PasswordResetData struct {
-	Action       string
-	Username     string
-	Payload      string
+	Action   string
+	Username string
+	Payload  string
 }
 
 type IndexData struct {
@@ -317,13 +320,13 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
-			data := GenericMessageData{
-				Title:       "Reset password",
-				Message:     errMessage,
-				Link:        "/reset",
-				LinkText:    "Go back",
-			}
-      h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+		data := GenericMessageData{
+			Title:    "Reset password",
+			Message:  errMessage,
+			Link:     "/reset",
+			LinkText: "Go back",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
 	}
 
 	switch req.Method {
@@ -691,4 +694,46 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 
 	fmt.Println("Serving forum on", port)
 	http.ListenAndServe(port, nil)
+}
+
+type CercaForum struct {
+	http.ServeMux
+	Directory string
+}
+
+func (u *CercaForum) directory() string {
+	if u.Directory == "" {
+		dir, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+		u.Directory = filepath.Join(dir, "UncivServer")
+	}
+	os.MkdirAll(u.Directory, 0755)
+	return u.Directory
+}
+
+func NewServer(allowlist []string, sessionKey string) (*CercaForum, error) {
+	s := &CercaForum{
+		ServeMux: http.ServeMux{},
+	}
+	dbpath := filepath.Join(s.Directory, "forum.db")
+
+	db := database.InitDB(dbpath)
+	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
+	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
+	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
+	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
+	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
+	s.ServeMux.HandleFunc("/register", handler.RegisterRoute)
+	s.ServeMux.HandleFunc("/post/delete/", handler.DeletePostRoute)
+	s.ServeMux.HandleFunc("/thread/new/", handler.NewThreadRoute)
+	s.ServeMux.HandleFunc("/thread/", handler.ThreadRoute)
+	s.ServeMux.HandleFunc("/robots.txt", handler.RobotsRoute)
+	s.ServeMux.HandleFunc("/", handler.IndexRoute)
+
+	fileserver := http.FileServer(http.Dir("html/assets/"))
+	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
+
+	return s, nil
 }
