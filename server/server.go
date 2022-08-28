@@ -707,7 +707,7 @@ func (u *CercaForum) directory() string {
 		if err != nil {
 			log.Fatal(err)
 		}
-		u.Directory = filepath.Join(dir, "UncivServer")
+		u.Directory = filepath.Join(dir, "CercaForum")
 	}
 	os.MkdirAll(u.Directory, 0755)
 	return u.Directory
