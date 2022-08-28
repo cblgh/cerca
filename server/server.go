@@ -696,6 +696,10 @@ func Serve(allowlist []string, sessionKey string, isdev bool) {
 	http.ListenAndServe(port, nil)
 }
 
+// CercaForum is an HTTP.ServeMux which is set up to initialize and run
+// a cerca-based forum. Software developers who wish to customize the
+// networks and security which they use to operate may wish to use this
+// to listen with TLS, Onion, or I2P addresses without manual setup.
 type CercaForum struct {
 	http.ServeMux
 	Directory string
@@ -713,6 +717,9 @@ func (u *CercaForum) directory() string {
 	return u.Directory
 }
 
+// NewServer sets up a new CercaForum object. Always use this to initialize
+// new CercaForum objects. Pass the result to http.Serve() with your choice
+// of net.Listener.
 func NewServer(allowlist []string, sessionKey string) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux: http.ServeMux{},
