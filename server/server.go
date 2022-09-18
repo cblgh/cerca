@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -667,33 +668,24 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 
 func Serve(allowlist []string, sessionKey string, isdev bool) {
 	port := ":8272"
-	dbpath := "./data/forum.db"
+	dir := "./data/"
 	if isdev {
 		developing = true
-		dbpath = "./data/forum.test.db"
+		dir = "./testdata/"
 		port = ":8277"
 	}
 
-	db := database.InitDB(dbpath)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
-	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
-	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
-	http.HandleFunc("/reset/", handler.ResetPasswordRoute)
-	http.HandleFunc("/about", handler.AboutRoute)
-	http.HandleFunc("/logout", handler.LogoutRoute)
-	http.HandleFunc("/login", handler.LoginRoute)
-	http.HandleFunc("/register", handler.RegisterRoute)
-	http.HandleFunc("/post/delete/", handler.DeletePostRoute)
-	http.HandleFunc("/thread/new/", handler.NewThreadRoute)
-	http.HandleFunc("/thread/", handler.ThreadRoute)
-	http.HandleFunc("/robots.txt", handler.RobotsRoute)
-	http.HandleFunc("/", handler.IndexRoute)
+	forum, err := NewServer(allowlist, sessionKey, dir)
+	if err != nil {
+		util.Check(err, "instantiate CercaForum")
+	}
 
-	fileserver := http.FileServer(http.Dir("html/assets/"))
-	http.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
-
+	l, err := net.Listen("tcp", port)
+	if err != nil {
+		util.Check(err, "setting up tcp listener")
+	}
 	fmt.Println("Serving forum on", port)
-	http.ListenAndServe(port, nil)
+	http.Serve(l, forum)
 }
 
 // CercaForum is an HTTP.ServeMux which is set up to initialize and run
@@ -720,13 +712,20 @@ func (u *CercaForum) directory() string {
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(allowlist []string, sessionKey string) (*CercaForum, error) {
+func NewServer(allowlist []string, sessionKey, dir string) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux: http.ServeMux{},
 	}
-	dbpath := filepath.Join(s.Directory, "forum.db")
 
+	if dir != "" {
+		s.Directory = dir
+	}
+
+	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
+
+	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
+	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
