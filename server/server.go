@@ -669,6 +669,7 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 func Serve(allowlist []string, sessionKey string, isdev bool) {
 	port := ":8272"
 	dir := "./data/"
+
 	if isdev {
 		developing = true
 		dir = "./testdata/"
@@ -715,10 +716,7 @@ func (u *CercaForum) directory() string {
 func NewServer(allowlist []string, sessionKey, dir string) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux: http.ServeMux{},
-	}
-
-	if dir != "" {
-		s.Directory = dir
+		Directory: dir,
 	}
 
 	dbpath := filepath.Join(s.directory(), "forum.db")
