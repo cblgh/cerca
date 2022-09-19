@@ -206,13 +206,13 @@
                 </li>
                 {{ end }}
                     {{ if .QuickNav }}
-                    <li><a href="#bottom">bottom</a></li>
+                    <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
                     {{end}}
-                    <li><a href="/about">about</a></li>
+                    <li><a href="/about">{{ "About" | translate }}</a></li>
                     {{ if .LoggedIn }}
-                    <li><a href="/logout">logout</a></li>
+                    <li><a href="/logout">{{"Logout" | translate }}</a></li>
                     {{ else }}
-                    <li><a href="/login">login</a></li>
+                    <li><a href="/login">{{ "Login" | translate }}</a></li>
                     {{ end }}
                 </ul>
             </nav>

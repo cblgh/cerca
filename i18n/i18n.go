@@ -2,10 +2,9 @@ package i18n
 
 import (
 	"cerca/util"
-	"text/template"
+	"html/template"
 	"strings"
 	"log"
-	"fmt"
 )
 
 var English = map[string]string{
@@ -31,13 +30,13 @@ var EspanolMexicano = map[string]string{
 	"Sort": "sort",
 	"SortPostsRecent": "recent posts",
 	"SortThreadsRecent": "most recent threads",
-	"LoginDescription": "Este foro es principalmente para las personas de la comunidad <a href='{{.CommunityLink}}>{{.CommunityName}}</a>.",
+	"LoginDescription": "Este foro es principalmente para las personas de la comunidad <a href='{{ .CommunityLink }}'>{{ .CommunityName }}</a>.",
 	"LoginNoAccount": "¿No tienes una cuenta? <a href='/register'>Registra</a> una. ",
 	"Username": "usuarie",
 	"Password": "contraseña",
 	"PasswordMin": "Debe tener por lo menos 9 caracteres.",
 	"PasswordForgot": "Olvidaste tu contraseña?",
-	"Enter": "enter",
+	"Enter": "entrar",
 }
 
 var translations = map[string]map[string]string{
@@ -77,8 +76,7 @@ func Init(lang string) Translator {
 	return Translator{lang}
 }
 
-func main() {
-	tr := Init("EnglishSwedish")
-	fmt.Println(tr.Translate("LoginNoAccount"))
-	fmt.Println(tr.TranslateWithData("LoginDescription", Community{"Merveilles", "https://merveill.es"}))
-}
+// usage:
+// 	  tr := Init("EnglishSwedish")
+// 	  fmt.Println(tr.Translate("LoginNoAccount"))
+// 	  fmt.Println(tr.TranslateWithData("LoginDescription", Community{"Merveilles", "https://merveill.es"}))

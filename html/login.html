@@ -1,10 +1,10 @@
 {{ template "head" . }}
 <main>
-	<h1>Login</h1>
-    <p>This forum is for the <a href="https://wiki.xxiivv.com/site/merveilles.html">Merveilles</a> community. Don't have an account yet? <a href="/register">Register</a> one. </p>
+    <h1>{{ "Login" | translate | capitalize }}</h1>
+    <p>{{ "LoginDescription" | translateWithData | capitalize | tohtml }} {{ "LoginNoAccount" | translate | tohtml }}</p>
 	<div style="max-width: 20rem">
 		{{ template "login-component" . }}
-        <p><a href="/reset">Forgot your password?</a></p>
+        <p><a href="/reset">{{ "PasswordForgot" | translate }}</a></p>
 	</div>
 	{{ if .Data.FailedAttempt }}
 		<p><b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.</p>
