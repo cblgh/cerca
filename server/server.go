@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+  "cerca/i18n"
 	"cerca/crypto"
 	"cerca/database"
 	cercaHTML "cerca/html"
@@ -108,6 +109,9 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 var (
+  translator = i18n.Init("EspañolMexicano")
+  community = i18n.Community{"Merveilles", "https://wiki.xxiivv.com/site/merveilles.html"}
+
 	templateFuncs = template.FuncMap{
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
@@ -127,6 +131,23 @@ var (
 			}
 			return t.Format("2006-01-02")
 		},
+    "translate": func(key string) string {
+      return translator.Translate(key)
+    },
+    "translateWithData": func(key string) string {
+      return translator.TranslateWithData(key, community)
+    },
+    "capitalize": func (s string) string {
+      return strings.ToUpper(string(s[0])) + s[1:]
+    },
+    "tohtml": func (s string) template.HTML {
+      // use of this function is risky cause it interprets the passed in string and renders it as unescaped html. 
+      // can allow for attacks! 
+      //
+      // advice: only use on strings that come statically from within cerca code, never on titles that may contain user-submitted data
+      // :)
+      return (template.HTML)(s)
+    },
 	}
 
 	templates = template.Must(generateTemplates())
@@ -135,6 +156,7 @@ var (
 func generateTemplates() (*template.Template, error) {
 	views := []string{
 		"about",
+    "about-template",
 		"footer",
 		"generic-message",
 		"head",
@@ -264,7 +286,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: ""})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: translator.Translate("Login")})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
@@ -276,7 +298,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: ""})
+      h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: translator.Translate("Login")})
 			return
 		}
 		// save user id in cookie
@@ -564,7 +586,14 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	h.renderView(res, "about", TemplateData{LoggedIn: loggedIn})
+  // TODO (2022-09-19): 
+  // * make sure file exists
+  // * create function to output a prefilled version, using the Community name and CommunityLink
+  // * embed the prefilled version in the code using golang's goembed
+  b, err := os.ReadFile("data/about.md")
+  util.Check(err, "about route: open about.md")
+  input := util.Markup(template.HTML(b))
+  h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
