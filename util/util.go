@@ -1,8 +1,10 @@
 package util
 
 import (
+  "bytes"
 	"encoding/base64"
 	"encoding/hex"
+  "encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -10,10 +12,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+  "os"
 
+  "github.com/komkom/toml"
 	"github.com/gomarkdown/markdown"
 	"github.com/microcosm-cc/bluemonday"
-	// "errors"
+
+  "cerca/types"
+  "cerca/defaults"
 )
 
 /* util.Eout example invocations
@@ -129,4 +135,31 @@ func GetURLPortion(req *http.Request, index int) (int, bool) {
 		return -1, false
 	}
 	return desiredID, true
+}
+
+func Capitalize (s string) string {
+  return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+func CheckFileExists(filepath string, defaultContent string) {
+  // check if file exists
+  // if it doesn't:
+  // write the default contents to the filepath
+}
+
+// TODO (2022-09-21): 
+// * DONE   go:embed sample-config.toml ---> defaults.DEFAULT_<x>
+// * util.checkFileExists(path, mockContents)
+func ReadConfig(confpath string) types.Config {
+  data, err := os.ReadFile(confpath)
+  ed := Describe("config")
+  ed.Check(err, "read file")
+
+  var conf types.Config
+  decoder := json.NewDecoder(toml.New(bytes.NewBuffer(data)))
+
+  err = decoder.Decode(&conf)
+  ed.Check(err, "decode toml with json decoder")
+
+  return conf
 }

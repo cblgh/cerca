@@ -6,7 +6,7 @@
 </main>
 {{ if .LoggedIn }}
 <aside>
-	<p> <a href="/thread/new">Start a new thread</a></p>
+    <p> <a href="/thread/new">{{ "ThreadStartNew" | translate }}</a></p>
 </aside>
 {{ end }}
 {{ template "footer" . }}
