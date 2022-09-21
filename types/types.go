@@ -1,34 +1,34 @@
 package types
 
 type Config struct {
-  // for internal use
-  Files map[string]string
-  // use as: 
-  // config.Files["about"] -> about markdown
-  // config.Files["rules"] -> rules explanation markdown
-  // config.Files["verification"] -> verification explanation
+	// for internal use
+	Files map[string]string
+	// use as:
+	// config.Files["about"] -> about markdown
+	// config.Files["rules"] -> rules explanation markdown
+	// config.Files["verification"] -> verification explanation
 
-  Community struct {
-    Name string
-    Link string
-    ConductLink string
-  } `json:"general"`
+	Community struct {
+		Name        string
+		Link        string
+		ConductLink string
+	} `json:"general"`
 
-  Theme struct {
-    Background string
-    Foreground string
-    Links string
-  } `json:"theme"`
+	Theme struct {
+		Background string
+		Foreground string
+		Links      string
+	} `json:"theme"`
 
-  Documents struct {
-    LogoPath string
-    AboutPath string
-    RegisterRulesPath string
-    VerificationExplanationPath string
-  } `json:"documents"`
+	Documents struct {
+		LogoPath                    string
+		AboutPath                   string
+		RegisterRulesPath           string
+		VerificationExplanationPath string
+	} `json:"documents"`
 }
 
-/* 
+/*
 config.Community.Name
 config.Community.Link
 config.Community.ConductLink

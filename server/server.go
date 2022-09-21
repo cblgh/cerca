@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-  "cerca/i18n"
 	"cerca/crypto"
 	"cerca/database"
 	cercaHTML "cerca/html"
+	"cerca/i18n"
 	"cerca/server/session"
+	"cerca/types"
 	"cerca/util"
-  "cerca/types"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -31,7 +31,7 @@ import (
 * CommunityLogo
 * CommunityLink
 * ForumName
-*/
+ */
 
 // TODO (2022-09-20): make verification instructions another md file to load, pass path from config
 /*
@@ -39,7 +39,7 @@ import (
 * registration rules
 * verification instructions
 * code of conduct link
-*/
+ */
 
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
@@ -48,7 +48,7 @@ type TemplateData struct {
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
 	LoggedInID int
-  ForumName string
+	ForumName  string
 	Title      string
 }
 
@@ -127,8 +127,8 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 var (
-  translator = i18n.Init("EspañolMexicano")
-  community = i18n.Community{"Merveilles", "https://wiki.xxiivv.com/site/merveilles.html"}
+	translator = i18n.Init("EspañolMexicano")
+	community  = i18n.Community{"Merveilles", "https://wiki.xxiivv.com/site/merveilles.html"}
 
 	templateFuncs = template.FuncMap{
 		"formatDateTime": func(t time.Time) string {
@@ -149,21 +149,21 @@ var (
 			}
 			return t.Format("2006-01-02")
 		},
-    "translate": func(key string) string {
-      return translator.Translate(key)
-    },
-    "translateWithData": func(key string) string {
-      return translator.TranslateWithData(key, community)
-    },
-    "capitalize": util.Capitalize,
-    "tohtml": func (s string) template.HTML {
-      // use of this function is risky cause it interprets the passed in string and renders it as unescaped html. 
-      // can allow for attacks! 
-      //
-      // advice: only use on strings that come statically from within cerca code, never on titles that may contain user-submitted data
-      // :)
-      return (template.HTML)(s)
-    },
+		"translate": func(key string) string {
+			return translator.Translate(key)
+		},
+		"translateWithData": func(key string) string {
+			return translator.TranslateWithData(key, community)
+		},
+		"capitalize": util.Capitalize,
+		"tohtml": func(s string) template.HTML {
+			// use of this function is risky cause it interprets the passed in string and renders it as unescaped html.
+			// can allow for attacks!
+			//
+			// advice: only use on strings that come statically from within cerca code, never on titles that may contain user-submitted data
+			// :)
+			return (template.HTML)(s)
+		},
 	}
 
 	templates = template.Must(generateTemplates())
@@ -172,7 +172,7 @@ var (
 func generateTemplates() (*template.Template, error) {
 	views := []string{
 		"about",
-    "about-template",
+		"about-template",
 		"footer",
 		"generic-message",
 		"head",
@@ -205,8 +205,8 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 	}
 
 	if data.ForumName == "" {
-    data.ForumName = "Forum"
-  }
+		data.ForumName = "Forum"
+	}
 
 	view := fmt.Sprintf("%s.html", viewName)
 	if err := templates.ExecuteTemplate(res, view, data); err != nil {
@@ -318,7 +318,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-      h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: translator.Translate("Login")})
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: translator.Translate("Login")})
 			return
 		}
 		// save user id in cookie
@@ -349,7 +349,7 @@ func hasVerificationCode(link, verification string) bool {
 func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("password proof route")
 	loggedIn, _ := h.IsLoggedIn(req)
-  title := util.Capitalize(translator.Translate("PasswordReset"))
+	title := util.Capitalize(translator.Translate("PasswordReset"))
 
 	if loggedIn {
 		data := GenericMessageData{
@@ -482,7 +482,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	if loggedIn {
-    // TODO (2022-09-20): translate
+		// TODO (2022-09-20): translate
 		data := GenericMessageData{
 			Title:       util.Capitalize(translator.Translate("Register")),
 			Message:     translator.Translate("RegisterMessage"),
@@ -610,14 +610,14 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-  // TODO (2022-09-19): 
-  // * make sure file exists
-  // * create function to output a prefilled version, using the Community name and CommunityLink
-  // * embed the prefilled version in the code using golang's goembed
-  b, err := os.ReadFile("./about.md")
-  util.Check(err, "about route: open about.md")
-  input := util.Markup(template.HTML(b))
-  h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: translator.Translate("About")})
+	// TODO (2022-09-19):
+	// * make sure file exists
+	// * create function to output a prefilled version, using the Community name and CommunityLink
+	// * embed the prefilled version in the code using golang's goembed
+	b, err := os.ReadFile("./about.md")
+	util.Check(err, "about route: open about.md")
+	input := util.Markup(template.HTML(b))
+	h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: translator.Translate("About")})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -629,7 +629,7 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	switch req.Method {
 	// Handle GET (=> want to start a new thread)
 	case "GET":
-    // TODO (2022-09-20): translate
+		// TODO (2022-09-20): translate
 		if !loggedIn {
 			title := translator.Translate("NotLoggedIn")
 			data := GenericMessageData{
@@ -723,7 +723,7 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 func Serve(allowlist []string, sessionKey string, isdev bool, conf types.Config) {
 	port := ":8272"
 	dir := "./data/"
-  config = conf
+	config = conf
 
 	if isdev {
 		developing = true
@@ -770,7 +770,7 @@ func (u *CercaForum) directory() string {
 // of net.Listener.
 func NewServer(allowlist []string, sessionKey, dir string) (*CercaForum, error) {
 	s := &CercaForum{
-		ServeMux: http.ServeMux{},
+		ServeMux:  http.ServeMux{},
 		Directory: dir,
 	}
 

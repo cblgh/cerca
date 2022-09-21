@@ -36,7 +36,7 @@ func main() {
 	// TODO (2022-01-10): somehow continually update veri sites by scraping merveilles webring sites || webring domain
 	var allowlistLocation string
 	var sessionKey string
-  var configPath string
+	var configPath string
 	var dev bool
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
 	flag.StringVar(&allowlistLocation, "allowlist", "", "domains which can be used to read verification codes from during registration")
@@ -50,6 +50,6 @@ func main() {
 	}
 	allowlist := readAllowlist(allowlistLocation)
 	allowlist = append(allowlist, "merveilles.town")
-  config := util.ReadConfig(configPath)
+	config := util.ReadConfig(configPath)
 	server.Serve(allowlist, sessionKey, dev, config)
 }
