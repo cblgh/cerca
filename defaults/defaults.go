@@ -1,10 +1,10 @@
 package defaults
 
 import (
-  "embed"
+	"embed"
 )
 
-//go:embed sample-about.md  
+//go:embed sample-about.md
 var DEFAULT_ABOUT string
 
 //go:embed sample-logo.svg

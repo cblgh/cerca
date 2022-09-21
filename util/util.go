@@ -1,25 +1,25 @@
 package util
 
 import (
-  "bytes"
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-  "encoding/json"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
-  "os"
 
-  "github.com/komkom/toml"
 	"github.com/gomarkdown/markdown"
+	"github.com/komkom/toml"
 	"github.com/microcosm-cc/bluemonday"
 
-  "cerca/types"
-  "cerca/defaults"
+	"cerca/defaults"
+	"cerca/types"
 )
 
 /* util.Eout example invocations
@@ -137,29 +137,29 @@ func GetURLPortion(req *http.Request, index int) (int, bool) {
 	return desiredID, true
 }
 
-func Capitalize (s string) string {
-  return strings.ToUpper(string(s[0])) + s[1:]
+func Capitalize(s string) string {
+	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
 func CheckFileExists(filepath string, defaultContent string) {
-  // check if file exists
-  // if it doesn't:
-  // write the default contents to the filepath
+	// check if file exists
+	// if it doesn't:
+	// write the default contents to the filepath
 }
 
-// TODO (2022-09-21): 
+// TODO (2022-09-21):
 // * DONE   go:embed sample-config.toml ---> defaults.DEFAULT_<x>
 // * util.checkFileExists(path, mockContents)
 func ReadConfig(confpath string) types.Config {
-  data, err := os.ReadFile(confpath)
-  ed := Describe("config")
-  ed.Check(err, "read file")
+	data, err := os.ReadFile(confpath)
+	ed := Describe("config")
+	ed.Check(err, "read file")
 
-  var conf types.Config
-  decoder := json.NewDecoder(toml.New(bytes.NewBuffer(data)))
+	var conf types.Config
+	decoder := json.NewDecoder(toml.New(bytes.NewBuffer(data)))
 
-  err = decoder.Decode(&conf)
-  ed.Check(err, "decode toml with json decoder")
+	err = decoder.Decode(&conf)
+	ed.Check(err, "decode toml with json decoder")
 
-  return conf
+	return conf
 }
