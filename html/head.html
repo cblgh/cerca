@@ -5,7 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Forum — {{ .Title }}</title>
+        <title>{{ .ForumName }} — {{ .Title }}</title>
 
          <style>
             /* reset */
@@ -183,7 +183,7 @@
     </head>
     <body>
         <header>
-            <a style="margin-bottom: 0; height: 48px;"  href="/" aria-label="Home">
+            <a style="margin-bottom: 0; height: 48px;"  href="/" aria-label='{{ "AriaHome" | translate }}'>
                 <svg aria-hidden="true" style="margin-bottom: 0;" width="48" height="48" fill="black" stroke="none" viewBox="60 60 200 200" xmlns="http://www.w3.org/2000/svg">
                   <g>
                     <path d="M185,65 A60,60 0 0,0 125,125 L185,125 Z M125,245 A60,60 0 0,0 185,185 L125,185 Z M95,125 A30,30 0 0,1 125,155 A30,30 0 0,1 95,185 A30,30 0 0,1 65,155 A30,30 0 0,1 95,125 Z M155,125 A30,30 0 0,1 185,155 A30,30 0 0,1 155,185 A30,30 0 0,1 125,155 A30,30 0 0,1 155,125 Z M215,125 A30,30 0 0,1 245,155 A30,30 0 0,1 215,185 A30,30 0 0,1 185,155 A30,30 0 0,1 215,125 "/>
@@ -194,13 +194,14 @@
             <nav>
                 <ul type="menu">
 
-                {{ if eq .Title "threads" }}
+                {{ $threads := "Threads" | translate }}
+                {{ if eq .Title $threads }}
                 <li> 
                     <details>
-                        <summary>sort</summary>
+                        <summary>{{ "Sort" | translate }}</summary>
                         <ul>
-                            <li> <a href="/?sort=posts">recent posts</a></li>
-                            <li> <a href="/">most recent thread</a></li>
+                            <li> <a href="/?sort=posts">{{ "SortRecentPosts" | translate }}</a></li>
+                            <li> <a href="/">{{ "SortRecentThreads" | translate }}</a></li>
                         </ul>
                     </details>
                 </li>

@@ -21,9 +21,25 @@ import (
 	cercaHTML "cerca/html"
 	"cerca/server/session"
 	"cerca/util"
+  "cerca/types"
 
 	"github.com/carlmjohnson/requests"
 )
+
+/* 2022-09-20: customizable stuff
+* CommunityName
+* CommunityLogo
+* CommunityLink
+* ForumName
+*/
+
+// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
+/*
+* pass in:
+* registration rules
+* verification instructions
+* code of conduct link
+*/
 
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
@@ -32,6 +48,7 @@ type TemplateData struct {
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
 	LoggedInID int
+  ForumName string
 	Title      string
 }
 
@@ -79,6 +96,7 @@ type RequestHandler struct {
 }
 
 var developing bool
+var config types.Config
 
 func dump(err error) {
 	if developing {
@@ -137,9 +155,7 @@ var (
     "translateWithData": func(key string) string {
       return translator.TranslateWithData(key, community)
     },
-    "capitalize": func (s string) string {
-      return strings.ToUpper(string(s[0])) + s[1:]
-    },
+    "capitalize": util.Capitalize,
     "tohtml": func (s string) template.HTML {
       // use of this function is risky cause it interprets the passed in string and renders it as unescaped html. 
       // can allow for attacks! 
@@ -188,6 +204,10 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
+	if data.ForumName == "" {
+    data.ForumName = "Forum"
+  }
+
 	view := fmt.Sprintf("%s.html", viewName)
 	if err := templates.ExecuteTemplate(res, view, data); err != nil {
 		util.Check(err, "rendering %q view", view)
@@ -199,10 +219,10 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	loggedIn, userid := h.IsLoggedIn(req)
 
 	if !ok {
-		title := "Thread not found"
+		title := translator.Translate("ErrThread404")
 		data := GenericMessageData{
 			Title:   title,
-			Message: "The thread does not exist (anymore?)",
+			Message: translator.Translate("ErrThread404Message"),
 		}
 		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
 		return
@@ -241,10 +261,10 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, status int) {
-	title := "Page not found"
+	title := translator.Translate("ErrGeneric404")
 	data := GenericMessageData{
 		Title:   title,
-		Message: fmt.Sprintf("The visited page does not exist (anymore?). Error code %d.", status),
+		Message: fmt.Sprintf(translator.Translate("ErrGeneric404Message"), status),
 	}
 	h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 }
@@ -265,7 +285,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost)
-	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: "threads"}
+	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
@@ -329,14 +349,16 @@ func hasVerificationCode(link, verification string) bool {
 func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("password proof route")
 	loggedIn, _ := h.IsLoggedIn(req)
+  title := util.Capitalize(translator.Translate("PasswordReset"))
+
 	if loggedIn {
 		data := GenericMessageData{
-			Title:    "Reset password",
-			Message:  "You are logged in, log out to reset password using proof",
+			Title:    title,
+			Message:  translator.Translate("PasswordResetMessage"),
 			Link:     "/logout",
-			LinkText: "Logout",
+			LinkText: util.Capitalize(translator.Translate("Logout")),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "Reset password"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: title})
 		return
 	}
 
@@ -344,12 +366,12 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		data := GenericMessageData{
-			Title:    "Reset password",
+			Title:    title,
 			Message:  errMessage,
 			Link:     "/reset",
-			LinkText: "Go back",
+			LinkText: translator.Translate("GoBack"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, Title: translator.Translate("PasswordReset")})
 	}
 
 	switch req.Method {
@@ -439,13 +461,13 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 			h.db.UpdateUserPasswordHash(userid, pwhash)
 			// render a success message & show a link to the login page :')
 			data := GenericMessageData{
-				Title:       "Reset password—success!",
-				Message:     "You reset your password!",
+				Title:       translator.Translate("PasswordResetSuccess"),
+				Message:     translator.Translate("PasswordResetSuccessMessage"),
 				Link:        "/login",
-				LinkMessage: "Give it a try and",
-				LinkText:    "login",
+				LinkMessage: translator.Translate("PasswordResetSuccessLinkMessage"),
+				LinkText:    translator.Translate("Login"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+			h.renderView(res, "generic-message", TemplateData{Data: data, Title: translator.Translate("PasswordReset")})
 		default:
 			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
 			IndexRedirect(res, req)
@@ -460,14 +482,15 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	if loggedIn {
+    // TODO (2022-09-20): translate
 		data := GenericMessageData{
-			Title:       "Register",
-			Message:     "You already have an account (you are logged in with it).",
+			Title:       util.Capitalize(translator.Translate("Register")),
+			Message:     translator.Translate("RegisterMessage"),
 			Link:        "/",
-			LinkMessage: "Visit the",
-			LinkText:    "index",
+			LinkMessage: translator.Translate("RegisterLinkMessage"),
+			LinkText:    translator.Translate("Index"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "register"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: translator.Translate("Register")})
 		return
 	}
 
@@ -566,13 +589,14 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: "registered successfully"})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
 	}
 }
 
+// purely an example route; intentionally unused :)
 func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request) {
 	data := GenericMessageData{
 		Title:       "GenericTitle",
@@ -590,10 +614,10 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
   // * make sure file exists
   // * create function to output a prefilled version, using the Community name and CommunityLink
   // * embed the prefilled version in the code using golang's goembed
-  b, err := os.ReadFile("data/about.md")
+  b, err := os.ReadFile("./about.md")
   util.Check(err, "about route: open about.md")
   input := util.Markup(template.HTML(b))
-  h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn})
+  h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: translator.Translate("About")})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -605,19 +629,20 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	switch req.Method {
 	// Handle GET (=> want to start a new thread)
 	case "GET":
+    // TODO (2022-09-20): translate
 		if !loggedIn {
-			title := "Not logged in"
+			title := translator.Translate("NotLoggedIn")
 			data := GenericMessageData{
 				Title:       title,
-				Message:     "Only members of this forum may create new threads",
+				Message:     translator.Translate("NewThreadMessage"),
 				Link:        "/login",
-				LinkMessage: "If you are a member,",
-				LinkText:    "log in",
+				LinkMessage: translator.Translate("NewThreadLinkMessage"),
+				LinkText:    translator.Translate("LogIn"),
 			}
 			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 			return
 		}
-		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: "new thread"})
+		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
@@ -627,10 +652,10 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 		threadid, err := h.db.CreateThread(title, content, userid, 1)
 		if err != nil {
 			data := GenericMessageData{
-				Title:   "Error creating thread",
-				Message: "There was a database error when creating the thread, apologies.",
+				Title:   translator.Translate("NewThreadCreateError"),
+				Message: translator.Translate("NewThreadCreateErrorMessage"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: "new thread"})
+			h.renderView(res, "generic-message", TemplateData{Data: data, Title: translator.Translate("ThreadNew")})
 			return
 		}
 		// when data has been stored => redirect to thread
@@ -653,10 +678,10 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 
 	// generic error message base, with specifics being swapped out depending on the error
 	genericErr := GenericMessageData{
-		Title:       "Unaccepted request",
-		LinkMessage: "Go back to",
+		Title:       translator.Translate("ErrUnaccepted"),
+		LinkMessage: translator.Translate("GoBack"),
 		Link:        threadURL,
-		LinkText:    "the thread",
+		LinkText:    translator.Translate("ThreadThe"),
 	}
 
 	renderErr := func(msg string) {
@@ -695,9 +720,10 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
 
-func Serve(allowlist []string, sessionKey string, isdev bool) {
+func Serve(allowlist []string, sessionKey string, isdev bool, conf types.Config) {
 	port := ":8272"
 	dir := "./data/"
+  config = conf
 
 	if isdev {
 		developing = true
