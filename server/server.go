@@ -40,6 +40,11 @@ type PasswordResetData struct {
 	Payload  string
 }
 
+type ChangePasswordData struct {
+	Action   string
+  Keypair string
+}
+
 type IndexData struct {
 	Threads []database.Thread
 }
@@ -146,6 +151,8 @@ func generateTemplates() (*template.Template, error) {
 		"register-success",
 		"thread",
 		"password-reset",
+		"change-password",
+		"change-password-success",
 	}
 
 	rootTemplate := template.New("root")
@@ -304,19 +311,98 @@ func hasVerificationCode(link, verification string) bool {
 	return strings.Contains(strings.TrimSpace(linkBody), strings.TrimSpace(verification))
 }
 
+func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.Request) {
+	renderErr := func(errFmt string, args ...interface{}) {
+		errMessage := fmt.Sprintf(errFmt, args...)
+		fmt.Println(errMessage)
+		data := GenericMessageData{
+			Title:    "Change password",
+			Message:  errMessage,
+			Link:     "/reset",
+			LinkText: "Go back",
+		}
+		h.renderView(res, "generic-message", TemplateData{Data: data, Title: "change password"})
+	}
+  _, uid := h.IsLoggedIn(req)
+
+  ed := util.Describe("change password")
+  switch req.Method {
+  case "GET":
+    switch req.URL.Path {
+    default:
+      h.renderView(res, "change-password", TemplateData{LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
+    }
+  case "POST":
+    switch req.URL.Path {
+    case "/reset/submit":
+      oldPassword := req.PostFormValue("password-old")
+      newPassword := req.PostFormValue("password-new")
+      resetKeypair := (req.PostFormValue("reset-keypair") == "true")
+      var keypairString string
+
+      // check if we're resetting keypair
+      if resetKeypair {
+        // if so: generate new keypair 
+        kp, err := crypto.GenerateKeypair()
+        ed.Check(err, "generate keypair")
+        kpBytes, err := kp.Marshal()
+        ed.Check(err, "marshal keypair")
+        pubkey, err := kp.PublicString()
+        ed.Check(err, "get pubkey string")
+        // and set it in db
+        err = h.db.SetPubkey(uid, pubkey)
+        ed.Check(err, "set new pubkey in database")
+        keypairString = string(kpBytes)
+      }
+
+      // check that the submitted, old password is valid
+      username, err := h.db.GetUsername(uid)
+      if err != nil {
+        dump(ed.Eout(err, "get username"))
+        return
+      }
+
+      pwhashOld, _, err := h.db.GetPasswordHash(username)
+      if err != nil {
+        dump(ed.Eout(err, "get old password hash"))
+        return
+      }
+
+      oldPasswordValid := crypto.ValidatePasswordHash(oldPassword, pwhashOld)
+      if !oldPasswordValid {
+        renderErr("old password did not match what was in database; not changing password")
+        return
+      }
+
+      // let's set the new password in the database. first, hash it
+      pwhashNew, err := crypto.HashPassword(newPassword)
+      if err != nil {
+        dump(ed.Eout(err, "hash new password"))
+        return
+      }
+      // then save the hash
+      h.db.UpdateUserPasswordHash(uid, pwhashNew)
+      // render a success message & show a link to the login page :')
+      h.renderView(res, "change-password-success", TemplateData{LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
+    default:
+      fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
+      IndexRedirect(res, req)
+    }
+  default:
+    fmt.Println("non get/post method, redirecting to index")
+    IndexRedirect(res, req)
+  }
+}
+
 func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("password proof route")
-	loggedIn, _ := h.IsLoggedIn(req)
-	if loggedIn {
-		data := GenericMessageData{
-			Title:    "Reset password",
-			Message:  "You are logged in, log out to reset password using proof",
-			Link:     "/logout",
-			LinkText: "Logout",
-		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "Reset password"})
-		return
-	}
+  loggedIn, _ := h.IsLoggedIn(req)
+
+  // change password functionality, handle this in another function
+  if loggedIn {
+    h.handleChangePassword(res, req)
+    return
+  }
 
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
