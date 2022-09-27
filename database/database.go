@@ -20,8 +20,16 @@ type DB struct {
 	db *sql.DB
 }
 
-func InitDB(filepath string) DB {
+func CheckExists(filepath string) bool {
 	if _, err := os.Stat(filepath); errors.Is(err, os.ErrNotExist) {
+    return false
+  }
+  return true
+}
+
+func InitDB(filepath string) DB {
+  exists := CheckExists(filepath)
+	if !exists {
 		file, err := os.Create(filepath)
 		if err != nil {
 			log.Fatal(err)
@@ -400,6 +408,17 @@ func (d DB) AddPubkey(userid int, pubkey string) error {
 	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
 	_, err := d.Exec(stmt, userid, pubkey)
 	if err = ed.Eout(err, "inserting record"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d DB) SetPubkey(userid int, pubkey string) error {
+	ed := util.Describe("set pubkey")
+	// TODO (2022-09-27): the insertion order is still wrong >.<
+	stmt := `UPDATE pubkeys SET pubkey = ? WHERE userid = ? `
+	_, err := d.Exec(stmt, userid, pubkey)
+	if err = ed.Eout(err, "updating record"); err != nil {
 		return err
 	}
 	return nil
