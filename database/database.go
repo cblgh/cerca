@@ -348,6 +348,16 @@ func (d DB) GetUserID(name string) (int, error) {
 	return userid, nil
 }
 
+func (d DB) GetUsername(uid int) (string, error) {
+	stmt := `SELECT name FROM users where id = ?`
+	var username string
+	err := d.db.QueryRow(stmt, uid).Scan(&username)
+	if err != nil {
+		return "", util.Eout(err, "get username")
+	}
+	return username, nil
+}
+
 func (d DB) GetPasswordHash(username string) (string, int, error) {
 	stmt := `SELECT passwordhash, id FROM users where name = ?`
 	var hash string
