@@ -9,22 +9,22 @@ type Config struct {
 	// config.Files["verification"] -> verification explanation
 
 	Community struct {
-		Name        string
-		Link        string
-		ConductLink string
+		Name        string `json:"name"`
+		Link        string `json:"link"`
+		ConductLink string `json:"conduct_url"`
 	} `json:"general"`
 
 	Theme struct {
-		Background string
-		Foreground string
-		Links      string
+		Background string `json:"background"`
+		Foreground string `json:"foreground"`
+		Links      string `json:"links"`
 	} `json:"theme"`
 
 	Documents struct {
-		LogoPath                    string
-		AboutPath                   string
-		RegisterRulesPath           string
-		VerificationExplanationPath string
+		LogoPath                    string `json:"logo"`
+		AboutPath                   string `json:"about"`
+		RegisterRulesPath           string `json:"rules"`
+		VerificationExplanationPath string `json:"verification_explanation"`
 	} `json:"documents"`
 }
 

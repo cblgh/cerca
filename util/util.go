@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"fmt"
 	"html/template"
 	"log"
@@ -141,18 +143,33 @@ func Capitalize(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func CheckFileExists(filepath string, defaultContent string) {
-	// check if file exists
-	// if it doesn't:
-	// write the default contents to the filepath
+func createIfNotExist(name, content string) (bool, error) {
+	_, err := os.Stat(name)
+	if err != nil {
+		// if the file doesn't exist, create it
+		if errors.Is(err, fs.ErrNotExist) {
+			err = os.WriteFile(name, []byte(content), 0777)
+			if err != nil {
+				return false, err
+			}
+			// created file successfully
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+	return false, nil
 }
 
 // TODO (2022-09-21):
 // * DONE   go:embed sample-config.toml ---> defaults.DEFAULT_<x>
 // * util.checkFileExists(path, mockContents)
 func ReadConfig(confpath string) types.Config {
-	data, err := os.ReadFile(confpath)
 	ed := Describe("config")
+	_, err := createIfNotExist(confpath, defaults.DEFAULT_CONFIG)
+	ed.Check(err, "create default config")
+
+	data, err := os.ReadFile(confpath)
 	ed.Check(err, "read file")
 
 	var conf types.Config

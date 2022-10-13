@@ -1,7 +1,7 @@
 package defaults
 
 import (
-	"embed"
+	_ "embed"
 )
 
 //go:embed sample-about.md

@@ -1,0 +1,15 @@
+[general]	
+name = ""
+link = ""
+conduct_url = ""
+
+[theme]
+background = "pink"
+foreground = "red"
+links = "aqua"
+
+[documents]
+logo = ""
+about = ""
+rules = ""
+verification_explanation = ""

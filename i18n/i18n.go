@@ -124,6 +124,120 @@ var English = map[string]string{
 	"ChangePassword":  "change password",
 }
 
+var Swedish = map[string]string{
+	"About":    "om",
+	"Login":    "logga in",
+	"Logout":   "logga ut",
+	"Sort":     "sortera",
+	"Enter":    "skicka",
+	"Register": "registrera",
+
+	"LoggedIn":    "inloggad",
+	"NotLoggedIn": "Ej inloggad",
+	"LogIn":       "logga in",
+	"GoBack":      "Go back",
+
+	"SortRecentPosts":   "nyast poster",
+	"SortRecentThreads": "nyast trådar",
+
+	"ForumDescription":     "Detta forum är till för <a href='{{ .CommunityLink }}'>{{.CommunityName}}</a> communityt.",
+	"LoginNoAccount":       "Saknar du konto? <a href='/register'>Skapa</a> ett.",
+	"LoginFailure":         "<b>Misslyckat inloggningsförsök:</b> inkorrekt lösenord, fel användernamn, eller obefintlig användare.",
+	"LoginAlreadyLoggedIn": `Du är redan inloggad. Vill du <a href="/logout">logga ut</a>?`,
+
+	"Username":       "användarnamn",
+	"Password":       "lösenord",
+	"PasswordMin":    "Måste vara minst 9 karaktärer långt",
+	"PasswordForgot": "Glömt lösenordet?",
+
+	"Threads":   "trådar",
+	"ThreadNew": "ny tråd",
+	"ThreadThe": "tråden",
+	"Index":     "index",
+
+	"ThreadCreate":        "Skapa en tråd",
+	"Title":               "Titel",
+	"Content":             "Innehåll",
+	"Create":              "Skapa",
+	"TextareaPlaceholder": "Tabula rasa",
+
+	"PasswordReset":                   "nollställ lösenord",
+	"PasswordResetMessage":            "Du är inloggad, logga ut för att nollställga lösenordet med skapat lösenordsbevis",
+	"PasswordResetSuccess":            "Nollställning av lösenord—lyckades!",
+	"PasswordResetSuccessMessage":     "Du har nollställt ditt lösenord!",
+	"PasswordResetSuccessLinkMessage": "Ge det ett försök och",
+
+	"RegisterMessage":     "Du har redan ett konto (du är inloggad med det).",
+	"RegisterLinkMessage": "Besök",
+	"RegisterSuccess":     "konto skapat",
+
+	"ErrUnaccepted":        "Ej accepterat request",
+	"ErrThread404":         "Tråd ej funnen",
+	"ErrThread404Message":  "Denna tråden finns ej (längre?)",
+	"ErrGeneric404":        "Sida ej funnen",
+	"ErrGeneric404Message": "Den besökta sidan finns ej (längre?). Felkod %d.",
+
+	"NewThreadMessage":            "Enbart medlemmarna av detta forum får skapa nya trådar",
+	"NewThreadLinkMessage":        "Om du är en medlem,",
+	"NewThreadCreateError":        "Fel uppstod vid trådskapning",
+	"NewThreadCreateErrorMessage": "Det uppstod ett databasfel under trådskapningen, ursäkta.",
+
+	"AriaPostMeta":          "Post meta",
+	"AriaDeletePost":        "Delete this post",
+	"AriaRespondIntoThread": "Respond into this thread",
+	"PromptDeleteQuestion":  "Radera post för alltid?",
+	"Delete":                "radera",
+	"Post":                  "post",
+	"Author":                "Författare",
+	"Responded":             "svarade",
+	"YourAnswer":            "Ditt svar",
+
+	"AriaHome":       "Hem",
+	"ThreadStartNew": "Starta ny tråd",
+
+	"RegisterHTMLMessage":               `Du har nu ett konto! Välkommen. Besök <a href="/">trådindexet</a> för att läsa och svara på trådar, eller för att starta en ny.`,
+	"RegisterKeypairExplanationStart":   `En grej till: <b>spara nyckeln du ser nedan</b>. Det är ett <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">nyckelpar</a> som tillhandahåller din forumidentitet, och inkluderar en hemlig del som bara du vet om och endast visas nu; forumdatabasen kommer enbart ihåg den publika delen.`,
+	"RegisterViewKeypairExplanationEnd": `Med detta nyckelpar kan du återställa ditt lösenord om du skulle tappa bort det—och detta utan att behöva samla in din email (eller kräva emailinfrastruktur på forumets sida).`,
+	"RegisterKeypairWarning":            "Detta nyckelpar visas enbart denna gång",
+
+	"RegisterRules": `To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the <a href="https://merveilles.town">Merveilles Fediverse instance</a>`,
+
+	"RegisterVerificationCode":              "Din verifikationskod är",
+	"RegisterVerificationInstructionsTitle": "Verification instructions",
+	// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
+	"RegisterVerificationInstructions": `<p>You can use either your mastodon profile or your webring site to verify your registration.</p>
+    <ul>
+        <li><b>Mastodon:</b> temporarily add a new metadata item to <a href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
+            displayed above. Pass your profile as the verification link.</li>
+        <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
+            the verification code from above. Pass the link to the uploaded file as the verification link (make sure it is viewable in a browser).</li>
+    </ul>
+  `,
+
+	"RegisterVerificationLink":  "Verificationsnyckel",
+	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">{{ .CommunityName }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">read it</a>`,
+
+	"PasswordResetDescription":            "På denna sida går vi igenom ett par steg för att säkert nollställa ditt lösenord—utan att behöva ta till mejl!",
+  "PasswordResetUsernameQuestion":       "För de första: hur löd användarnamnet?",
+	"PasswordResetCopyPayload":            `Kopiera nu textsnutten nedan (aka <i>beviset</i>)`,
+	"PasswordResetFollowToolInstructions": `Följ <b>verktygsinstruktionerna</b> för att finalisera nollställningen.`,
+	"ToolInstructions":                    `verktygsinstruktionerna`,
+	"PasswordResetToolInstructions": fmt.Sprintf(`
+    <ul>
+        <li><a href="%s">Ladda ned verktyget</a></li>
+        <li>Kör det så hör:<br><code>pwtool --payload &lt;payload från ovan&gt; --keypair &lt;filvägen innehållandes ditt nyckelpar från när du registrerade dig&gt;</code>
+        </li>
+        <li>Kopiera det genererade beviset och klistra in nedan</li>
+        <li>(Kom ihåg att spara ditt lösenord:)</li>
+    </ul>
+    `, toolURL),
+	"GeneratePayload": "skapa payload",
+	"Proof":           "bevis",
+	"NewPassword":     "nytt lösenord",
+	"ChangePassword":  "ändra lösenord",
+}
+
 var EspanolMexicano = map[string]string{
 	"About":    "acerca de",
 	"Login":    "loguearse",
@@ -239,6 +353,7 @@ var EspanolMexicano = map[string]string{
 var translations = map[string]map[string]string{
 	"English":         English,
 	"EspañolMexicano": EspanolMexicano,
+  "Swedish": Swedish,
 }
 
 type Community struct {
