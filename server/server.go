@@ -127,7 +127,7 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 var (
-	translator = i18n.Init("EspañolMexicano")
+	translator = i18n.Init("Swedish")
 	community  = i18n.Community{"Merveilles", "https://wiki.xxiivv.com/site/merveilles.html"}
 
 	templateFuncs = template.FuncMap{
