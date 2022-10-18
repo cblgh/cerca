@@ -1,17 +1,10 @@
 [general]	
 name = ""
-link = ""
-conduct_url = ""
-language = ""
-
-[theme]
-background = ""
-foreground = ""
-links = ""
+conduct_url = "" # optional + recommended: if omitted, the checkboxes in registration relating to CoC will be hidden
+language = "" # Swedish, English
 
 [documents]
-logo = "logo.svg"
+logo = "logo.html"
 about = "about.md"
 rules = "rules.md"
 verification_explanation = "verification-instructions.md"
-custom_css = ""
