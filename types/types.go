@@ -1,8 +1,6 @@
 package types
 
 type Config struct {
-	// for internal use
-	Files map[string]string
 	// use as:
 	// config.Files["about"] -> about markdown
 	// config.Files["rules"] -> rules explanation markdown
@@ -10,8 +8,8 @@ type Config struct {
 
 	Community struct {
 		Name        string `json:"name"`
-		Link        string `json:"link"`
 		ConductLink string `json:"conduct_url"`
+    Language string `json:"language"`
 	} `json:"general"`
 
 	Theme struct {
@@ -25,6 +23,7 @@ type Config struct {
 		AboutPath                   string `json:"about"`
 		RegisterRulesPath           string `json:"rules"`
 		VerificationExplanationPath string `json:"verification_explanation"`
+    CustomCSSPath string `json:"custom_css"`
 	} `json:"documents"`
 }
 

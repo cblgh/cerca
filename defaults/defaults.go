@@ -8,7 +8,7 @@ import (
 var DEFAULT_ABOUT string
 
 //go:embed sample-logo.svg
-var DEFAULT_LOG string
+var DEFAULT_LOGO string
 
 //go:embed sample-rules.md
 var DEFAULT_RULES string

@@ -26,7 +26,6 @@ var English = map[string]string{
 	"SortPostsRecent":   "recent posts",
 	"SortThreadsRecent": "most recent threads",
 
-	"ForumDescription":     "This forum is for the <a href='{{ .CommunityLink }}'>{{.CommunityName}}</a> community.",
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
@@ -90,19 +89,9 @@ var English = map[string]string{
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
-	"RegisterVerificationInstructions": `<p>You can use either your mastodon profile or your webring site to verify your registration.</p>
-    <ul>
-        <li><b>Mastodon:</b> temporarily add a new metadata item to <a href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
-            displayed above. Pass your profile as the verification link.</li>
-        <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
-            the verification code from above. Pass the link to the uploaded file as the verification link (make sure it is viewable in a browser).</li>
-    </ul>
-  `,
-
 	"RegisterVerificationLink":  "Verification link",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">{{ .CommunityName }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">read it</a>`,
+	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion":       "First up: what was your username?",
@@ -140,7 +129,6 @@ var Swedish = map[string]string{
 	"SortRecentPosts":   "nyast poster",
 	"SortRecentThreads": "nyast trådar",
 
-	"ForumDescription":     "Detta forum är till för <a href='{{ .CommunityLink }}'>{{.CommunityName}}</a> communityt.",
 	"LoginNoAccount":       "Saknar du konto? <a href='/register'>Skapa</a> ett.",
 	"LoginFailure":         "<b>Misslyckat inloggningsförsök:</b> inkorrekt lösenord, fel användernamn, eller obefintlig användare.",
 	"LoginAlreadyLoggedIn": `Du är redan inloggad. Vill du <a href="/logout">logga ut</a>?`,
@@ -204,19 +192,9 @@ var Swedish = map[string]string{
 
 	"RegisterVerificationCode":              "Din verifikationskod är",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
-	"RegisterVerificationInstructions": `<p>You can use either your mastodon profile or your webring site to verify your registration.</p>
-    <ul>
-        <li><b>Mastodon:</b> temporarily add a new metadata item to <a href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
-            displayed above. Pass your profile as the verification link.</li>
-        <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
-            the verification code from above. Pass the link to the uploaded file as the verification link (make sure it is viewable in a browser).</li>
-    </ul>
-  `,
-
 	"RegisterVerificationLink":  "Verificationsnyckel",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">{{ .CommunityName }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">read it</a>`,
+	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "På denna sida går vi igenom ett par steg för att säkert nollställa ditt lösenord—utan att behöva ta till mejl!",
   "PasswordResetUsernameQuestion":       "För de första: hur löd användarnamnet?",
@@ -254,7 +232,6 @@ var EspanolMexicano = map[string]string{
 	"SortRecentPosts":   "recent posts",
 	"SortRecentThreads": "most recent threads",
 
-	"ForumDescription":     "Este foro es principalmente para las personas de la comunidad <a href='{{ .CommunityLink }}'>{{ .CommunityName }}</a>.",
 	"LoginNoAccount":       "¿No tienes una cuenta? <a href='/register'>Registra</a> una. ",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
@@ -317,18 +294,9 @@ var EspanolMexicano = map[string]string{
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
-	"RegisterVerificationInstructions": `<p>You can use either your mastodon profile or your webring site to verify your registration.</p>
-    <ul>
-        <li><b>Mastodon:</b> temporarily add a new metadata item to <a href="https://merveilles.town/settings/profile">your profile</a> containing the verification code
-            displayed above. Pass your profile as the verification link.</li>
-        <li><b>Webring site:</b> Upload a plaintext file somewhere on your webring domain (incl. subdomain) containing
-            the verification code from above. Pass the link to the uploaded file as the verification link (make sure it is viewable in a browser).</li>
-    </ul>
-  `,
 	"RegisterVerificationLink":  "Verification link",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">{{ .CommunityName }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="https://github.com/merveilles/Resources/blob/master/CONDUCT.md">read it</a>`,
+	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion":       "First up: what was your username?",
@@ -356,12 +324,12 @@ var translations = map[string]map[string]string{
   "Swedish": Swedish,
 }
 
-type Community struct {
-	CommunityName string
-	CommunityLink string
+type TranslationData struct {
+  Data interface{}
 }
 
-func (tr *Translator) TranslateWithData(key string, data Community) string {
+func (tr *Translator) TranslateWithData(key string, data TranslationData) string {
+  fmt.Println(key, data)
 	phrase := translations[tr.Language][key]
 	t, err := template.New(key).Parse(phrase)
 	ed := util.Describe("i18n translation")
@@ -373,7 +341,7 @@ func (tr *Translator) TranslateWithData(key string, data Community) string {
 }
 
 func (tr *Translator) Translate(key string) string {
-	var empty Community
+	var empty TranslationData
 	return tr.TranslateWithData(key, empty)
 }
 
