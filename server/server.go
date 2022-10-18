@@ -134,9 +134,15 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
+// establish closure over config + translator so that it's present in templates during render
 func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
-  // establish closure over translator so that it's present in templates during render
+  // only read logo contents once when generating
+  logo, err := os.ReadFile(config.Documents.LogoPath)
+  util.Check(err, "generate-template: dump logo")
   templateFuncs := template.FuncMap{
+    "dumpLogo": func() template.HTML {
+      return template.HTML(logo)
+    },
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
 		},

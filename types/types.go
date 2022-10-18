@@ -12,18 +12,11 @@ type Config struct {
     Language string `json:"language"`
 	} `json:"general"`
 
-	Theme struct {
-		Background string `json:"background"`
-		Foreground string `json:"foreground"`
-		Links      string `json:"links"`
-	} `json:"theme"`
-
 	Documents struct {
 		LogoPath                    string `json:"logo"`
 		AboutPath                   string `json:"about"`
 		RegisterRulesPath           string `json:"rules"`
 		VerificationExplanationPath string `json:"verification_explanation"`
-    CustomCSSPath string `json:"custom_css"`
 	} `json:"documents"`
 }
 

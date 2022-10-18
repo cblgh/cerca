@@ -7,7 +7,7 @@ import (
 //go:embed sample-about.md
 var DEFAULT_ABOUT string
 
-//go:embed sample-logo.svg
+//go:embed sample-logo.html
 var DEFAULT_LOGO string
 
 //go:embed sample-rules.md
