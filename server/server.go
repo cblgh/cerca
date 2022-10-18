@@ -22,6 +22,7 @@ import (
 	"cerca/server/session"
 	"cerca/types"
 	"cerca/util"
+  "cerca/defaults"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -73,6 +74,9 @@ type GenericMessageData struct {
 type RegisterData struct {
 	VerificationCode string
 	ErrorMessage     string
+  Rules template.HTML
+  VerificationInstructions template.HTML
+  ConductLink string
 }
 
 type RegisterSuccessData struct {
@@ -93,6 +97,8 @@ type RequestHandler struct {
 	db        *database.DB
 	session   *session.Session
 	allowlist []string // allowlist of domains valid for forum registration
+  files map[string][]byte
+  config types.Config
 }
 
 var developing bool
@@ -127,9 +133,6 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 var (
-	translator = i18n.Init("Swedish")
-	community  = i18n.Community{"Merveilles", "https://wiki.xxiivv.com/site/merveilles.html"}
-
 	templateFuncs = template.FuncMap{
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
@@ -153,7 +156,14 @@ var (
 			return translator.Translate(key)
 		},
 		"translateWithData": func(key string) string {
-			return translator.TranslateWithData(key, community)
+      data := struct{
+          Name string
+          Link string
+        }{
+          Name: config.Community.Name,
+          Link: config.Community.ConductLink,
+        }
+			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
 		"capitalize": util.Capitalize,
 		"tohtml": func(s string) template.HTML {
@@ -494,11 +504,14 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		return
 	}
 
+  rules := util.Markup(template.HTML(h.files["rules"]))
+  verification := util.Markup(template.HTML(h.files["verification-instructions"]))
+  conduct := h.config.Community.ConductLink
 	var verificationCode string
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage, rules, verification, conduct}})
 	}
 
 	var err error
@@ -508,14 +521,15 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		verificationCode, err = h.session.GetVerificationCode(req)
 		// we had an error getting the verification code, generate a code and set it on the session
 		if err != nil {
-			verificationCode = fmt.Sprintf("MRV%06d\n", crypto.GenerateVerificationCode())
+      prefix := util.VerificationPrefix(h.config.Community.Name)
+			verificationCode = fmt.Sprintf("%s%06d\n", prefix, crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
 				renderErr("Had troubles setting the verification code on session")
 				return
 			}
 		}
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, ""}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, "", rules, verification, conduct}})
 	case "POST":
 		verificationCode, err = h.session.GetVerificationCode(req)
 		if err != nil {
@@ -610,13 +624,7 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	// TODO (2022-09-19):
-	// * make sure file exists
-	// * create function to output a prefilled version, using the Community name and CommunityLink
-	// * embed the prefilled version in the code using golang's goembed
-	b, err := os.ReadFile("./about.md")
-	util.Check(err, "about route: open about.md")
-	input := util.Markup(template.HTML(b))
+	input := util.Markup(template.HTML(h.files["about"]))
 	h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: translator.Translate("About")})
 }
 
@@ -720,18 +728,18 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
 
-func Serve(allowlist []string, sessionKey string, isdev bool, conf types.Config) {
+func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf types.Config) {
 	port := ":8272"
-	dir := "./data/"
 	config = conf
 
 	if isdev {
 		developing = true
+    // TODO (2022-10-18): don't overload passed in dir; just use --data instead
 		dir = "./testdata/"
 		port = ":8277"
 	}
 
-	forum, err := NewServer(allowlist, sessionKey, dir)
+	forum, err := NewServer(allowlist, sessionKey, dir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -751,6 +759,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool, conf types.Config)
 type CercaForum struct {
 	http.ServeMux
 	Directory string
+  Files map[string][]byte
 }
 
 func (u *CercaForum) directory() string {
@@ -765,21 +774,39 @@ func (u *CercaForum) directory() string {
 	return u.Directory
 }
 
+func (c *CercaForum) loadFile(key, filepath, defaultContent string) {
+  _, err := util.CreateIfNotExist(filepath, defaultContent)
+  util.Check(err, "create if not exist (%s) %s", key, filepath)
+  c.Files[key], err = os.ReadFile(filepath)
+  util.Check(err, "read %s", filepath)
+}
+
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(allowlist []string, sessionKey, dir string) (*CercaForum, error) {
+func NewServer(allowlist []string, sessionKey, dir string, conf types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
+    Files: make(map[string][]byte),
 	}
 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
+  // TODO (2022-10-18): introduce step where if config document path is empty => config.Documents.<path> =
+  // filepath.Join(s.directory(), <name>)
+
+  // load the documents specified in the config 
+  // iff document doesn't exist, dump a default document where it should be and read that
+  s.loadFile("about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT)
+  s.loadFile("rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES)
+  s.loadFile("verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION)
+  s.loadFile("logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO)
+
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
+  handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, s.Files, config}
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)

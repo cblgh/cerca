@@ -2,14 +2,16 @@
 name = ""
 link = ""
 conduct_url = ""
+language = ""
 
 [theme]
-background = "pink"
-foreground = "red"
-links = "aqua"
+background = ""
+foreground = ""
+links = ""
 
 [documents]
-logo = ""
-about = ""
-rules = ""
-verification_explanation = ""
+logo = "logo.svg"
+about = "about.md"
+rules = "rules.md"
+verification_explanation = "verification-instructions.md"
+custom_css = ""

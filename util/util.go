@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
+  "regexp"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -103,6 +104,16 @@ func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
 }
 
+func VerificationPrefix (name string) string {
+  pattern := regexp.MustCompile("A|E|O|U|I|Y")
+  upper := strings.ToUpper(name)
+  replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
+  if len(replaced) < 3 {
+    replaced += "XYZ"
+  }
+  return replaced[0:3]
+}
+
 func GetThreadSlug(threadid int, title string, threadLen int) string {
 	return fmt.Sprintf("/thread/%d/%s-%d/", threadid, SanitizeURL(title), threadLen)
 }
@@ -143,12 +154,12 @@ func Capitalize(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func createIfNotExist(name, content string) (bool, error) {
-	_, err := os.Stat(name)
+func CreateIfNotExist(filepath, content string) (bool, error) {
+	_, err := os.Stat(filepath)
 	if err != nil {
 		// if the file doesn't exist, create it
 		if errors.Is(err, fs.ErrNotExist) {
-			err = os.WriteFile(name, []byte(content), 0777)
+			err = os.WriteFile(filepath, []byte(content), 0777)
 			if err != nil {
 				return false, err
 			}
@@ -166,7 +177,7 @@ func createIfNotExist(name, content string) (bool, error) {
 // * util.checkFileExists(path, mockContents)
 func ReadConfig(confpath string) types.Config {
 	ed := Describe("config")
-	_, err := createIfNotExist(confpath, defaults.DEFAULT_CONFIG)
+	_, err := CreateIfNotExist(confpath, defaults.DEFAULT_CONFIG)
 	ed.Check(err, "create default config")
 
 	data, err := os.ReadFile(confpath)
