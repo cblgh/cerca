@@ -85,8 +85,6 @@ var English = map[string]string{
 	"RegisterViewKeypairExplanationEnd": `With this keypair you will be able to reset your account if you ever lose your password—and without having to share your email (or require email infrastructure on the forum's part).`,
 	"RegisterKeypairWarning":            "This keypair will only be displayed once",
 
-	"RegisterRules": `To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the <a href="https://merveilles.town">Merveilles Fediverse instance</a>`,
-
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
 	"RegisterVerificationLink":  "Verification link",
@@ -188,8 +186,6 @@ var Swedish = map[string]string{
 	"RegisterViewKeypairExplanationEnd": `Med detta nyckelpar kan du återställa ditt lösenord om du skulle tappa bort det—och detta utan att behöva samla in din email (eller kräva emailinfrastruktur på forumets sida).`,
 	"RegisterKeypairWarning":            "Detta nyckelpar visas enbart denna gång",
 
-	"RegisterRules": `To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the <a href="https://merveilles.town">Merveilles Fediverse instance</a>`,
-
 	"RegisterVerificationCode":              "Din verifikationskod är",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
 	"RegisterVerificationLink":  "Verificationsnyckel",
@@ -290,8 +286,6 @@ var EspanolMexicano = map[string]string{
 	"RegisterViewKeypairExplanationEnd": `With this keypair you will be able to reset your account if you ever lose your password—and without having to share your email (or require email infrastructure on the forum's part).`,
 	"RegisterKeypairWarning":            "This keypair will only be displayed once",
 
-	"RegisterRules": `To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the <a href="https://merveilles.town">Merveilles Fediverse instance</a>`,
-
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
 	"RegisterVerificationLink":  "Verification link",
@@ -329,7 +323,6 @@ type TranslationData struct {
 }
 
 func (tr *Translator) TranslateWithData(key string, data TranslationData) string {
-  fmt.Println(key, data)
 	phrase := translations[tr.Language][key]
 	t, err := template.New(key).Parse(phrase)
 	ed := util.Describe("i18n translation")
@@ -351,7 +344,7 @@ type Translator struct {
 
 func Init(lang string) Translator {
 	if _, ok := translations[lang]; !ok {
-		log.Fatalln(lang + " is not translated yet")
+		log.Fatalln(fmt.Sprintf("language '%s' is not translated yet", lang))
 	}
 	return Translator{lang}
 }
