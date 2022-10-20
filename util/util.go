@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+  "path/filepath"
 	"fmt"
 	"html/template"
 	"log"
@@ -154,12 +155,16 @@ func Capitalize(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func CreateIfNotExist(filepath, content string) (bool, error) {
-	_, err := os.Stat(filepath)
+func CreateIfNotExist(docpath, content string) (bool, error) {
+  err := os.MkdirAll(filepath.Dir(docpath), 0750)
+  if err != nil {
+    return false, err
+  }
+	_, err = os.Stat(docpath)
 	if err != nil {
 		// if the file doesn't exist, create it
 		if errors.Is(err, fs.ErrNotExist) {
-			err = os.WriteFile(filepath, []byte(content), 0777)
+			err = os.WriteFile(docpath, []byte(content), 0777)
 			if err != nil {
 				return false, err
 			}
@@ -172,9 +177,6 @@ func CreateIfNotExist(filepath, content string) (bool, error) {
 	return false, nil
 }
 
-// TODO (2022-09-21):
-// * DONE   go:embed sample-config.toml ---> defaults.DEFAULT_<x>
-// * util.checkFileExists(path, mockContents)
 func ReadConfig(confpath string) types.Config {
 	ed := Describe("config")
 	_, err := CreateIfNotExist(confpath, defaults.DEFAULT_CONFIG)
@@ -191,3 +193,19 @@ func ReadConfig(confpath string) types.Config {
 
 	return conf
 }
+
+func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
+  ed := Describe("load file")
+  _, err := CreateIfNotExist(docpath, defaultContent)
+  err = ed.Eout(err, "create if not exist (%s) %s", key, docpath)
+  if err != nil {
+    return nil, err
+  }
+  data, err := os.ReadFile(docpath)
+  err = ed.Eout(err, "read %s", docpath)
+  if err != nil {
+    return nil, err
+  }
+  return data, nil
+}
+

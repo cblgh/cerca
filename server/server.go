@@ -27,21 +27,6 @@ import (
 	"github.com/carlmjohnson/requests"
 )
 
-/* 2022-09-20: customizable stuff
-* CommunityName
-* CommunityLogo
-* CommunityLink
-* ForumName
- */
-
-// TODO (2022-09-20): make verification instructions another md file to load, pass path from config
-/*
-* pass in:
-* registration rules
-* verification instructions
-* code of conduct link
- */
-
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
 type TemplateData struct {
@@ -104,7 +89,6 @@ type RequestHandler struct {
 }
 
 var developing bool
-var config types.Config
 
 func dump(err error) {
 	if developing {
@@ -218,6 +202,9 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
+  if h.config.Community.Name != "" {
+    data.ForumName = h.config.Community.Name
+  }
 	if data.ForumName == "" {
 		data.ForumName = "Forum"
 	}
@@ -734,7 +721,6 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 
 func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf types.Config) {
 	port := ":8272"
-	config = conf
 
 	if isdev {
 		developing = true
@@ -763,7 +749,6 @@ func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf t
 type CercaForum struct {
 	http.ServeMux
 	Directory string
-  Files map[string][]byte
 }
 
 func (u *CercaForum) directory() string {
@@ -778,41 +763,46 @@ func (u *CercaForum) directory() string {
 	return u.Directory
 }
 
-func (c *CercaForum) loadFile(key, filepath, defaultContent string) {
-  _, err := util.CreateIfNotExist(filepath, defaultContent)
-  util.Check(err, "create if not exist (%s) %s", key, filepath)
-  c.Files[key], err = os.ReadFile(filepath)
-  util.Check(err, "read %s", filepath)
-}
-
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(allowlist []string, sessionKey, dir string, conf types.Config) (*CercaForum, error) {
+func NewServer(allowlist []string, sessionKey, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
-    Files: make(map[string][]byte),
 	}
 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
-  // TODO (2022-10-18): introduce step where if config document path is empty => config.Documents.<path> =
-  // filepath.Join(s.directory(), <name>)
+  // TODO? (2022-10-18): introduce step where if config document path is empty => 
+  // cconfig.Documents.<path> = filepath.Join(s.directory(), <name>)
 
   // load the documents specified in the config 
   // iff document doesn't exist, dump a default document where it should be and read that
-  s.loadFile("about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT)
-  s.loadFile("rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES)
-  s.loadFile("verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION)
-  s.loadFile("logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO)
+  type triple struct { key, docpath, content string }
+  triples := []triple{
+    {"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
+    {"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
+    {"verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION},
+    {"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
+  }
 
-	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
+  files := make(map[string][]byte)
+  for _, t := range triples {
+    data, err := util.LoadFile(t.key, t.docpath, t.content)
+    if err != nil {
+      return s, err
+    }
+    files[t.key] = data
+  }
+
+  // TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
   translator := i18n.Init(config.Community.Language)
   templates := template.Must(generateTemplates(config, translator))
-  handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, s.Files, config, translator, templates}
+  handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
 
+	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
