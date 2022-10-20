@@ -775,9 +775,6 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
-  // TODO? (2022-10-18): introduce step where if config document path is empty => 
-  // cconfig.Documents.<path> = filepath.Join(s.directory(), <name>)
-
   // load the documents specified in the config 
   // iff document doesn't exist, dump a default document where it should be and read that
   type triple struct { key, docpath, content string }
