@@ -43,7 +43,7 @@ func main() {
 	flag.StringVar(&allowlistLocation, "allowlist", "", "domains which can be used to read verification codes from during registration")
 	flag.StringVar(&sessionKey, "authkey", "", "session cookies authentication key")
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
-	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its files (database and customizable documents)")
+	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 	flag.Parse()
 	if len(sessionKey) == 0 {
 		complain("please pass a random session auth key with --authkey")

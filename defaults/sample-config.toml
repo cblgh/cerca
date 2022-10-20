@@ -1,10 +1,10 @@
 [general]	
 name = ""
-conduct_url = "" # optional + recommended: if omitted, the checkboxes in registration relating to CoC will be hidden
-language = "" # Swedish, English
+conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
+language = "" # Swedish, English. contributions for more translations welcome!
 
 [documents]
-logo = "logo.html"
-about = "about.md"
-rules = "rules.md"
-verification_explanation = "verification-instructions.md"
+logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
+about = "content/about.md"
+rules = "content/rules.md"
+verification_explanation = "content/verification-instructions.md"
