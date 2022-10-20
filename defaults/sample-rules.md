@@ -1,1 +1,1 @@
-This forum is for the [Merveilles](https://wiki.xxiivv.com/site/merveilles.html) community. To register, you need to either belong to the <a href="https://webring.xxiivv.com">Merveilles Webring</a> or the <a href="https://merveilles.town">Merveilles Fediverse instance.
+This forum is for the [Merveilles](https://wiki.xxiivv.com/site/merveilles.html) community. To register, you need to either belong to the [Merveilles Webring](https://webring.xxiivv.com) or the [Merveilles Fediverse instance](https://merveilles.town).
