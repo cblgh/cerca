@@ -19,9 +19,9 @@ Posts in the forum are made using [Markdown syntax](https://en.wikipedia.org/wik
 <b>\*\*Bold text\*\*</b> and <i>\*italics\*</i>
 
 <ul>
-    <li>\* lists</li>
-    <li>\* like </li>
-    <li>\* this </li>
+    <li>* lists</li>
+    <li>* like </li>
+    <li>* this </li>
 </ul>
 
 <blockquote>&gt; Blockquote</blockquote>
@@ -29,11 +29,11 @@ Posts in the forum are made using [Markdown syntax](https://en.wikipedia.org/wik
 <code>\`typewriter text\`</code>
 
 <!-- leave the <pre><code> blocks from reformatting! they render all their spacing :)-->
-<pre><code>\`\`\`
+<pre><code>```
 blocks of
 code like
 this
-\`\`\`
+```
 </code></pre>
 
 Create links like <code>\[this\]\(url\)</code>, and embed images like: <code>!\[description\]\(url\)</code>. Note how the image
