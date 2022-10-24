@@ -31,6 +31,10 @@ var English = map[string]string{
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
 
 	"Username":       "username",
+  "Current": "current",
+  "New": "new",
+  "GenerateNewKeypair": "I also want to generate a new keypair",
+  "ChangePasswordDescription": "Use this page to change your password. If needed, you can also regenerate your password reset keypair—used to reset a forgotten password without admin help.",
 	"Password":       "password",
 	"PasswordMin":    "Must be at least 9 characters long",
 	"PasswordForgot": "Forgot your password?",
@@ -132,6 +136,10 @@ var Swedish = map[string]string{
 	"LoginAlreadyLoggedIn": `Du är redan inloggad. Vill du <a href="/logout">logga ut</a>?`,
 
 	"Username":       "användarnamn",
+  "Current": "nuvarande",
+  "New": "nytt",
+  "GenerateNewKeypair": "Jag vill också generera ett nytt nyckelpar",
+  "ChangePasswordDescription": "På den här sidan kan du ändra ditt lösenord. Vid behov kan du också regenerera ditt nyckelpar—används för att nollställa ditt lösenord utan att be admin om hjälp.",
 	"Password":       "lösenord",
 	"PasswordMin":    "Måste vara minst 9 karaktärer långt",
 	"PasswordForgot": "Glömt lösenordet?",
@@ -233,6 +241,10 @@ var EspanolMexicano = map[string]string{
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
 
 	"Username":       "usuarie",
+  "Current": "current",
+  "New": "new",
+  "GenerateNewKeypair": "I also want to generate a new keypair",
+  "ChangePasswordDescription": "Use this page to change your password. If needed, you can also regenerate your password reset keypair—used to reset a forgotten password without admin help.",
 	"Password":       "contraseña",
 	"PasswordMin":    "Debe tener por lo menos 9 caracteres.",
 	"PasswordForgot": "Olvidaste tu contraseña?",

@@ -20,8 +20,16 @@ type DB struct {
 	db *sql.DB
 }
 
-func InitDB(filepath string) DB {
+func CheckExists(filepath string) bool {
 	if _, err := os.Stat(filepath); errors.Is(err, os.ErrNotExist) {
+    return false
+  }
+  return true
+}
+
+func InitDB(filepath string) DB {
+  exists := CheckExists(filepath)
+	if !exists {
 		file, err := os.Create(filepath)
 		if err != nil {
 			log.Fatal(err)
@@ -340,6 +348,16 @@ func (d DB) GetUserID(name string) (int, error) {
 	return userid, nil
 }
 
+func (d DB) GetUsername(uid int) (string, error) {
+	stmt := `SELECT name FROM users where id = ?`
+	var username string
+	err := d.db.QueryRow(stmt, uid).Scan(&username)
+	if err != nil {
+		return "", util.Eout(err, "get username")
+	}
+	return username, nil
+}
+
 func (d DB) GetPasswordHash(username string) (string, int, error) {
 	stmt := `SELECT passwordhash, id FROM users where name = ?`
 	var hash string
@@ -400,6 +418,17 @@ func (d DB) AddPubkey(userid int, pubkey string) error {
 	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
 	_, err := d.Exec(stmt, userid, pubkey)
 	if err = ed.Eout(err, "inserting record"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d DB) SetPubkey(userid int, pubkey string) error {
+	ed := util.Describe("set pubkey")
+	// TODO (2022-09-27): the insertion order is still wrong >.<
+	stmt := `UPDATE pubkeys SET pubkey = ? WHERE userid = ? `
+	_, err := d.Exec(stmt, userid, pubkey)
+	if err = ed.Eout(err, "updating record"); err != nil {
 		return err
 	}
 	return nil
