@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/url"
+  "path/filepath"
 	"os"
 	"strings"
 
@@ -50,6 +51,11 @@ func main() {
 	} else if len(allowlistLocation) == 0 {
 		complain("please pass a file containing the verification code domain allowlist")
 	}
+
+  err := os.MkdirAll(filepath.Dir(dataDir), 0750)
+  if err != nil {
+    complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
+  }
 	allowlist := readAllowlist(allowlistLocation)
 	allowlist = append(allowlist, "merveilles.town")
 	config := util.ReadConfig(configPath)

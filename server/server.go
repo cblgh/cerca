@@ -724,8 +724,6 @@ func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf t
 
 	if isdev {
 		developing = true
-    // TODO (2022-10-18): don't overload passed in dir; just use --data instead
-		dir = "./testdata/"
 		port = ":8277"
 	}
 
@@ -775,6 +773,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
+  config.EnsureDefaultPaths()
   // load the documents specified in the config 
   // iff document doesn't exist, dump a default document where it should be and read that
   type triple struct { key, docpath, content string }
@@ -795,6 +794,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
   }
 
   // TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
+  // for currently translated languages, see i18n/i18n.go
   translator := i18n.Init(config.Community.Language)
   templates := template.Must(generateTemplates(config, translator))
   handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
