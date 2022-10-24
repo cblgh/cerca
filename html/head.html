@@ -195,7 +195,10 @@
                 <ul type="menu">
 
                 {{ if eq .Title "threads" }}
-                <li> 
+                {{ if .LoggedIn }}
+                <li><a href="/thread/new">new thread</a></li>
+                {{ end }}
+                <li>
                     <details>
                         <summary>sort</summary>
                         <ul>
