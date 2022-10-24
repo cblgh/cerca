@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/synacor/argon2id"
+	"math/big"
 	rand "math/rand"
 	"os"
 	"strings"
@@ -161,6 +162,24 @@ func GenerateNonce() string {
 	var src cryptoSource
 	rnd := rand.New(src)
 	return fmt.Sprintf("%d%d", time.Now().Unix(), rnd.Intn(MaxInt))
+}
+
+// used for generating a random reset password
+const characterSet = "abcdedfghijklmnopqrstABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const pwlength = 20
+
+func GeneratePassword() string {
+	var password strings.Builder
+	const maxChar = int64(len(characterSet))
+
+	for i := 0; i < pwlength; i++ {
+		max := big.NewInt(maxChar)
+		bigN, err := crand.Int(crand.Reader, max)
+		util.Check(err, "randomly generate int")
+		n := bigN.Int64()
+		password.WriteString(string(characterSet[n]))
+	}
+	return password.String()
 }
 
 type cryptoSource struct{}
