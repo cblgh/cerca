@@ -368,8 +368,8 @@ func hasVerificationCode(link, verification string) bool {
 }
 
 func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.Request) {
-  // TODO (2022-10-24): add translations for change password view
-  title := h.translator.Translate("ChangePassword")
+	// TODO (2022-10-24): add translations for change password view
+	title := h.translator.Translate("ChangePassword")
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
