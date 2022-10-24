@@ -3,18 +3,18 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
-  "regexp"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io/fs"
-  "path/filepath"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -105,14 +105,14 @@ func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
 }
 
-func VerificationPrefix (name string) string {
-  pattern := regexp.MustCompile("A|E|O|U|I|Y")
-  upper := strings.ToUpper(name)
-  replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
-  if len(replaced) < 3 {
-    replaced += "XYZ"
-  }
-  return replaced[0:3]
+func VerificationPrefix(name string) string {
+	pattern := regexp.MustCompile("A|E|O|U|I|Y")
+	upper := strings.ToUpper(name)
+	replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
+	if len(replaced) < 3 {
+		replaced += "XYZ"
+	}
+	return replaced[0:3]
 }
 
 func GetThreadSlug(threadid int, title string, threadLen int) string {
@@ -156,10 +156,10 @@ func Capitalize(s string) string {
 }
 
 func CreateIfNotExist(docpath, content string) (bool, error) {
-  err := os.MkdirAll(filepath.Dir(docpath), 0750)
-  if err != nil {
-    return false, err
-  }
+	err := os.MkdirAll(filepath.Dir(docpath), 0750)
+	if err != nil {
+		return false, err
+	}
 	_, err = os.Stat(docpath)
 	if err != nil {
 		// if the file doesn't exist, create it
@@ -195,17 +195,16 @@ func ReadConfig(confpath string) types.Config {
 }
 
 func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
-  ed := Describe("load file")
-  _, err := CreateIfNotExist(docpath, defaultContent)
-  err = ed.Eout(err, "create if not exist (%s) %s", key, docpath)
-  if err != nil {
-    return nil, err
-  }
-  data, err := os.ReadFile(docpath)
-  err = ed.Eout(err, "read %s", docpath)
-  if err != nil {
-    return nil, err
-  }
-  return data, nil
+	ed := Describe("load file")
+	_, err := CreateIfNotExist(docpath, defaultContent)
+	err = ed.Eout(err, "create if not exist (%s) %s", key, docpath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(docpath)
+	err = ed.Eout(err, "read %s", docpath)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
-

@@ -1,14 +1,14 @@
 package types
 
 import (
-  "path/filepath"
+	"path/filepath"
 )
 
 type Config struct {
 	Community struct {
 		Name        string `json:"name"`
 		ConductLink string `json:"conduct_url"` // optional
-    Language string `json:"language"`
+		Language    string `json:"language"`
 	} `json:"general"`
 
 	Documents struct {
@@ -21,18 +21,18 @@ type Config struct {
 
 // Ensure that, at the very least, default paths exist for each expected document path. Does not overwrite previously set values.
 func (c *Config) EnsureDefaultPaths() {
-  if c.Documents.AboutPath == "" {
-    c.Documents.AboutPath = filepath.Join("content", "about.md")
-  }
-  if c.Documents.RegisterRulesPath == "" {
-    c.Documents.RegisterRulesPath  = filepath.Join("content", "rules.md")
-  }
-  if c.Documents.VerificationExplanationPath == "" {
-    c.Documents.VerificationExplanationPath = filepath.Join("content", "verification-instructions.md")
-  }
-  if c.Documents.LogoPath == "" {
-    c.Documents.LogoPath = filepath.Join("content", "logo.html")
-  }
+	if c.Documents.AboutPath == "" {
+		c.Documents.AboutPath = filepath.Join("content", "about.md")
+	}
+	if c.Documents.RegisterRulesPath == "" {
+		c.Documents.RegisterRulesPath = filepath.Join("content", "rules.md")
+	}
+	if c.Documents.VerificationExplanationPath == "" {
+		c.Documents.VerificationExplanationPath = filepath.Join("content", "verification-instructions.md")
+	}
+	if c.Documents.LogoPath == "" {
+		c.Documents.LogoPath = filepath.Join("content", "logo.html")
+	}
 }
 
 /*

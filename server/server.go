@@ -17,12 +17,12 @@ import (
 
 	"cerca/crypto"
 	"cerca/database"
+	"cerca/defaults"
 	cercaHTML "cerca/html"
 	"cerca/i18n"
 	"cerca/server/session"
 	"cerca/types"
 	"cerca/util"
-  "cerca/defaults"
 
 	"github.com/carlmjohnson/requests"
 )
@@ -57,11 +57,11 @@ type GenericMessageData struct {
 }
 
 type RegisterData struct {
-	VerificationCode string
-	ErrorMessage     string
-  Rules template.HTML
-  VerificationInstructions template.HTML
-  ConductLink string
+	VerificationCode         string
+	ErrorMessage             string
+	Rules                    template.HTML
+	VerificationInstructions template.HTML
+	ConductLink              string
 }
 
 type RegisterSuccessData struct {
@@ -79,13 +79,13 @@ type ThreadData struct {
 }
 
 type RequestHandler struct {
-	db        *database.DB
-	session   *session.Session
-	allowlist []string // allowlist of domains valid for forum registration
-  files map[string][]byte
-  config types.Config
-  translator i18n.Translator
-  templates *template.Template
+	db         *database.DB
+	session    *session.Session
+	allowlist  []string // allowlist of domains valid for forum registration
+	files      map[string][]byte
+	config     types.Config
+	translator i18n.Translator
+	templates  *template.Template
 }
 
 var developing bool
@@ -120,13 +120,13 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 
 // establish closure over config + translator so that it's present in templates during render
 func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
-  // only read logo contents once when generating
-  logo, err := os.ReadFile(config.Documents.LogoPath)
-  util.Check(err, "generate-template: dump logo")
-  templateFuncs := template.FuncMap{
-    "dumpLogo": func() template.HTML {
-      return template.HTML(logo)
-    },
+	// only read logo contents once when generating
+	logo, err := os.ReadFile(config.Documents.LogoPath)
+	util.Check(err, "generate-template: dump logo")
+	templateFuncs := template.FuncMap{
+		"dumpLogo": func() template.HTML {
+			return template.HTML(logo)
+		},
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
 		},
@@ -149,13 +149,13 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 			return translator.Translate(key)
 		},
 		"translateWithData": func(key string) string {
-      data := struct{
-          Name string
-          Link string
-        }{
-          Name: config.Community.Name,
-          Link: config.Community.ConductLink,
-        }
+			data := struct {
+				Name string
+				Link string
+			}{
+				Name: config.Community.Name,
+				Link: config.Community.ConductLink,
+			}
 			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
 		"capitalize": util.Capitalize,
@@ -202,9 +202,9 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-  if h.config.Community.Name != "" {
-    data.ForumName = h.config.Community.Name
-  }
+	if h.config.Community.Name != "" {
+		data.ForumName = h.config.Community.Name
+	}
 	if data.ForumName == "" {
 		data.ForumName = "Forum"
 	}
@@ -495,9 +495,9 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-  rules := util.Markup(template.HTML(h.files["rules"]))
-  verification := util.Markup(template.HTML(h.files["verification-instructions"]))
-  conduct := h.config.Community.ConductLink
+	rules := util.Markup(template.HTML(h.files["rules"]))
+	verification := util.Markup(template.HTML(h.files["verification-instructions"]))
+	conduct := h.config.Community.ConductLink
 	var verificationCode string
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
@@ -512,7 +512,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		verificationCode, err = h.session.GetVerificationCode(req)
 		// we had an error getting the verification code, generate a code and set it on the session
 		if err != nil {
-      prefix := util.VerificationPrefix(h.config.Community.Name)
+			prefix := util.VerificationPrefix(h.config.Community.Name)
 			verificationCode = fmt.Sprintf("%s%06d\n", prefix, crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
@@ -773,31 +773,31 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
-  config.EnsureDefaultPaths()
-  // load the documents specified in the config 
-  // iff document doesn't exist, dump a default document where it should be and read that
-  type triple struct { key, docpath, content string }
-  triples := []triple{
-    {"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
-    {"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
-    {"verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION},
-    {"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
-  }
+	config.EnsureDefaultPaths()
+	// load the documents specified in the config
+	// iff document doesn't exist, dump a default document where it should be and read that
+	type triple struct{ key, docpath, content string }
+	triples := []triple{
+		{"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
+		{"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
+		{"verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION},
+		{"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
+	}
 
-  files := make(map[string][]byte)
-  for _, t := range triples {
-    data, err := util.LoadFile(t.key, t.docpath, t.content)
-    if err != nil {
-      return s, err
-    }
-    files[t.key] = data
-  }
+	files := make(map[string][]byte)
+	for _, t := range triples {
+		data, err := util.LoadFile(t.key, t.docpath, t.content)
+		if err != nil {
+			return s, err
+		}
+		files[t.key] = data
+	}
 
-  // TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
-  // for currently translated languages, see i18n/i18n.go
-  translator := i18n.Init(config.Community.Language)
-  templates := template.Must(generateTemplates(config, translator))
-  handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
+	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
+	// for currently translated languages, see i18n/i18n.go
+	translator := i18n.Init(config.Community.Language)
+	templates := template.Must(generateTemplates(config, translator))
+	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes

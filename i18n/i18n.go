@@ -87,9 +87,9 @@ var English = map[string]string{
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":  "Verification link",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterVerificationLink":              "Verification link",
+	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion":       "First up: what was your username?",
@@ -188,12 +188,12 @@ var Swedish = map[string]string{
 
 	"RegisterVerificationCode":              "Din verifikationskod är",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":  "Verificationsnyckel",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterVerificationLink":              "Verificationsnyckel",
+	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "På denna sida går vi igenom ett par steg för att säkert nollställa ditt lösenord—utan att behöva ta till mejl!",
-  "PasswordResetUsernameQuestion":       "För de första: hur löd användarnamnet?",
+	"PasswordResetUsernameQuestion":       "För de första: hur löd användarnamnet?",
 	"PasswordResetCopyPayload":            `Kopiera nu textsnutten nedan (aka <i>beviset</i>)`,
 	"PasswordResetFollowToolInstructions": `Följ <b>verktygsinstruktionerna</b> för att finalisera nollställningen.`,
 	"ToolInstructions":                    `verktygsinstruktionerna`,
@@ -288,9 +288,9 @@ var EspanolMexicano = map[string]string{
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":  "Verification link",
-	"RegisterConductCodeBoxOne": `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo": `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterVerificationLink":              "Verification link",
+	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion":       "First up: what was your username?",
@@ -315,11 +315,11 @@ var EspanolMexicano = map[string]string{
 var translations = map[string]map[string]string{
 	"English":         English,
 	"EspañolMexicano": EspanolMexicano,
-  "Swedish": Swedish,
+	"Swedish":         Swedish,
 }
 
 type TranslationData struct {
-  Data interface{}
+	Data interface{}
 }
 
 func (tr *Translator) TranslateWithData(key string, data TranslationData) string {
