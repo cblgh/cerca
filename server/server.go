@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"cerca/crypto"
@@ -211,7 +212,12 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 
 	view := fmt.Sprintf("%s.html", viewName)
 	if err := h.templates.ExecuteTemplate(res, view, data); err != nil {
-		util.Check(err, "rendering %q view", view)
+		if errors.Is(err, syscall.EPIPE) {
+			fmt.Println("recovering from broken pipe")
+			return
+		} else {
+			util.Check(err, "rendering %q view", view)
+		}
 	}
 }
 

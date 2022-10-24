@@ -23,8 +23,8 @@ var English = map[string]string{
 	"LogIn":       "log in",
 	"GoBack":      "Go back",
 
-	"SortPostsRecent":   "recent posts",
-	"SortThreadsRecent": "most recent threads",
+	"SortRecentPosts":   "recent posts",
+	"SortRecentThreads": "most recent threads",
 
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
