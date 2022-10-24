@@ -11,7 +11,7 @@
                     <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}"
                             onsubmit="return confirm('Delete post for all posterity?');"
                         >
-                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit">delete</button>
+                        <button style="background-color: transparent; cursor: pointer; text-decoration: underline; border: 0; padding: 0;" type="submit">delete</button>
                         <input type="hidden" name="thread" value="{{ $threadURL }}">
                     </form>
                 </span>
