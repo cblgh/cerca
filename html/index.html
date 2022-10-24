@@ -4,9 +4,4 @@
 	<h2><a href="{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
 	{{ end }}
 </main>
-{{ if .LoggedIn }}
-<aside>
-	<p> <a href="/thread/new">Start a new thread</a></p>
-</aside>
-{{ end }}
 {{ template "footer" . }}
