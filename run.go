@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"net/url"
-  "path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"cerca/server"
@@ -38,7 +38,7 @@ func main() {
 	var allowlistLocation string
 	var sessionKey string
 	var configPath string
-  var dataDir string
+	var dataDir string
 	var dev bool
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
 	flag.StringVar(&allowlistLocation, "allowlist", "", "domains which can be used to read verification codes from during registration")
@@ -52,10 +52,10 @@ func main() {
 		complain("please pass a file containing the verification code domain allowlist")
 	}
 
-  err := os.MkdirAll(filepath.Dir(dataDir), 0750)
-  if err != nil {
-    complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
-  }
+	err := os.MkdirAll(filepath.Dir(dataDir), 0750)
+	if err != nil {
+		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
+	}
 	allowlist := readAllowlist(allowlistLocation)
 	allowlist = append(allowlist, "merveilles.town")
 	config := util.ReadConfig(configPath)
