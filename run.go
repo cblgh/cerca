@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"cerca/server"
@@ -52,7 +51,7 @@ func main() {
 		complain("please pass a file containing the verification code domain allowlist")
 	}
 
-	err := os.MkdirAll(filepath.Dir(dataDir), 0750)
+	err := os.MkdirAll(dataDir, 0750)
 	if err != nil {
 		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
 	}
