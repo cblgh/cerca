@@ -21,6 +21,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/komkom/toml"
 	"github.com/microcosm-cc/bluemonday"
+	"golang.org/x/exp/utf8string"
 
 	"cerca/defaults"
 	"cerca/types"
@@ -152,7 +153,11 @@ func GetURLPortion(req *http.Request, index int) (int, bool) {
 }
 
 func Capitalize(s string) string {
-	return strings.ToUpper(string(s[0])) + s[1:]
+	// utf8 safe capitalization
+	str := utf8string.NewString(s)
+	first := string(str.At(0))
+	rest := string(str.Slice(1, str.RuneCount()))
+	return strings.ToUpper(first) + rest
 }
 
 func CreateIfNotExist(docpath, content string) (bool, error) {
