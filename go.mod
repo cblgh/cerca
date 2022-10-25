@@ -3,6 +3,7 @@ module cerca
 go 1.16
 
 require (
+	github.com/antchfx/htmlquery v1.2.5
 	github.com/carlmjohnson/requests v0.22.1 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20211212230626-5af6ad2f47df // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect

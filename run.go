@@ -3,24 +3,33 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strings"
 
 	"cerca/server"
-	"cerca/util"
+
+	"github.com/antchfx/htmlquery"
 )
 
-func readAllowlist(location string) []string {
-	ed := util.Describe("read allowlist")
-	data, err := os.ReadFile(location)
-	ed.Check(err, "read file")
-	list := strings.Split(strings.TrimSpace(string(data)), "\n")
+func readAllowlist() []string {
+	doc, err := htmlquery.LoadURL("https://webring.xxiivv.com")
+	if err != nil {
+		log.Println("err fetching webring", err)
+	}
+
 	var processed []string
-	for _, fullpath := range list {
-		u, err := url.Parse(fullpath)
+	// query for links in the ordered list (ol), that do not contain a class
+	// (otherwise, we'd get duplicates such as liked webrings with twtxt or rss
+	// feeds)
+	list := htmlquery.Find(doc, "//ol//a[not(@class)]/@href")
+	for _, n := range list {
+		ring_url := htmlquery.SelectAttr(n, "href")
+
+		u, err := url.Parse(ring_url)
 		if err != nil {
-			continue
+			log.Fatal(err)
 		}
 		processed = append(processed, u.Host)
 	}
