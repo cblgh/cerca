@@ -51,7 +51,7 @@ func main() {
 	if len(sessionKey) == 0 {
 		complain("please pass a random session auth key with --authkey")
 	}
-	allowlist := readAllowlist(allowlistLocation)
+	allowlist := readAllowlist()
 	allowlist = append(allowlist, "merveilles.town")
 	server.Serve(allowlist, sessionKey, dev)
 }
