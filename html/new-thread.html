@@ -1,13 +1,13 @@
 {{ template "head" . }}
 <main>
-    <h1>Create thread</h1>
+    <h1>{{ "ThreadCreate" | translate }}</h1>
     <form method="POST">
         <div class="post-container" >
-            <label for="title">Title:</label>
+            <label for="title">{{ "Title" | translate }}:</label>
             <input required name="title" type="text" id="Title">
-            <label for="content">Content:</label>
-            <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
-            <button type="submit">Create</button>
+            <label for="content">{{ "Content" | translate }}:</label>
+            <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'></textarea>
+            <button type="submit">{{ "Create" | translate }}</button>
         </div>
     </form>
 </main>

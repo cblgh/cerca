@@ -5,7 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Forum — {{ .Title }}</title>
+        <title>{{ .ForumName }} — {{ .Title }}</title>
 
          <style>
             /* reset */
@@ -27,6 +27,9 @@
             label {
                 display: block;
             }
+            header svg {
+                fill: #ff8000;
+            }
             article h1, article h2, article h3 {
                 /* normalize post titles */
                 font-size: 1rem;
@@ -46,19 +49,19 @@
             li { margin-bottom: 0rem; }
             ul { padding-left: 1rem; }
             h1, h2 { margin-bottom: 1rem; }
-            p { margin-bottom: 1rem; }
-            blockquote { padding-left: 1rem; border-left: 3px solid black }
+            p { margin-bottom: 1rem; color: #f2f2f2; }
+            blockquote { padding-left: 1rem; border-left: 3px solid wheat; }
             div { margin-bottom: 2rem; }
-            textarea { min-height: 10rem; }
+            textarea { min-height: 10rem; background: black; color: wheat; }
             article > section { margin-bottom: 0.5rem; }
             article { margin-bottom: 2rem; }
             form div, label { margin-bottom: 0; }
             h1 a:visited,
             a:not([class]) {
-                color: black;
+                color: wheat;
             }
             a:visited {
-                color: #666; /* for lack of better imagination */
+                color: gray; /* #666; /* for lack of better imagination */
             }
             .selectable {
                 -webkit-touch-callout: all;
@@ -83,7 +86,7 @@
                 width: 100%;
             }
 
-            body { padding: 2rem; background: wheat; }
+            body { padding: 2rem; background: #111; color: #ff8000; /*wheat;*/ }
             * { margin-bottom: 1rem; }
 
             .visually-hidden {
@@ -117,7 +120,6 @@
             }
 
             header > a {
-                background-image: url('/assets/merveilles.png');
                 background-size: 100%;
                 background-repeat: no-repeat;
                 display: inline-block;
@@ -136,13 +138,18 @@
                 margin-bottom: unset;
             }
             header details a:visited {
-                color: black;
+                color: #ff8000;
             }
             header details ul {
                 position: absolute;
             }
             header details ul > li {
                 display: block;
+            }
+
+            /* post author name */
+            span > b {
+                color: #ff8000;
             }
 
             @supports (display: flex) {
@@ -158,7 +165,7 @@
             }
         </style>
 
-        <!-- <link href="/assets/style.css" rel="stylesheet"> -->
+        <link href="/assets/theme.css" rel="stylesheet">
 
         <link rel="icon" href="/assets/favicon.png">
         <!-- <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"> -->
@@ -183,36 +190,32 @@
     </head>
     <body>
         <header>
-            <a style="margin-bottom: 0; height: 48px;"  href="/" aria-label="Home">
-                <svg aria-hidden="true" style="margin-bottom: 0;" width="48" height="48" fill="black" stroke="none" viewBox="60 60 200 200" xmlns="http://www.w3.org/2000/svg">
-                  <g>
-                    <path d="M185,65 A60,60 0 0,0 125,125 L185,125 Z M125,245 A60,60 0 0,0 185,185 L125,185 Z M95,125 A30,30 0 0,1 125,155 A30,30 0 0,1 95,185 A30,30 0 0,1 65,155 A30,30 0 0,1 95,125 Z M155,125 A30,30 0 0,1 185,155 A30,30 0 0,1 155,185 A30,30 0 0,1 125,155 A30,30 0 0,1 155,125 Z M215,125 A30,30 0 0,1 245,155 A30,30 0 0,1 215,185 A30,30 0 0,1 185,155 A30,30 0 0,1 215,125 "/>
-                    <path d="M125,65 A60,60 0 0,1 185,125 L125,125 Z M185,245 A60,60 0 0,1 125,185 L185,185 Z M65,65 A60,60 0 0,1 125,125 L65,125 Z M65,245 A60,60 0 0,0 125,185 L65,185 Z M245,65 A60,60 0 0,0 185,125 L245,125 Z M245,245 A60,60 0 0,1 185,185 L245,185 Z"/>
-                  </g>
-                </svg>
+            <a style="margin-bottom: 0; height: 48px;"  href="/" aria-label='{{ "AriaHome" | translate }}'>
+                {{ dumpLogo }}
             </a>
             <nav>
                 <ul type="menu">
 
-                {{ if eq .Title "threads" }}
+                {{ $threads := "Threads" | translate }}
+                {{ if eq .Title $threads }}
                 <li> 
                     <details>
-                        <summary>sort</summary>
+                        <summary>{{ "Sort" | translate }}</summary>
                         <ul>
-                            <li> <a href="/?sort=posts">recent posts</a></li>
-                            <li> <a href="/">most recent thread</a></li>
+                            <li> <a href="/?sort=posts">{{ "SortRecentPosts" | translate }}</a></li>
+                            <li> <a href="/">{{ "SortRecentThreads" | translate }}</a></li>
                         </ul>
                     </details>
                 </li>
                 {{ end }}
                     {{ if .QuickNav }}
-                    <li><a href="#bottom">bottom</a></li>
+                    <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
                     {{end}}
-                    <li><a href="/about">about</a></li>
+                    <li><a href="/about">{{ "About" | translate }}</a></li>
                     {{ if .LoggedIn }}
-                    <li><a href="/logout">logout</a></li>
+                    <li><a href="/logout">{{"Logout" | translate }}</a></li>
                     {{ else }}
-                    <li><a href="/login">login</a></li>
+                    <li><a href="/login">{{ "Login" | translate }}</a></li>
                     {{ end }}
                 </ul>
             </nav>

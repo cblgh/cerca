@@ -5,23 +5,22 @@
     {{ $threadURL := .Data.ThreadURL }}
     {{ range $index, $post := .Data.Posts }}
     <article id="{{ $post.ID }}">
-        <section aria-label="Post meta">
+        <section aria-label='{{ "AriaPostMeta" | translate }}'>
             {{ if eq $post.AuthorID $userID }} 
-                <span style="float: right;" aria-label="Delete this post">
+            <span style="float: right;" aria-label='{{ "AriaDeletePost" | translate }}'>
                     <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}"
-                            onsubmit="return confirm('Delete post for all posterity?');"
-                        >
-                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit">delete</button>
+                        onsubmit="return confirm('{{"PromptDeleteQuestion" | translate }}');">
+                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit"> {{ "Delete" | translate }}</button>
                         <input type="hidden" name="thread" value="{{ $threadURL }}">
                     </form>
                 </span>
             {{ end }}
-            <span class="visually-hidden">Author:</span>
+            <span class="visually-hidden">{{ "Author" | translate }}:</span>
             <span><b>{{ $post.Author }}</b>
-                <span class="visually-hidden"> responded:</span>
+                <span class="visually-hidden"> {{ "Responded" | translate }}:</span>
             </span>
             <a href="#{{ $post.ID }}">
-                <span style="margin-left: 0.5rem; font-style: italic;">
+                <span style="margin-left: 0.5rem;">
                     <time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
                 </span>
             </a>
@@ -30,12 +29,12 @@
     </article>
     {{ end }}
     {{ if .LoggedIn }}
-    <section aria-label="Respond into this thread">
+    <section aria-label='{{ "AriaRespondIntoThread" | translate }}'>
         <form method="POST">
             <div id="bottom" class="post-container" >
-                <label class="visually-hidden" for="content">Your answer:</label>
-                <textarea required name="content" id="content" placeholder="Tabula rasa"></textarea>
-                <button type="submit">Post</button>
+                <label class="visually-hidden" for="content">{{ "YourAnswer" | translate }}:</label>
+                <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'></textarea>
+                <button type="submit">{{ "Post" | translate | capitalize }}</button>
             </div>
         </form>
     </section>

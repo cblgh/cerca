@@ -1,13 +1,10 @@
 {{ template "head" . }}
 <main>
-	<h1>Register</h1>
-	<p>You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.</p>
-	<p>There's just one more thing: <b>save the key displayed below</b>. It is a <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">keypair</a>
-	describing your forum identity, with a private part that only you know; the forum only stores the public portion.</p>
-
-	<p>With this keypair you will be able to reset your account if you ever lose your password—and without having to share your email (or require
-	email infrastructure on the forum's part).</p>
-	<p><i><b>This keypair will only be displayed once</i></b></p>
+    <h1>{{ "Register" | translate | capitalize }}</h1>
+    <p>{{ "RegisterHTMLMessage" | translate | tohtml }}</p>
+    <p>{{ "RegisterKeypairExplanationStart" | translate | tohtml }}</p>
+    <p>{{ "RegisterKeypairExplanationEnd" | translate | tohtml }}</p>
+    <p><i><b>{{ "RegisterKeypairWarning" | translate }}</i></b></p>
 	<code>
 	<pre class="selectable">
 	{{ .Data.Keypair }}

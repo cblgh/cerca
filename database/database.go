@@ -22,13 +22,13 @@ type DB struct {
 
 func CheckExists(filepath string) bool {
 	if _, err := os.Stat(filepath); errors.Is(err, os.ErrNotExist) {
-    return false
-  }
-  return true
+		return false
+	}
+	return true
 }
 
 func InitDB(filepath string) DB {
-  exists := CheckExists(filepath)
+	exists := CheckExists(filepath)
 	if !exists {
 		file, err := os.Create(filepath)
 		if err != nil {
