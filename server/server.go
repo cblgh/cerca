@@ -12,13 +12,18 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"cerca/crypto"
 	"cerca/database"
+	"cerca/defaults"
 	cercaHTML "cerca/html"
+	"cerca/i18n"
 	"cerca/server/session"
+	"cerca/types"
 	"cerca/util"
 
 	"github.com/carlmjohnson/requests"
@@ -31,6 +36,7 @@ type TemplateData struct {
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
 	LoggedInID int
+	ForumName  string
 	Title      string
 }
 
@@ -41,8 +47,8 @@ type PasswordResetData struct {
 }
 
 type ChangePasswordData struct {
-	Action   string
-  Keypair string
+	Action  string
+	Keypair string
 }
 
 type IndexData struct {
@@ -58,8 +64,11 @@ type GenericMessageData struct {
 }
 
 type RegisterData struct {
-	VerificationCode string
-	ErrorMessage     string
+	VerificationCode         string
+	ErrorMessage             string
+	Rules                    template.HTML
+	VerificationInstructions template.HTML
+	ConductLink              string
 }
 
 type RegisterSuccessData struct {
@@ -77,9 +86,13 @@ type ThreadData struct {
 }
 
 type RequestHandler struct {
-	db        *database.DB
-	session   *session.Session
-	allowlist []string // allowlist of domains valid for forum registration
+	db         *database.DB
+	session    *session.Session
+	allowlist  []string // allowlist of domains valid for forum registration
+	files      map[string][]byte
+	config     types.Config
+	translator i18n.Translator
+	templates  *template.Template
 }
 
 var developing bool
@@ -112,8 +125,15 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
-var (
-	templateFuncs = template.FuncMap{
+// establish closure over config + translator so that it's present in templates during render
+func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
+	// only read logo contents once when generating
+	logo, err := os.ReadFile(config.Documents.LogoPath)
+	util.Check(err, "generate-template: dump logo")
+	templateFuncs := template.FuncMap{
+		"dumpLogo": func() template.HTML {
+			return template.HTML(logo)
+		},
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
 		},
@@ -132,14 +152,32 @@ var (
 			}
 			return t.Format("2006-01-02")
 		},
+		"translate": func(key string) string {
+			return translator.Translate(key)
+		},
+		"translateWithData": func(key string) string {
+			data := struct {
+				Name string
+				Link string
+			}{
+				Name: config.Community.Name,
+				Link: config.Community.ConductLink,
+			}
+			return translator.TranslateWithData(key, i18n.TranslationData{data})
+		},
+		"capitalize": util.Capitalize,
+		"tohtml": func(s string) template.HTML {
+			// use of this function is risky cause it interprets the passed in string and renders it as unescaped html.
+			// can allow for attacks!
+			//
+			// advice: only use on strings that come statically from within cerca code, never on titles that may contain user-submitted data
+			// :)
+			return (template.HTML)(s)
+		},
 	}
-
-	templates = template.Must(generateTemplates())
-)
-
-func generateTemplates() (*template.Template, error) {
 	views := []string{
 		"about",
+		"about-template",
 		"footer",
 		"generic-message",
 		"head",
@@ -173,9 +211,21 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
+	if h.config.Community.Name != "" {
+		data.ForumName = h.config.Community.Name
+	}
+	if data.ForumName == "" {
+		data.ForumName = "Forum"
+	}
+
 	view := fmt.Sprintf("%s.html", viewName)
-	if err := templates.ExecuteTemplate(res, view, data); err != nil {
-		util.Check(err, "rendering %q view", view)
+	if err := h.templates.ExecuteTemplate(res, view, data); err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			fmt.Println("recovering from broken pipe")
+			return
+		} else {
+			util.Check(err, "rendering %q view", view)
+		}
 	}
 }
 
@@ -184,10 +234,10 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	loggedIn, userid := h.IsLoggedIn(req)
 
 	if !ok {
-		title := "Thread not found"
+		title := h.translator.Translate("ErrThread404")
 		data := GenericMessageData{
 			Title:   title,
-			Message: "The thread does not exist (anymore?)",
+			Message: h.translator.Translate("ErrThread404Message"),
 		}
 		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
 		return
@@ -212,9 +262,15 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 	// TODO (2022-01-07):
 	// * handle error
 	thread := h.db.GetThread(threadid)
+	pattern := regexp.MustCompile("<img")
 	// markdownize content (but not title)
 	for i, post := range thread {
-		thread[i].Content = util.Markup(post.Content)
+		content := []byte(util.Markup(post.Content))
+		// make sure images are lazy loaded
+		if pattern.Match(content) {
+			content = pattern.ReplaceAll(content, []byte(`<img loading="lazy"`))
+		}
+		thread[i].Content = template.HTML(content)
 	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
 	view := TemplateData{Data: &data, QuickNav: loggedIn, LoggedIn: loggedIn, LoggedInID: userid}
@@ -226,10 +282,10 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, status int) {
-	title := "Page not found"
+	title := h.translator.Translate("ErrGeneric404")
 	data := GenericMessageData{
 		Title:   title,
-		Message: fmt.Sprintf("The visited page does not exist (anymore?). Error code %d.", status),
+		Message: fmt.Sprintf(h.translator.Translate("ErrGeneric404Message"), status),
 	}
 	h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 }
@@ -250,7 +306,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost)
-	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: "threads"}
+	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
@@ -271,7 +327,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: ""})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
@@ -283,7 +339,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: ""})
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 			return
 		}
 		// save user id in cookie
@@ -312,108 +368,111 @@ func hasVerificationCode(link, verification string) bool {
 }
 
 func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.Request) {
+	// TODO (2022-10-24): add translations for change password view
+	title := h.translator.Translate("ChangePassword")
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		data := GenericMessageData{
-			Title:    "Change password",
+			Title:    title,
 			Message:  errMessage,
 			Link:     "/reset",
-			LinkText: "Go back",
+			LinkText: h.translator.Translate("GoBack"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, Title: "change password"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 	}
-  _, uid := h.IsLoggedIn(req)
+	_, uid := h.IsLoggedIn(req)
 
-  ed := util.Describe("change password")
-  switch req.Method {
-  case "GET":
-    switch req.URL.Path {
-    default:
-      h.renderView(res, "change-password", TemplateData{LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
-    }
-  case "POST":
-    switch req.URL.Path {
-    case "/reset/submit":
-      oldPassword := req.PostFormValue("password-old")
-      newPassword := req.PostFormValue("password-new")
-      resetKeypair := (req.PostFormValue("reset-keypair") == "true")
-      var keypairString string
+	ed := util.Describe("change password")
+	switch req.Method {
+	case "GET":
+		switch req.URL.Path {
+		default:
+			h.renderView(res, "change-password", TemplateData{LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
+		}
+	case "POST":
+		switch req.URL.Path {
+		case "/reset/submit":
+			oldPassword := req.PostFormValue("password-old")
+			newPassword := req.PostFormValue("password-new")
+			resetKeypair := (req.PostFormValue("reset-keypair") == "true")
+			var keypairString string
 
-      // check if we're resetting keypair
-      if resetKeypair {
-        // if so: generate new keypair 
-        kp, err := crypto.GenerateKeypair()
-        ed.Check(err, "generate keypair")
-        kpBytes, err := kp.Marshal()
-        ed.Check(err, "marshal keypair")
-        pubkey, err := kp.PublicString()
-        ed.Check(err, "get pubkey string")
-        // and set it in db
-        err = h.db.SetPubkey(uid, pubkey)
-        ed.Check(err, "set new pubkey in database")
-        keypairString = string(kpBytes)
-      }
+			// check if we're resetting keypair
+			if resetKeypair {
+				// if so: generate new keypair
+				kp, err := crypto.GenerateKeypair()
+				ed.Check(err, "generate keypair")
+				kpBytes, err := kp.Marshal()
+				ed.Check(err, "marshal keypair")
+				pubkey, err := kp.PublicString()
+				ed.Check(err, "get pubkey string")
+				// and set it in db
+				err = h.db.SetPubkey(uid, pubkey)
+				ed.Check(err, "set new pubkey in database")
+				keypairString = string(kpBytes)
+			}
 
-      // check that the submitted, old password is valid
-      username, err := h.db.GetUsername(uid)
-      if err != nil {
-        dump(ed.Eout(err, "get username"))
-        return
-      }
+			// check that the submitted, old password is valid
+			username, err := h.db.GetUsername(uid)
+			if err != nil {
+				dump(ed.Eout(err, "get username"))
+				return
+			}
 
-      pwhashOld, _, err := h.db.GetPasswordHash(username)
-      if err != nil {
-        dump(ed.Eout(err, "get old password hash"))
-        return
-      }
+			pwhashOld, _, err := h.db.GetPasswordHash(username)
+			if err != nil {
+				dump(ed.Eout(err, "get old password hash"))
+				return
+			}
 
-      oldPasswordValid := crypto.ValidatePasswordHash(oldPassword, pwhashOld)
-      if !oldPasswordValid {
-        renderErr("old password did not match what was in database; not changing password")
-        return
-      }
+			oldPasswordValid := crypto.ValidatePasswordHash(oldPassword, pwhashOld)
+			if !oldPasswordValid {
+				renderErr("old password did not match what was in database; not changing password")
+				return
+			}
 
-      // let's set the new password in the database. first, hash it
-      pwhashNew, err := crypto.HashPassword(newPassword)
-      if err != nil {
-        dump(ed.Eout(err, "hash new password"))
-        return
-      }
-      // then save the hash
-      h.db.UpdateUserPasswordHash(uid, pwhashNew)
-      // render a success message & show a link to the login page :')
-      h.renderView(res, "change-password-success", TemplateData{LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
-    default:
-      fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
-      IndexRedirect(res, req)
-    }
-  default:
-    fmt.Println("non get/post method, redirecting to index")
-    IndexRedirect(res, req)
-  }
+			// let's set the new password in the database. first, hash it
+			pwhashNew, err := crypto.HashPassword(newPassword)
+			if err != nil {
+				dump(ed.Eout(err, "hash new password"))
+				return
+			}
+			// then save the hash
+			h.db.UpdateUserPasswordHash(uid, pwhashNew)
+			// render a success message & show a link to the login page :')
+			h.renderView(res, "change-password-success", TemplateData{LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
+		default:
+			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
+			IndexRedirect(res, req)
+		}
+	default:
+		fmt.Println("non get/post method, redirecting to index")
+		IndexRedirect(res, req)
+	}
 }
 
 func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("password proof route")
-  loggedIn, _ := h.IsLoggedIn(req)
+	loggedIn, _ := h.IsLoggedIn(req)
+	title := util.Capitalize(h.translator.Translate("PasswordReset"))
 
-  // change password functionality, handle this in another function
-  if loggedIn {
-    h.handleChangePassword(res, req)
-    return
-  }
+	// change password functionality, handle this in another function
+	if loggedIn {
+		h.handleChangePassword(res, req)
+		return
+	}
 
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		data := GenericMessageData{
-			Title:    "Reset password",
+			Title:    title,
 			Message:  errMessage,
 			Link:     "/reset",
-			LinkText: "Go back",
+			LinkText: h.translator.Translate("GoBack"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 	}
 
 	switch req.Method {
@@ -503,13 +562,13 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 			h.db.UpdateUserPasswordHash(userid, pwhash)
 			// render a success message & show a link to the login page :')
 			data := GenericMessageData{
-				Title:       "Reset password—success!",
-				Message:     "You reset your password!",
+				Title:       h.translator.Translate("PasswordResetSuccess"),
+				Message:     h.translator.Translate("PasswordResetSuccessMessage"),
 				Link:        "/login",
-				LinkMessage: "Give it a try and",
-				LinkText:    "login",
+				LinkMessage: h.translator.Translate("PasswordResetSuccessLinkMessage"),
+				LinkText:    h.translator.Translate("Login"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: "password reset"})
+			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 		default:
 			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
 			IndexRedirect(res, req)
@@ -524,22 +583,26 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	ed := util.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	if loggedIn {
+		// TODO (2022-09-20): translate
 		data := GenericMessageData{
-			Title:       "Register",
-			Message:     "You already have an account (you are logged in with it).",
+			Title:       util.Capitalize(h.translator.Translate("Register")),
+			Message:     h.translator.Translate("RegisterMessage"),
 			Link:        "/",
-			LinkMessage: "Visit the",
-			LinkText:    "index",
+			LinkMessage: h.translator.Translate("RegisterLinkMessage"),
+			LinkText:    h.translator.Translate("Index"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: "register"})
+		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
 		return
 	}
 
+	rules := util.Markup(template.HTML(h.files["rules"]))
+	verification := util.Markup(template.HTML(h.files["verification-instructions"]))
+	conduct := h.config.Community.ConductLink
 	var verificationCode string
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage, rules, verification, conduct}})
 	}
 
 	var err error
@@ -549,14 +612,15 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		verificationCode, err = h.session.GetVerificationCode(req)
 		// we had an error getting the verification code, generate a code and set it on the session
 		if err != nil {
-			verificationCode = fmt.Sprintf("MRV%06d\n", crypto.GenerateVerificationCode())
+			prefix := util.VerificationPrefix(h.config.Community.Name)
+			verificationCode = fmt.Sprintf("%s%06d\n", prefix, crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
 				renderErr("Had troubles setting the verification code on session")
 				return
 			}
 		}
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, ""}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, "", rules, verification, conduct}})
 	case "POST":
 		verificationCode, err = h.session.GetVerificationCode(req)
 		if err != nil {
@@ -630,13 +694,14 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: "registered successfully"})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
 	}
 }
 
+// purely an example route; intentionally unused :)
 func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request) {
 	data := GenericMessageData{
 		Title:       "GenericTitle",
@@ -650,7 +715,8 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	h.renderView(res, "about", TemplateData{LoggedIn: loggedIn})
+	input := util.Markup(template.HTML(h.files["about"]))
+	h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: h.translator.Translate("About")})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -662,19 +728,20 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	switch req.Method {
 	// Handle GET (=> want to start a new thread)
 	case "GET":
+		// TODO (2022-09-20): translate
 		if !loggedIn {
-			title := "Not logged in"
+			title := h.translator.Translate("NotLoggedIn")
 			data := GenericMessageData{
 				Title:       title,
-				Message:     "Only members of this forum may create new threads",
+				Message:     h.translator.Translate("NewThreadMessage"),
 				Link:        "/login",
-				LinkMessage: "If you are a member,",
-				LinkText:    "log in",
+				LinkMessage: h.translator.Translate("NewThreadLinkMessage"),
+				LinkText:    h.translator.Translate("LogIn"),
 			}
 			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 			return
 		}
-		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: "new thread"})
+		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
@@ -684,10 +751,10 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 		threadid, err := h.db.CreateThread(title, content, userid, 1)
 		if err != nil {
 			data := GenericMessageData{
-				Title:   "Error creating thread",
-				Message: "There was a database error when creating the thread, apologies.",
+				Title:   h.translator.Translate("NewThreadCreateError"),
+				Message: h.translator.Translate("NewThreadCreateErrorMessage"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: "new thread"})
+			h.renderView(res, "generic-message", TemplateData{Data: data, Title: h.translator.Translate("ThreadNew")})
 			return
 		}
 		// when data has been stored => redirect to thread
@@ -710,10 +777,10 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 
 	// generic error message base, with specifics being swapped out depending on the error
 	genericErr := GenericMessageData{
-		Title:       "Unaccepted request",
-		LinkMessage: "Go back to",
+		Title:       h.translator.Translate("ErrUnaccepted"),
+		LinkMessage: h.translator.Translate("GoBack"),
 		Link:        threadURL,
-		LinkText:    "the thread",
+		LinkText:    h.translator.Translate("ThreadThe"),
 	}
 
 	renderErr := func(msg string) {
@@ -752,17 +819,15 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
 
-func Serve(allowlist []string, sessionKey string, isdev bool) {
+func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf types.Config) {
 	port := ":8272"
-	dir := "./data/"
 
 	if isdev {
 		developing = true
-		dir = "./testdata/"
 		port = ":8277"
 	}
 
-	forum, err := NewServer(allowlist, sessionKey, dir)
+	forum, err := NewServer(allowlist, sessionKey, dir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -799,18 +864,43 @@ func (u *CercaForum) directory() string {
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(allowlist []string, sessionKey, dir string) (*CercaForum, error) {
+func NewServer(allowlist []string, sessionKey, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
-		ServeMux: http.ServeMux{},
+		ServeMux:  http.ServeMux{},
 		Directory: dir,
 	}
 
 	dbpath := filepath.Join(s.directory(), "forum.db")
 	db := database.InitDB(dbpath)
 
+	config.EnsureDefaultPaths()
+	// load the documents specified in the config
+	// iff document doesn't exist, dump a default document where it should be and read that
+	type triple struct{ key, docpath, content string }
+	triples := []triple{
+		{"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
+		{"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
+		{"verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION},
+		{"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
+	}
+
+	files := make(map[string][]byte)
+	for _, t := range triples {
+		data, err := util.LoadFile(t.key, t.docpath, t.content)
+		if err != nil {
+			return s, err
+		}
+		files[t.key] = data
+	}
+
+	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
+	// for currently translated languages, see i18n/i18n.go
+	translator := i18n.Init(config.Community.Language)
+	templates := template.Must(generateTemplates(config, translator))
+	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
+
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist}
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)

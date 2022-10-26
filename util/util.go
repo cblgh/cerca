@@ -1,19 +1,30 @@
 package util
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
+	"github.com/komkom/toml"
 	"github.com/microcosm-cc/bluemonday"
-	// "errors"
+	"golang.org/x/exp/utf8string"
+
+	"cerca/defaults"
+	"cerca/types"
 )
 
 /* util.Eout example invocations
@@ -95,6 +106,16 @@ func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
 }
 
+func VerificationPrefix(name string) string {
+	pattern := regexp.MustCompile("A|E|O|U|I|Y")
+	upper := strings.ToUpper(name)
+	replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
+	if len(replaced) < 3 {
+		replaced += "XYZ"
+	}
+	return replaced[0:3]
+}
+
 func GetThreadSlug(threadid int, title string, threadLen int) string {
 	return fmt.Sprintf("/thread/%d/%s-%d/", threadid, SanitizeURL(title), threadLen)
 }
@@ -129,4 +150,66 @@ func GetURLPortion(req *http.Request, index int) (int, bool) {
 		return -1, false
 	}
 	return desiredID, true
+}
+
+func Capitalize(s string) string {
+	// utf8 safe capitalization
+	str := utf8string.NewString(s)
+	first := string(str.At(0))
+	rest := string(str.Slice(1, str.RuneCount()))
+	return strings.ToUpper(first) + rest
+}
+
+func CreateIfNotExist(docpath, content string) (bool, error) {
+	err := os.MkdirAll(filepath.Dir(docpath), 0750)
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(docpath)
+	if err != nil {
+		// if the file doesn't exist, create it
+		if errors.Is(err, fs.ErrNotExist) {
+			err = os.WriteFile(docpath, []byte(content), 0777)
+			if err != nil {
+				return false, err
+			}
+			// created file successfully
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+	return false, nil
+}
+
+func ReadConfig(confpath string) types.Config {
+	ed := Describe("config")
+	_, err := CreateIfNotExist(confpath, defaults.DEFAULT_CONFIG)
+	ed.Check(err, "create default config")
+
+	data, err := os.ReadFile(confpath)
+	ed.Check(err, "read file")
+
+	var conf types.Config
+	decoder := json.NewDecoder(toml.New(bytes.NewBuffer(data)))
+
+	err = decoder.Decode(&conf)
+	ed.Check(err, "decode toml with json decoder")
+
+	return conf
+}
+
+func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
+	ed := Describe("load file")
+	_, err := CreateIfNotExist(docpath, defaultContent)
+	err = ed.Eout(err, "create if not exist (%s) %s", key, docpath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(docpath)
+	err = ed.Eout(err, "read %s", docpath)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }

@@ -2,15 +2,15 @@
 <form method="post" action="/login">
     <div style="display: grid;">
         <div>
-            <label for="username">Username:</label>
+            <label for="username">{{ "Username" | translate | capitalize }}:</label>
             <input type="text" name="username" id="username">
         </div>
         <div>
-            <label for="password">Password:</label>
+            <label for="password">{{ "Password" | translate | capitalize }}:</label>
             <input type="password" name="password" id="password" style="margin-bottom:0;" aria-describedby="password-help">
-            <div><small id="password-help">Must be at least 9 characters long.</small></div>
+            <div><small id="password-help">{{ "PasswordMin" | translate }}</small></div>
         </div>
-        <input type="submit" value="Enter" style="margin-top:1rem;">
+        <input type="submit" value='{{ "Enter" | translate | capitalize }}' style="margin-top:1rem;">
     </div>
 </form>
 {{ end }}
