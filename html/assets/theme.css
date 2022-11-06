@@ -8,10 +8,10 @@ a:visited { color: #666; }
 tr:hover td { background:#e2cca2; }
 body { background: wheat; color: black; }
 
-header > a { background-image: url('/assets/merveilles.png'); }
 header details a:visited { color: black; }
 
 /* halloween theme */
+/*
 header svg { fill: #ff8000; }
 #logo {
 	width: 48px;
@@ -28,4 +28,6 @@ body { background: #111; color: #ff8000;   }
 header details a:visited { color: #ff8000; }
 
 /* author colors */
+/*
 span > b { color: #ff8000; }
+*/
