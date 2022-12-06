@@ -14,10 +14,10 @@ textarea { background: black; color: wheat; }
 ul li { list-style-type: circle; }
 /* post author name is styled with `span > b` */
 blockquote { border-left-color: darkred; }
-pre code { color: darkred; }
+a:not([class]), pre code { color: darkred; }
+h1, h2, h2 > a:not([class], :visited), span > b { color: black; }
 a:visited { color: #666; }
-a:not([class]), header details a:visited { color: darkred; }
-h1, h2, h2 > a:not([class]), span > b { color: black; }
+header a, header a:visited { color: darkred; }
 
 /* halloween theme */
 /*
