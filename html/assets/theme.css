@@ -2,15 +2,32 @@
  * change these to change the forum's colours */
 
 /* normal theme */
-blockquote { border-color: black }
-a:not([class]) { color: black; }
-a:visited { color: #666; }
-tr:hover td { background:#e2cca2; }
-body { background: wheat; color: black; }
+/* default theme colors:
+ * black
+ * wheat - bg
+ * #666 - visited link
+ * darkred - highlights: links, certain tags
+*/
 
-header details a:visited { color: black; }
+body { background: wheat; color: black; }
+textarea { background: black; color: wheat; }
+ul li { list-style-type: circle; }
+/* post author name is styled with `span > b` */
+blockquote { border-left-color: darkred; }
+pre code { color: darkred; }
+a:visited { color: #666; }
+a:not([class]), header details a:visited { color: darkred; }
+h1, h2, h2 > a:not([class]), span > b { color: black; }
 
 /* halloween theme */
+/*
+/* halloween theme colors
+ * #ff8000
+ * wheat
+ * gray
+ * #111
+ * #f2f2f2
+*/
 /*
 header svg { fill: #ff8000; }
 #logo {
@@ -24,10 +41,10 @@ textarea { background: black; color: wheat; }
 h1 a:visited, a:not([class]) { color: wheat; }
 a:visited { color: gray; }
 body { background: #111; color: #ff8000;   }
-
 header details a:visited { color: #ff8000; }
 
 /* author colors */
 /*
 span > b { color: #ff8000; }
 */
+
