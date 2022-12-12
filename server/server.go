@@ -360,6 +360,12 @@ func IndexRedirect(res http.ResponseWriter, req *http.Request) {
 
 const rfc822RSS = "Mon, 02 Jan 2006 15:04:05 -0700"
 
+func joinPath(host, upath string) string {
+	host = strings.TrimSuffix(host, "/")
+	upath = strings.TrimPrefix(upath, "/")
+	return fmt.Sprintf("%s/%s", host, upath)
+}
+
 func GenerateRSS(db *database.DB, config types.Config) string {
 	if config.RSS.URL == "" {
 		return "feed not configured"
@@ -371,7 +377,7 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 	for i, t := range threads {
 		fulltime := t.Publish.Format(rfc822RSS)
 		date := t.Publish.Format("2006-01-02")
-		posturl := filepath.Join(config.RSS.URL, fmt.Sprintf("%s#%d", t.Slug, t.PostID))
+		posturl := joinPath(config.RSS.URL, fmt.Sprintf("%s#%d", t.Slug, t.PostID))
 		entry := rss.OutputRSSItem(fulltime, t.Title, fmt.Sprintf("[%s] %s posted", date, t.Author), posturl)
 		entries[i] = entry
 	}
