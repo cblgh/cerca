@@ -244,13 +244,16 @@ type Thread struct {
 	Slug    string
 	ID      int
 	Publish time.Time
+	PostID  int
 }
 
 // get a list of threads
+// NOTE: this query is setting thread.Author not by thread creator, but latest poster. if this becomes a problem, revert
+// its use and employ Thread.PostID to perform another query for each thread to get the post author name (wrt server.go:GenerateRSS)
 func (d DB) ListThreads(sortByPost bool) []Thread {
 	query := `
-  SELECT count(t.id), t.title, t.id, u.name FROM threads t
-  INNER JOIN users u on u.id = t.authorid
+  SELECT count(t.id), t.title, t.id, u.name, p.publishtime, p.id FROM threads t
+  INNER JOIN users u on u.id = p.authorid
   INNER JOIN posts p ON t.id = p.threadid
   GROUP BY t.id
   %s
@@ -274,7 +277,7 @@ func (d DB) ListThreads(sortByPost bool) []Thread {
 	var data Thread
 	var threads []Thread
 	for rows.Next() {
-		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Author); err != nil {
+		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Author, &data.Publish, &data.PostID); err != nil {
 			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
 		}
 		data.Slug = util.GetThreadSlug(data.ID, data.Title, postCount)
