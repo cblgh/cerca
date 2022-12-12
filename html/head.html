@@ -191,6 +191,9 @@
                     <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
                     {{end}}
                     <li><a href="/about">{{ "About" | translate }}</a></li>
+                    {{ if .HasRSS }}
+                    <li><a href="/rss.xml">rss</a></li>
+                    {{ end }}
                     {{ if .LoggedIn }}
                     <li><a href="/logout">{{"Logout" | translate }}</a></li>
                     {{ else }}

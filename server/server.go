@@ -37,6 +37,7 @@ type TemplateData struct {
 	Data       interface{}
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
+  HasRSS bool
 	LoggedInID int
 	ForumName  string
 	Title      string
@@ -270,7 +271,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 			Title:   title,
 			Message: h.translator.Translate("ErrThread404Message"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+    h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
 		return
 	}
 
@@ -306,7 +307,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 		thread[i].Content = template.HTML(content)
 	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
-	view := TemplateData{Data: &data, QuickNav: loggedIn, LoggedIn: loggedIn, LoggedInID: userid}
+	view := TemplateData{Data: &data, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle
 		view.Title = data.Title
@@ -339,7 +340,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost)
-	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{threads}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
@@ -395,7 +396,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
@@ -407,7 +408,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 			return
 		}
 		// save user id in cookie
@@ -456,7 +457,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 	case "GET":
 		switch req.URL.Path {
 		default:
-			h.renderView(res, "change-password", TemplateData{LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
+			h.renderView(res, "change-password", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
 		}
 	case "POST":
 		switch req.URL.Path {
@@ -509,7 +510,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 			// then save the hash
 			h.db.UpdateUserPasswordHash(uid, pwhashNew)
 			// render a success message & show a link to the login page :')
-			h.renderView(res, "change-password-success", TemplateData{LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
+			h.renderView(res, "change-password-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
 		default:
 			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
 			IndexRedirect(res, req)
@@ -659,7 +660,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			LinkMessage: h.translator.Translate("RegisterLinkMessage"),
 			LinkText:    h.translator.Translate("Index"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
+		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
 		return
 	}
 
@@ -762,7 +763,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
@@ -784,7 +785,7 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	input := util.Markup(template.HTML(h.files["about"]))
-	h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: h.translator.Translate("About")})
+	h.renderView(res, "about-template", TemplateData{Data: input, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("About")})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -809,7 +810,7 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 			return
 		}
-		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
+		h.renderView(res, "new-thread", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
@@ -856,7 +857,7 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 	renderErr := func(msg string) {
 		fmt.Println(msg)
 		genericErr.Message = msg
-		h.renderView(res, "generic-message", TemplateData{Data: genericErr, LoggedIn: loggedIn})
+		h.renderView(res, "generic-message", TemplateData{Data: genericErr, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
 	}
 
 	if !loggedIn || !ok {
