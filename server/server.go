@@ -364,7 +364,11 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 		entry := rss.OutputRSSItem(fulltime, t.Title, fmt.Sprintf("[%s] %s posted", date, t.Author), posturl)
 		entries[i] = entry
 	}
-	feed := rss.OutputRSS(config.RSS.Name, config.RSS.URL, config.RSS.Description, entries)
+	feedName := config.RSS.Name
+	if feedName == "" {
+		feedName = config.Community.Name
+	}
+	feed := rss.OutputRSS(feedName, config.RSS.URL, config.RSS.Description, entries)
 	return feed
 }
 
