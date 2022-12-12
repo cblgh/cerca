@@ -37,7 +37,7 @@ type TemplateData struct {
 	Data       interface{}
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
-  HasRSS bool
+	HasRSS     bool
 	LoggedInID int
 	ForumName  string
 	Title      string
@@ -116,7 +116,7 @@ func NewRateLimitingWare(routes []string) *RateLimitingWare {
 	// refresh one access every 15 minutes. forget about the requester after 24h of non-activity
 	ware.limiter = limiter.NewTimedRateLimiter(routes, 15*time.Minute, 24*time.Hour)
 	// allow 15 requests at once, then
-	ware.limiter.SetBurstAllowance(15)
+	ware.limiter.SetBurstAllowance(25)
 	return &ware
 }
 
@@ -124,6 +124,16 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		portIndex := strings.LastIndex(req.RemoteAddr, ":")
 		ip := req.RemoteAddr[:portIndex]
+		// specific fix in case of using a reverse proxy setup
+		if address, exists := req.Header["X-Real-Ip"]; ip == "127.0.0.1" && exists {
+			ip = address[0]
+		}
+		// rate limiting likely not working as intended on server;
+		// set a x-real-ip header: https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
+		if ip == "127.0.0.1" {
+			next.ServeHTTP(res, req)
+			return
+		}
 		err := ware.limiter.BlockUntilAllowed(ip, req.URL.String(), req.Context())
 		if err != nil {
 			err = util.Eout(err, "RateLimitingWare")
@@ -271,7 +281,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 			Title:   title,
 			Message: h.translator.Translate("ErrThread404Message"),
 		}
-    h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
+		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
 		return
 	}
 
