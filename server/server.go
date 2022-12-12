@@ -130,7 +130,7 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 		}
 		// rate limiting likely not working as intended on server;
 		// set a x-real-ip header: https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
-		if ip == "127.0.0.1" {
+		if !developing && ip == "127.0.0.1" {
 			next.ServeHTTP(res, req)
 			return
 		}
