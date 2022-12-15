@@ -29,6 +29,10 @@
                 /* normalize post titles */
                 font-size: 1rem;
             }
+            button {
+                text-decoration: underline;
+                cursor: pointer;
+            }
             #logo {
                 width: 48px;
                 height: 48px;
@@ -191,6 +195,9 @@
                     <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
                     {{end}}
                     <li><a href="/about">{{ "About" | translate }}</a></li>
+                    {{ if .HasRSS }}
+                    <li><a href="/rss.xml">rss</a></li>
+                    {{ end }}
                     {{ if .LoggedIn }}
                     <li><a href="/logout">{{"Logout" | translate }}</a></li>
                     {{ else }}

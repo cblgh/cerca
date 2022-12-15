@@ -11,6 +11,12 @@ type Config struct {
 		Language    string `json:"language"`
 	} `json:"general"`
 
+	RSS struct {
+		Name        string `json:"feed_name"`
+		Description string `json:"feed_description"`
+		URL         string `json:"forum_url"`
+	} `json:"rss"`
+
 	Documents struct {
 		LogoPath                    string `json:"logo"`
 		AboutPath                   string `json:"about"`
