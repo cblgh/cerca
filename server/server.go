@@ -22,11 +22,13 @@ import (
 	"cerca/defaults"
 	cercaHTML "cerca/html"
 	"cerca/i18n"
+	"cerca/limiter"
 	"cerca/server/session"
 	"cerca/types"
 	"cerca/util"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/cblgh/plain/rss"
 )
 
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
@@ -35,6 +37,7 @@ type TemplateData struct {
 	Data       interface{}
 	QuickNav   bool
 	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
+	HasRSS     bool
 	LoggedInID int
 	ForumName  string
 	Title      string
@@ -93,6 +96,7 @@ type RequestHandler struct {
 	config     types.Config
 	translator i18n.Translator
 	templates  *template.Template
+	rssFeed    string
 }
 
 var developing bool
@@ -101,6 +105,44 @@ func dump(err error) {
 	if developing {
 		fmt.Println(err)
 	}
+}
+
+type RateLimitingWare struct {
+	limiter *limiter.TimedRateLimiter
+}
+
+func NewRateLimitingWare(routes []string) *RateLimitingWare {
+	ware := RateLimitingWare{}
+	// refresh one access every 15 minutes. forget about the requester after 24h of non-activity
+	ware.limiter = limiter.NewTimedRateLimiter(routes, 15*time.Minute, 24*time.Hour)
+	// allow 15 requests at once, then
+	ware.limiter.SetBurstAllowance(25)
+	return &ware
+}
+
+func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		portIndex := strings.LastIndex(req.RemoteAddr, ":")
+		ip := req.RemoteAddr[:portIndex]
+		// specific fix in case of using a reverse proxy setup
+		if address, exists := req.Header["X-Real-Ip"]; ip == "127.0.0.1" && exists {
+			ip = address[0]
+		}
+		// rate limiting likely not working as intended on server;
+		// set a x-real-ip header: https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
+		if !developing && ip == "127.0.0.1" {
+			next.ServeHTTP(res, req)
+			return
+		}
+		err := ware.limiter.BlockUntilAllowed(ip, req.URL.String(), req.Context())
+		if err != nil {
+			err = util.Eout(err, "RateLimitingWare")
+			dump(err)
+			http.Error(res, "An error occured", http.StatusInternalServerError)
+			return
+		}
+		next.ServeHTTP(res, req)
+	})
 }
 
 // returns true if logged in, and the userid of the logged in user.
@@ -229,7 +271,7 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 	}
 }
 
-func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
 	threadid, ok := util.GetURLPortion(req, 2)
 	loggedIn, userid := h.IsLoggedIn(req)
 
@@ -239,7 +281,7 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 			Title:   title,
 			Message: h.translator.Translate("ErrThread404Message"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn})
+		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
 		return
 	}
 
@@ -256,6 +298,8 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		// * passing data to signal "your post was successfully added" (w/o impacting visited state / url)
 		posts := h.db.GetThread(threadid)
 		newSlug := util.GetThreadSlug(threadid, posts[0].ThreadTitle, len(posts))
+		// update the rss feed
+		h.rssFeed = GenerateRSS(h.db, h.config)
 		http.Redirect(res, req, newSlug, http.StatusFound)
 		return
 	}
@@ -273,7 +317,7 @@ func (h RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) 
 		thread[i].Content = template.HTML(content)
 	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
-	view := TemplateData{Data: &data, QuickNav: loggedIn, LoggedIn: loggedIn, LoggedInID: userid}
+	view := TemplateData{Data: &data, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle
 		view.Title = data.Title
@@ -306,12 +350,53 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost)
-	view := TemplateData{Data: IndexData{threads}, LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{threads}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
 func IndexRedirect(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, "/", http.StatusSeeOther)
+}
+
+const rfc822RSS = "Mon, 02 Jan 2006 15:04:05 -0700"
+
+func joinPath(host, upath string) string {
+	host = strings.TrimSuffix(host, "/")
+	upath = strings.TrimPrefix(upath, "/")
+	return fmt.Sprintf("%s/%s", host, upath)
+}
+
+func GenerateRSS(db *database.DB, config types.Config) string {
+	if config.RSS.URL == "" {
+		return "feed not configured"
+	}
+	// TODO (2022-12-08): augment ListThreads to choose getting author of latest post or thread creator (currently latest
+	// post always)
+	threads := db.ListThreads(true)
+	entries := make([]string, len(threads))
+	for i, t := range threads {
+		fulltime := t.Publish.Format(rfc822RSS)
+		date := t.Publish.Format("2006-01-02")
+		posturl := joinPath(config.RSS.URL, fmt.Sprintf("%s#%d", t.Slug, t.PostID))
+		entry := rss.OutputRSSItem(fulltime, t.Title, fmt.Sprintf("[%s] %s posted", date, t.Author), posturl)
+		entries[i] = entry
+	}
+	feedName := config.RSS.Name
+	if feedName == "" {
+		feedName = config.Community.Name
+	}
+	feed := rss.OutputRSS(feedName, config.RSS.URL, config.RSS.Description, entries)
+	return feed
+}
+
+func (h *RequestHandler) RSSRoute(res http.ResponseWriter, req *http.Request) {
+	// error if feed not configured (e.g. config.RSS.URL not set)
+	if h.config.RSS.URL == "" {
+		http.Error(res, "Feed Not Configured", http.StatusNotFound)
+		return
+	}
+	res.Header().Set("Content-Type", "application/xml")
+	res.Write([]byte(h.rssFeed))
 }
 
 func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) {
@@ -327,7 +412,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
-		h.renderView(res, "login", TemplateData{Data: LoginData{}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
+		h.renderView(res, "login", TemplateData{Data: LoginData{}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
@@ -339,7 +424,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
+			h.renderView(res, "login", TemplateData{Data: LoginData{FailedAttempt: true}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Login")})
 			return
 		}
 		// save user id in cookie
@@ -388,7 +473,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 	case "GET":
 		switch req.URL.Path {
 		default:
-			h.renderView(res, "change-password", TemplateData{LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
+			h.renderView(res, "change-password", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{Action: "/reset/submit"}})
 		}
 	case "POST":
 		switch req.URL.Path {
@@ -441,7 +526,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 			// then save the hash
 			h.db.UpdateUserPasswordHash(uid, pwhashNew)
 			// render a success message & show a link to the login page :')
-			h.renderView(res, "change-password-success", TemplateData{LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
+			h.renderView(res, "change-password-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
 		default:
 			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
 			IndexRedirect(res, req)
@@ -591,7 +676,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			LinkMessage: h.translator.Translate("RegisterLinkMessage"),
 			LinkText:    h.translator.Translate("Index"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
+		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
 		return
 	}
 
@@ -694,7 +779,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		kpJson, err := keypair.Marshal()
 		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
+		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
@@ -716,14 +801,14 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	input := util.Markup(template.HTML(h.files["about"]))
-	h.renderView(res, "about-template", TemplateData{Data: input, LoggedIn: loggedIn, Title: h.translator.Translate("About")})
+	h.renderView(res, "about-template", TemplateData{Data: input, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("About")})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(res, "User-agent: *\nDisallow: /")
 }
 
-func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	switch req.Method {
 	// Handle GET (=> want to start a new thread)
@@ -741,7 +826,7 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 			return
 		}
-		h.renderView(res, "new-thread", TemplateData{LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
+		h.renderView(res, "new-thread", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
@@ -757,6 +842,8 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 			h.renderView(res, "generic-message", TemplateData{Data: data, Title: h.translator.Translate("ThreadNew")})
 			return
 		}
+		// update the rss feed
+		h.rssFeed = GenerateRSS(h.db, h.config)
 		// when data has been stored => redirect to thread
 		slug := fmt.Sprintf("thread/%d/%s/", threadid, util.SanitizeURL(title))
 		http.Redirect(res, req, "/"+slug, http.StatusSeeOther)
@@ -766,7 +853,7 @@ func (h RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reques
 	}
 }
 
-func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
 		IndexRedirect(res, req)
 		return
@@ -786,7 +873,7 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 	renderErr := func(msg string) {
 		fmt.Println(msg)
 		genericErr.Message = msg
-		h.renderView(res, "generic-message", TemplateData{Data: genericErr, LoggedIn: loggedIn})
+		h.renderView(res, "generic-message", TemplateData{Data: genericErr, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
 	}
 
 	if !loggedIn || !ok {
@@ -815,6 +902,8 @@ func (h RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Reque
 			renderErr("That's not your post to delete? Sorry buddy!")
 			return
 		}
+		// update the rss feed, in case the deleted post was present in feed
+		h.rssFeed = GenerateRSS(h.db, h.config)
 	}
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
@@ -837,7 +926,10 @@ func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf t
 		util.Check(err, "setting up tcp listener")
 	}
 	fmt.Println("Serving forum on", port)
-	http.Serve(l, forum)
+
+	rateLimitingInstance := NewRateLimitingWare([]string{"/rss/", "/rss.xml"})
+	limitingMiddleware := rateLimitingInstance.Handler(forum)
+	http.Serve(l, limitingMiddleware)
 }
 
 // CercaForum is an HTTP.ServeMux which is set up to initialize and run
@@ -897,7 +989,8 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	// for currently translated languages, see i18n/i18n.go
 	translator := i18n.Init(config.Community.Language)
 	templates := template.Must(generateTemplates(config, translator))
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates}
+	feed := GenerateRSS(&db, config)
+	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
@@ -911,6 +1004,8 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	s.ServeMux.HandleFunc("/thread/", handler.ThreadRoute)
 	s.ServeMux.HandleFunc("/robots.txt", handler.RobotsRoute)
 	s.ServeMux.HandleFunc("/", handler.IndexRoute)
+	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
+	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
 	fileserver := http.FileServer(http.Dir("html/assets/"))
 	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
