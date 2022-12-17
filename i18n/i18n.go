@@ -17,6 +17,7 @@ var English = map[string]string{
 	"Sort":     "sort",
 	"Enter":    "enter",
 	"Register": "register",
+  "Bottom": "bottom",
 
 	"LoggedIn":    "logged in",
 	"NotLoggedIn": "Not logged in",
@@ -122,6 +123,7 @@ var Swedish = map[string]string{
 	"Sort":     "sortera",
 	"Enter":    "skicka",
 	"Register": "registrera",
+  "Bottom": "hoppa ner",
 
 	"LoggedIn":    "inloggad",
 	"NotLoggedIn": "Ej inloggad",
@@ -227,6 +229,7 @@ var EspanolMexicano = map[string]string{
 	"Sort":     "sort",
 	"Register": "register",
 	"Enter":    "entrar",
+  "Bottom": "bottom",
 
 	"LoggedIn":    "logged in",
 	"NotLoggedIn": "Not logged in",
