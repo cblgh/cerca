@@ -21,7 +21,7 @@
             </span>
             <a href="#{{ $post.ID }}">
                 <span style="margin-left: 0.5rem;">
-                    <time datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
+                    <time title="{{ $post.Publish | formatDateTime }}" datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
                 </span>
             </a>
         </section>
