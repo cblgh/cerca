@@ -55,9 +55,9 @@ func createUser (username, password string, db *database.DB) UserInfo {
 
 func inform(msg string, args ...interface{}) {
 	if len(args) > 0 {
-		fmt.Printf("admin-add-user: %s\n", fmt.Sprintf(msg, args...))
+		fmt.Printf("%s\n", fmt.Sprintf(msg, args...))
 	} else {
-		fmt.Printf("admin-add-user: %s\n", msg)
+		fmt.Printf("%s\n", msg)
 	}
 }
 
@@ -83,7 +83,7 @@ func main() {
 
 	usage := `usage
 	admin-add-user --url https://forum.merveilles.town --database ./data/forum.db --username <username to create account for> 
-  admin-add-user --help for more information
+	admin-add-user --help for more information
   `
 
 	if username == "" {
