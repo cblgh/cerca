@@ -2,14 +2,6 @@
 <main>
     <h1>{{ "Register" | translate | capitalize }}</h1>
     <p>{{ "RegisterHTMLMessage" | translate | tohtml }}</p>
-    <p>{{ "RegisterKeypairExplanationStart" | translate | tohtml }}</p>
-    <p>{{ "RegisterKeypairExplanationEnd" | translate | tohtml }}</p>
-    <p><i><b>{{ "RegisterKeypairWarning" | translate }}</i></b></p>
-	<code>
-	<pre class="selectable">
-	{{ .Data.Keypair }}
-	</pre>
-	</code>
 </main>
 
 {{ template "footer" . }}
