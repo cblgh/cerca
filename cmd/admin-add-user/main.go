@@ -10,7 +10,7 @@ import (
 )
 
 type UserInfo struct {
-	Username, Password, Keypair string
+	Username, Password string
 }
 
 func createUser (username, password string, db *database.DB) UserInfo {
@@ -35,22 +35,7 @@ func createUser (username, password string, db *database.DB) UserInfo {
 	if err = ed.Eout(err, "add registration"); err != nil {
 		complain("Database had a problem saving user registration location")
 	}
-	// generate and pass public keypair
-	keypair, err := crypto.GenerateKeypair()
-	ed.Check(err, "generate keypair")
-	// record generated pubkey in database for eventual later use
-	pub, err := keypair.PublicString()
-	if err = ed.Eout(err, "convert pubkey to string"); err != nil {
-		complain("Can't convert pubkey to string")
-	}
-	ed.Check(err, "stringify pubkey")
-	err = db.AddPubkey(userID, pub)
-	if err = ed.Eout(err, "insert pubkey in db"); err != nil {
-		complain("Database had a problem saving user registration")
-	}
-	kpJson, err := keypair.Marshal()
-	ed.Check(err, "marshal keypair")
-	return UserInfo{Username: username, Password: password, Keypair: string(kpJson)}
+	return UserInfo{Username: username, Password: password}
 }
 
 func inform(msg string, args ...interface{}) {
@@ -73,9 +58,7 @@ func complain(msg string, args ...interface{}) {
 func main() {
 	var username string
 	var forumDomain string
-	var keypairFlag bool
 	var dbPath string
-	flag.BoolVar(&keypairFlag, "keypair", false, "output the keypair")
 	flag.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
 	flag.StringVar(&username, "username", "", "username whose credentials should be reset")
 	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
@@ -104,9 +87,6 @@ func main() {
 
 	inform("[user]\n%s", username)
 	inform("[password]\n%s", newPassword)
-	if keypairFlag {
-		inform("[keypair]\n%s", info.Keypair)
-	}
 	inform("Please login at %s\n", loginRoute)
 	inform("After logging in, visit %s to reset your password", resetRoute)
 }
