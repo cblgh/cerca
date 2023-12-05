@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
@@ -51,7 +50,6 @@ type PasswordResetData struct {
 
 type ChangePasswordData struct {
 	Action  string
-	Keypair string
 }
 
 type IndexData struct {
@@ -72,10 +70,6 @@ type RegisterData struct {
 	Rules                    template.HTML
 	VerificationInstructions template.HTML
 	ConductLink              string
-}
-
-type RegisterSuccessData struct {
-	Keypair string
 }
 
 type LoginData struct {
@@ -480,23 +474,6 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 		case "/reset/submit":
 			oldPassword := req.PostFormValue("password-old")
 			newPassword := req.PostFormValue("password-new")
-			resetKeypair := (req.PostFormValue("reset-keypair") == "true")
-			var keypairString string
-
-			// check if we're resetting keypair
-			if resetKeypair {
-				// if so: generate new keypair
-				kp, err := crypto.GenerateKeypair()
-				ed.Check(err, "generate keypair")
-				kpBytes, err := kp.Marshal()
-				ed.Check(err, "marshal keypair")
-				pubkey, err := kp.PublicString()
-				ed.Check(err, "get pubkey string")
-				// and set it in db
-				err = h.db.SetPubkey(uid, pubkey)
-				ed.Check(err, "set new pubkey in database")
-				keypairString = string(kpBytes)
-			}
 
 			// check that the submitted, old password is valid
 			username, err := h.db.GetUsername(uid)
@@ -526,7 +503,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 			// then save the hash
 			h.db.UpdateUserPasswordHash(uid, pwhashNew)
 			// render a success message & show a link to the login page :')
-			h.renderView(res, "change-password-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{Keypair: keypairString}})
+			h.renderView(res, "change-password-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Data: ChangePasswordData{}})
 		default:
 			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
 			IndexRedirect(res, req)
@@ -538,130 +515,28 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 }
 
 func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("password proof route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	title := util.Capitalize(h.translator.Translate("PasswordReset"))
 
-	// change password functionality, handle this in another function
+	// the user was logged in, let them change their password themselves :)
 	if loggedIn {
 		h.handleChangePassword(res, req)
 		return
 	}
 
-	renderErr := func(errFmt string, args ...interface{}) {
+	renderPlaceholder := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
 		data := GenericMessageData{
 			Title:    title,
 			Message:  errMessage,
-			Link:     "/reset",
+			Link:     "/",
 			LinkText: h.translator.Translate("GoBack"),
 		}
 		h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 	}
-
-	switch req.Method {
-	case "GET":
-		switch req.URL.Path {
-		case "/reset/submit":
-			params := req.URL.Query()
-			getParam := func(key string) string {
-				if q, exists := params[key]; exists {
-					return q[0]
-				}
-				fmt.Println("can't find param", key)
-				return ""
-			}
-			username := getParam("username")
-			payload := getParam("payload")
-			h.renderView(res, "password-reset", TemplateData{Data: PasswordResetData{Action: "/reset/submit", Username: username, Payload: payload}})
-		default:
-			h.renderView(res, "password-reset", TemplateData{Data: PasswordResetData{Action: "/reset/generate"}})
-		}
-	case "POST":
-		username := req.PostFormValue("username")
-		switch req.URL.Path {
-		case "/reset/generate":
-			constructProofPayload := func() string {
-				return fmt.Sprintf("%s::%s", username, crypto.GenerateNonce())
-			}
-			payload := constructProofPayload()
-			params := fmt.Sprintf("?payload=%s&username=%s", payload, username)
-			http.Redirect(res, req, "/reset/submit"+params, http.StatusSeeOther)
-		case "/reset/submit":
-			password := req.PostFormValue("password")
-			proofString := req.PostFormValue("proof")
-			payload := req.PostFormValue("payload")
-
-			// make sure the user exists
-			userid, err := h.db.GetUserID(username)
-			if err != nil {
-				renderErr("Wrong username, or a non-existent user")
-				return
-			}
-
-			// make sure the nonce / payload is not being reused
-			nonceExisted, err := h.db.CheckNonceExists(payload)
-			if err != nil {
-				dump(ed.Eout(err, "check nonce existed"))
-				return
-			}
-			if nonceExisted {
-				renderErr("This payload has already been used, please generate a new one")
-				return
-			}
-
-			// get the pubkey, as it is saved in the database for the corresponding user
-			pubkeyString, err := h.db.GetPubkey(userid)
-			if err != nil {
-				renderErr("No matching pubkey found")
-				return
-			}
-			// convert to ed25519.PublicKey
-			pubkey := crypto.PublicKeyFromString(pubkeyString)
-
-			proof, err := hex.DecodeString(proofString)
-			if err != nil {
-				renderErr("The proof format was incorrect")
-				return
-			}
-
-			correct := crypto.VerifyProof(pubkey, []byte(payload), proof)
-			if !correct {
-				renderErr("The proof was incorrect")
-				return
-			}
-			// proof was correct!
-			// save the nonce, so it's not reused
-			err = h.db.AddNonce(payload)
-			if err != nil {
-				dump(ed.Eout(err, "insert nonce into database"))
-				return
-			}
-			// let's set the new password in the database. first, hash it
-			pwhash, err := crypto.HashPassword(password)
-			if err != nil {
-				dump(ed.Eout(err, "hash password during reset"))
-				return
-			}
-			h.db.UpdateUserPasswordHash(userid, pwhash)
-			// render a success message & show a link to the login page :')
-			data := GenericMessageData{
-				Title:       h.translator.Translate("PasswordResetSuccess"),
-				Message:     h.translator.Translate("PasswordResetSuccessMessage"),
-				Link:        "/login",
-				LinkMessage: h.translator.Translate("PasswordResetSuccessLinkMessage"),
-				LinkText:    h.translator.Translate("Login"),
-			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
-		default:
-			fmt.Printf("unsupported POST route (%s), redirecting to /\n", req.URL.Path)
-			IndexRedirect(res, req)
-		}
-	default:
-		fmt.Println("non get/post method, redirecting to index")
-		IndexRedirect(res, req)
-	}
+	renderPlaceholder("Password reset under construction: please contact admin if you need help resetting yr pw :)")
+	return
 }
 
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
@@ -764,22 +639,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		if err = ed.Eout(err, "add registration"); err != nil {
 			dump(err)
 		}
-		// generate and pass public keypair
-		keypair, err := crypto.GenerateKeypair()
-		ed.Check(err, "generate keypair")
-		// record generated pubkey in database for eventual later use
-		pub, err := keypair.PublicString()
-		if err = ed.Eout(err, "convert pubkey to string"); err != nil {
-			dump(err)
-		}
-		ed.Check(err, "stringify pubkey")
-		err = h.db.AddPubkey(userID, pub)
-		if err = ed.Eout(err, "insert pubkey in db"); err != nil {
-			dump(err)
-		}
-		kpJson, err := keypair.Marshal()
-		ed.Check(err, "marshal keypair")
-		h.renderView(res, "register-success", TemplateData{Data: RegisterSuccessData{string(kpJson)}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
+		h.renderView(res, "register-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)
