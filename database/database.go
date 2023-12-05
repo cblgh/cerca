@@ -63,20 +63,6 @@ func createTables(db *sql.DB) {
   );
   `,
 		`
-  CREATE TABLE IF NOT EXISTS nonces (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nonce TEXT NOT NULL UNIQUE
-  );
-  `,
-		`
-  CREATE TABLE IF NOT EXISTS pubkeys (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pubkey TEXT NOT NULL UNIQUE,
-    userid integer NOT NULL UNIQUE,
-    FOREIGN KEY (userid) REFERENCES users(id)
-  );
-  `,
-		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -387,11 +373,6 @@ func (d DB) CheckUserExists(userid int) (bool, error) {
 	return d.existsQuery(stmt, userid)
 }
 
-func (d DB) CheckNonceExists(nonce string) (bool, error) {
-	stmt := `SELECT 1 FROM nonces WHERE nonce = ?`
-	return d.existsQuery(stmt, nonce)
-}
-
 func (d DB) CheckUsernameExists(username string) (bool, error) {
 	stmt := `SELECT 1 FROM users WHERE name = ?`
 	return d.existsQuery(stmt, username)
@@ -413,51 +394,6 @@ func (d DB) DeleteUser(userid int) {
 	stmt := `DELETE FROM users WHERE id = ?`
 	_, err := d.Exec(stmt, userid)
 	util.Check(err, "deleting user %d", userid)
-}
-
-func (d DB) AddPubkey(userid int, pubkey string) error {
-	ed := util.Describe("add pubkey")
-	// TODO (2022-02-03): the insertion order is wrong >.<
-	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
-	_, err := d.Exec(stmt, userid, pubkey)
-	if err = ed.Eout(err, "inserting record"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d DB) SetPubkey(userid int, pubkey string) error {
-	ed := util.Describe("set pubkey")
-	// TODO (2022-09-27): the insertion order is still wrong >.<
-	stmt := `UPDATE pubkeys SET pubkey = ? WHERE userid = ? `
-	_, err := d.Exec(stmt, userid, pubkey)
-	if err = ed.Eout(err, "updating record"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d DB) GetPubkey(userid int) (pubkey string, err error) {
-	ed := util.Describe("get pubkey")
-	// due to a mishap in the query in AddPubkey the column `pubkey` contains the userid
-	// and the column `userid` contains the pubkey
-	// :'))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-	// TODO (2022-02-03): when we have migration logic, fix this mishap
-	stmt := `SELECT userid from pubkeys where pubkey = ?`
-	err = d.db.QueryRow(stmt, userid).Scan(&pubkey)
-	err = ed.Eout(err, "query & scan")
-	return
-}
-
-// TODO (2022-02-04): extend mrv verification code length and reuse nonce scheme to fix registration bug?
-func (d DB) AddNonce(nonce string) error {
-	ed := util.Describe("add nonce")
-	stmt := `INSERT INTO nonces (nonce) VALUES (?)`
-	_, err := d.Exec(stmt, nonce)
-	if err != nil {
-		return ed.Eout(err, "insert nonce")
-	}
-	return nil
 }
 
 func (d DB) AddRegistration(userid int, verificationLink string) error {
