@@ -1,0 +1,14 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    <h2> Admins </h2>
+    {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
+    {{ if .LoggedIn }}
+        {{ range $index, $user := .Data.Admins }}
+        <p> {{ $user.Name }} ({{ $user.ID }}) </p>
+        {{ end }}
+    {{ end }}
+
+    <h2> Users </h2>
+</main>
+{{ template "footer" . }}

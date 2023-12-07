@@ -82,6 +82,12 @@ type ThreadData struct {
 	ThreadURL string
 }
 
+type AdminsData struct {
+	Admins []database.User
+	Users []database.User
+	IsAdmin bool
+}
+
 type RequestHandler struct {
 	db         *database.DB
 	session    *session.Session
@@ -224,6 +230,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"register",
 		"register-success",
 		"thread",
+		"admin",
 		"password-reset",
 		"change-password",
 		"change-password-success",
@@ -264,6 +271,15 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		}
 	}
 }
+func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) {
+	loggedIn, userid := h.IsLoggedIn(req)
+
+	admins := h.db.GetAdmins()
+	data := AdminsData{Admins: admins}
+	view := TemplateData{Title: "Admins", Data: &data, QuickNav: loggedIn, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
+	h.renderView(res, "admin", view)
+}
+
 
 func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
 	threadid, ok := util.GetURLPortion(req, 2)
@@ -855,6 +871,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
+	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)

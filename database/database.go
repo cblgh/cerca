@@ -63,6 +63,11 @@ func createTables(db *sql.DB) {
   );
   `,
 		`
+  CREATE TABLE IF NOT EXISTS admins(
+    id INTEGER PRIMARY KEY
+  );
+  `,
+		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -410,3 +415,82 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 	}
 	return nil
 }
+
+type User struct { 
+	Name string
+	ID int 
+}
+
+func (d DB) AddAdmin(userid int) error {
+	ed := util.Describe("add admin")
+	// make sure the id exists
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return errors.New(fmt.Sprintf("add admin: userid %d did not exist", userid))
+	}
+	if err != nil {
+		return ed.Eout(err, "CheckUserExists had an error")
+	}
+	isAdminAlready, err := d.IsUserAdmin(userid)
+	if isAdminAlready {
+		return errors.New(fmt.Sprintf("userid %d was already an admin", userid))
+	}
+	if err != nil {
+		// some kind of error, let's bubble it up
+		return ed.Eout(err, "IsUserAdmin")
+	}
+	// insert into table, we gots ourselves a new sheriff in town [|:D
+	stmt := `INSERT INTO admins (id) VALUES (?)`
+	_, err = d.db.Exec(stmt, userid)
+	if err != nil {
+		return ed.Eout(err, "inserting new admin")
+	}
+	return nil
+}
+
+func (d DB) IsUserAdmin(userid int) (bool, error) {
+	// make sure they're not already an admin, if they are just return (don't error)
+	query := `SELECT id FROM admins WHERE id = ?`
+	stmt, err := d.db.Prepare(query)
+	util.Check(err, "is user admin: prepare query")
+	id := -1
+	defer stmt.Close()
+	err = stmt.QueryRow(userid).Scan(&id)
+	if err == nil && id != -1 {
+		// the given userid was already an admin
+		return true, nil
+	}
+	// the user was not an admin 
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (d DB) GetAdmins() []User {
+	ed := util.Describe("get admins")
+	query := `SELECT u.name, a.id 
+  FROM users u 
+  INNER JOIN admins a ON u.id = a.id 
+  ORDER BY u.name
+  `
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var user User
+	var admins []User
+	for rows.Next() {
+		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		admins = append(admins, user)
+	}
+	return admins
+}
+// func (d DB) GetUsers() []User {
+// }
