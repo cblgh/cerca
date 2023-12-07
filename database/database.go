@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"cerca/crypto"
 	"errors"
 	"fmt"
 	"html/template"
@@ -60,6 +61,11 @@ func createTables(db *sql.DB) {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     passwordhash TEXT NOT NULL
+  );
+  `,
+		`
+  CREATE TABLE IF NOT EXISTS admins(
+    id INTEGER PRIMARY KEY
   );
   `,
 		`
@@ -409,4 +415,116 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 		return err
 	}
 	return nil
+}
+
+func (d DB) ResetPassword(userid int) (string, error) {
+	ed := util.Describe("reset password")
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+	} else if err != nil {
+		return "", fmt.Errorf("reset password encountered an error (%w)", err)
+	}
+	// generate new password for user and set it in the database
+	newPassword := crypto.GeneratePassword()
+	passwordHash, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return "", ed.Eout(err, "hash password")
+	}
+	d.UpdateUserPasswordHash(userid, passwordHash)
+	return newPassword, nil
+}
+
+type User struct { 
+	Name string
+	ID int 
+}
+
+func (d DB) AddAdmin(userid int) error {
+	ed := util.Describe("add admin")
+	// make sure the id exists
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return errors.New(fmt.Sprintf("add admin: userid %d did not exist", userid))
+	}
+	if err != nil {
+		return ed.Eout(err, "CheckUserExists had an error")
+	}
+	isAdminAlready, err := d.IsUserAdmin(userid)
+	if isAdminAlready {
+		return errors.New(fmt.Sprintf("userid %d was already an admin", userid))
+	}
+	if err != nil {
+		// some kind of error, let's bubble it up
+		return ed.Eout(err, "IsUserAdmin")
+	}
+	// insert into table, we gots ourselves a new sheriff in town [|:D
+	stmt := `INSERT INTO admins (id) VALUES (?)`
+	_, err = d.db.Exec(stmt, userid)
+	if err != nil {
+		return ed.Eout(err, "inserting new admin")
+	}
+	return nil
+}
+func (d DB) IsUserAdmin (userid int) (bool, error) {
+	stmt := `SELECT 1 FROM admins WHERE id = ?`
+	return d.existsQuery(stmt, userid)
+}
+
+func (d DB) GetAdmins() []User {
+	ed := util.Describe("get admins")
+	query := `SELECT u.name, a.id 
+  FROM users u 
+  INNER JOIN admins a ON u.id = a.id 
+  ORDER BY u.name
+  `
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var user User
+	var admins []User
+	for rows.Next() {
+		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		admins = append(admins, user)
+	}
+	return admins
+}
+func (d DB) GetUsers(includeAdmin bool) []User {
+	ed := util.Describe("get users")
+	query := `SELECT u.name, u.id
+  FROM users u 
+	%s
+  ORDER BY u.name
+  `
+
+	if includeAdmin {
+		query = fmt.Sprintf(query, "") // do nothing
+	} else {
+		query = fmt.Sprintf(query, "WHERE u.id NOT IN (select id from admins)") // do nothing
+	}
+
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var user User
+	var users []User
+	for rows.Next() {
+		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		users = append(users, user)
+	}
+	return users
 }

@@ -1,0 +1,57 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    <!-- { if .IsAdmin } -->
+        <section>
+            <p>
+            Does someone wish admittance? You can <button>Add new user</button>.
+            </p>
+            <p>
+            If you want to stop being an admin, you can <button>Step down</button>.
+            </p>
+        </section>
+    {{ if .LoggedIn }}
+    <section>
+        <h2> Admins </h2>
+        {{ if len .Data.Admins | eq 0 }} 
+            <p> there are no admins; chaos reigns </p>
+        {{ else }}
+            {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
+            {{ range $index, $user := .Data.Admins }}
+            <p> {{ $user.Name }} ({{ $user.ID }}) </p>
+            {{ end }}
+        {{ end }}
+    </section>
+
+    <section>
+        <h2> Users </h2>
+        {{ if len .Data.Users | eq 0 }} 
+            <p> there are no other users </p>
+        {{ else }}
+        <table>
+            {{ range $index, $user := .Data.Users }}
+            <form method="POST">
+            <input type="hidden" name="userid" value="{{$user.ID}}">
+            <tr>
+                <td>{{ $user.Name }} ({{ $user.ID }})</td>
+                <td>
+                    <!-- TODO only have one form and use select's form attribute to target that form -->
+                    <select name="admin-action" action="/admin/" id="select-{{$user.ID}}">
+                        <option selected value="reset-password">Reset password</option>
+                        <option value="remove-account">Remove account</option>
+                        <option value="make-admin">Make admin</option>
+                    </select>
+                </td>
+                <td>
+                    <button type="submit">Submit</button>
+                </td>
+            </tr>
+            </form>
+            {{ end }}
+        </table>
+        {{ end }}
+    </section>
+
+    {{ end }}
+</main>
+{{ template "footer" . }}
