@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"strconv"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,7 +36,8 @@ import (
 type TemplateData struct {
 	Data       interface{}
 	QuickNav   bool
-	LoggedIn   bool // TODO (2022-01-09): put this in a middleware || template function or sth?
+	LoggedIn   bool 
+	IsAdmin    bool 
 	HasRSS     bool
 	LoggedInID int
 	ForumName  string
@@ -80,6 +82,12 @@ type ThreadData struct {
 	Title     string
 	Posts     []database.Post
 	ThreadURL string
+}
+
+type AdminsData struct {
+	Admins []database.User
+	Users []database.User
+	IsAdmin bool
 }
 
 type RequestHandler struct {
@@ -161,6 +169,35 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	return true, userid
 }
 
+// TODO (2023-12-10): any vulns with this approach? could a user forge a session cookie with the user id of an admin?
+func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
+	ed := util.Describe("IsAdmin")
+	userid, err := h.session.Get(req)
+	err = ed.Eout(err, "getting userid from session cookie")
+	if err != nil {
+		dump(err)
+		return false, -1
+	}
+
+	// make sure the user from the cookie actually exists
+	userExists, err := h.db.CheckUserExists(userid)
+	if err != nil {
+		dump(ed.Eout(err, "check userid in db"))
+		return false, -1
+	} else if !userExists {
+		return false, -1
+	}
+	// make sure the user id is actually an admin
+	userIsAdmin, err := h.db.IsUserAdmin(userid)
+	if err != nil {
+		dump(ed.Eout(err, "IsUserAdmin in db"))
+		return false, -1
+	} else if !userIsAdmin {
+		return false, -1
+	}
+	return true, userid
+}
+
 // establish closure over config + translator so that it's present in templates during render
 func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
 	// only read logo contents once when generating
@@ -224,6 +261,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"register",
 		"register-success",
 		"thread",
+		"admin",
 		"password-reset",
 		"change-password",
 		"change-password-success",
@@ -265,9 +303,147 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 	}
 }
 
+
+func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.Request, incomingData GenericMessageData) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	data := TemplateData{
+		Data: incomingData,
+		// the following two fields are defaults that usually are not set and which are cumbersome to set each time since
+		// they don't really matter / vary across invocations
+		HasRSS: h.config.RSS.URL != "",
+		LoggedIn: loggedIn,
+	}
+	h.renderView(res, "generic-message", data)
+	return
+}
+
+func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	if req.Method == "POST" && loggedIn {
+		// perform action
+		// get results
+		// render simple page saying "user <x> was removed but their posts were kept"
+	}
+}
+
+func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserid int) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		// redirect to index
+		IndexRedirect(res, req)
+		return
+	}
+	// TODO (2023-12-10): introduce 2-quorom 
+	err := h.db.AddAdmin(targetUserid)
+	if err != nil {
+		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
+		errMsg := fmt.Sprintf("make admin failed (%w)\n", err)
+		fmt.Println(errMsg)
+		data := GenericMessageData{
+			Title:   "Make admin",
+			Message: errMsg,
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+	// adminUsername, _ := h.db.GetUsername(adminUserid)
+	username, _ := h.db.GetUsername(targetUserid)
+	// TODO (2023-12-12): h.db.LogModerationAction(adminUserid, targerUserid, fmt.Sprintf("%s made %s an admin",
+	// adminUsername, username))
+
+	// output copy-pastable credentials page for admin to send to the user
+	data := GenericMessageData{
+		Title: "Make admin success",
+		Message: fmt.Sprintf("User %s is now a fellow admin user!", username),
+		LinkMessage: "Go back to the",
+		LinkText: "admin view",
+		Link: "/admin",
+	}
+	h.renderGenericMessage(res, req, data)
+	return
+}
+
+func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserid int) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		// redirect to index
+		IndexRedirect(res, req)
+		return
+	}
+	newPassword, err := h.db.ResetPassword(targetUserid)
+	if err != nil {
+		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
+		errMsg := fmt.Sprintf("reset password failed (%w)\n", err)
+		fmt.Println(errMsg)
+		data := GenericMessageData{
+			Title:   "Admin reset password",
+			Message: errMsg,
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+	// adminUsername, _ := h.db.GetUsername(adminUserid)
+	// TODO (2023-12-12): h.db.LogModerationAction(adminUserid, targerUserid, fmt.Sprintf("%s changed reset a user's password", adminUsername))
+
+	username, _ := h.db.GetUsername(targetUserid)
+
+	// output copy-pastable credentials page for admin to send to the user
+	data := GenericMessageData{
+		Title: "Password reset successful!",
+		Message: fmt.Sprintf("Instructions: %s's password was reset to: %s. After logging in, please change your password by going to /reset", username, newPassword),
+		LinkMessage: "Go back to the",
+		LinkText: "admin view",
+		Link: "/admin",
+	}
+	h.renderGenericMessage(res, req, data)
+	return
+}
+// TODO (2023-12-10): introduce 2-quorum for consequential actions like
+// * make admin
+// * remove account
+// * (later: demote admin)
+// note: only make a 2-quorum if there are actually 2 admins
+func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) {
+	loggedIn, userid := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+
+	if req.Method == "POST" && loggedIn && isAdmin {
+		action := req.PostFormValue("admin-action")
+		useridString := req.PostFormValue("userid")
+		targetUserId, err := strconv.Atoi(useridString)
+		util.Check(err, "convert user id string to a plain userid")
+		
+		switch action {
+		case "reset-password":
+			h.AdminResetUserPassword(res, req, targetUserId)
+		case "make-admin":
+			h.AdminMakeUserAdmin(res, req, targetUserId)
+			fmt.Println("make admin!")
+		case "remove-account":
+			fmt.Println("gone with the account!")
+		}
+		return
+	}
+	if req.Method == "GET" && loggedIn {
+		if !isAdmin {
+			// TODO (2023-12-10):	redirect to /admins
+			IndexRedirect(res, req)
+			return
+		}
+		admins := h.db.GetAdmins()
+		normalUsers := h.db.GetUsers(false) // do not include admins
+		data := AdminsData{Admins: admins, Users: normalUsers}
+		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
+		h.renderView(res, "admin", view)
+	}
+}
+
 func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
 	threadid, ok := util.GetURLPortion(req, 2)
 	loggedIn, userid := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
 
 	if !ok {
 		title := h.translator.Translate("ErrThread404")
@@ -275,7 +451,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 			Title:   title,
 			Message: h.translator.Translate("ErrThread404Message"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
+		h.renderGenericMessage(res, req, data)
 		return
 	}
 
@@ -311,7 +487,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 		thread[i].Content = template.HTML(content)
 	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
-	view := TemplateData{Data: &data, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
+	view := TemplateData{Data: &data, IsAdmin: isAdmin, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle
 		view.Title = data.Title
@@ -325,7 +501,7 @@ func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, s
 		Title:   title,
 		Message: fmt.Sprintf(h.translator.Translate("ErrGeneric404Message"), status),
 	}
-	h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
+	h.renderGenericMessage(res, req, data)
 }
 
 func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
@@ -336,6 +512,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	loggedIn, _ := h.IsLoggedIn(req)
 	var mostRecentPost bool
+	isAdmin, _ := h.IsAdmin(req)
 
 	params := req.URL.Query()
 	if q, exists := params["sort"]; exists {
@@ -344,7 +521,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost)
-	view := TemplateData{Data: IndexData{threads}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{threads}, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
@@ -458,7 +635,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 			Link:     "/reset",
 			LinkText: h.translator.Translate("GoBack"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
+		h.renderGenericMessage(res, req, data)
 	}
 	_, uid := h.IsLoggedIn(req)
 
@@ -551,7 +728,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			LinkMessage: h.translator.Translate("RegisterLinkMessage"),
 			LinkText:    h.translator.Translate("Index"),
 		}
-		h.renderView(res, "generic-message", TemplateData{Data: data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Register")})
+		h.renderGenericMessage(res, req, data)
 		return
 	}
 
@@ -655,7 +832,7 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 		LinkMessage: "Generic link messsage",
 		LinkText:    "with link",
 	}
-	h.renderView(res, "generic-message", TemplateData{Data: data})
+	h.renderGenericMessage(res, req, data)
 }
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
@@ -683,7 +860,7 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 				LinkMessage: h.translator.Translate("NewThreadLinkMessage"),
 				LinkText:    h.translator.Translate("LogIn"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
+			h.renderGenericMessage(res, req, data)
 			return
 		}
 		h.renderView(res, "new-thread", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
@@ -699,7 +876,7 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 				Title:   h.translator.Translate("NewThreadCreateError"),
 				Message: h.translator.Translate("NewThreadCreateErrorMessage"),
 			}
-			h.renderView(res, "generic-message", TemplateData{Data: data, Title: h.translator.Translate("ThreadNew")})
+			h.renderGenericMessage(res, req, data)
 			return
 		}
 		// update the rss feed
@@ -733,7 +910,7 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 	renderErr := func(msg string) {
 		fmt.Println(msg)
 		genericErr.Message = msg
-		h.renderView(res, "generic-message", TemplateData{Data: genericErr, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn})
+		h.renderGenericMessage(res, req, genericErr)
 	}
 
 	if !loggedIn || !ok {
@@ -855,6 +1032,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
+	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)

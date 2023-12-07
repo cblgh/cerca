@@ -80,7 +80,7 @@ func main() {
 
 	db := database.InitDB(dbPath)
 	newPassword := crypto.GeneratePassword()
-	info := createUser(username, newPassword, &db)
+	_ = createUser(username, newPassword, &db)
 
 	loginRoute := fmt.Sprintf("%s/login", forumDomain)
 	resetRoute := fmt.Sprintf("%s/reset", forumDomain)
