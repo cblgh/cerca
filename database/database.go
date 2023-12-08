@@ -492,5 +492,35 @@ func (d DB) GetAdmins() []User {
 	}
 	return admins
 }
-// func (d DB) GetUsers() []User {
-// }
+func (d DB) GetUsers(includeAdmin bool) []User {
+	ed := util.Describe("get users")
+	query := `SELECT u.name, u.id
+  FROM users u 
+	%s
+  ORDER BY u.name
+  `
+
+	if includeAdmin {
+		query = fmt.Sprintf(query, "") // do nothing
+	} else {
+		query = fmt.Sprintf(query, "WHERE u.id NOT IN (select id from admins)") // do nothing
+	}
+
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var user User
+	var users []User
+	for rows.Next() {
+		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		users = append(users, user)
+	}
+	return users
+}

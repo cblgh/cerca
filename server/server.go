@@ -275,7 +275,8 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 	loggedIn, userid := h.IsLoggedIn(req)
 
 	admins := h.db.GetAdmins()
-	data := AdminsData{Admins: admins}
+	normalUsers := h.db.GetUsers(false) // do not include admins
+	data := AdminsData{Admins: admins, Users: normalUsers}
 	view := TemplateData{Title: "Admins", Data: &data, QuickNav: loggedIn, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 	h.renderView(res, "admin", view)
 }

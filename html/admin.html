@@ -1,14 +1,53 @@
 {{ template "head" . }}
 <main>
     <h1>{{ .Title }}</h1>
-    <h2> Admins </h2>
-    {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
+    <!-- { if .IsAdmin } -->
+        <section>
+            <div>
+            Does someone wish admittance? You can <button>Add new user</button>.
+            </div>
+            <div>
+            If you want to stop being an admin, you can <button>Step down</button>.
+            </div>
+        </section>
     {{ if .LoggedIn }}
-        {{ range $index, $user := .Data.Admins }}
-        <p> {{ $user.Name }} ({{ $user.ID }}) </p>
+    <section>
+        <h2> Admins </h2>
+        {{ if len .Data.Admins | eq 0 }} 
+            <p> there are no admins; chaos reigns </p>
+        {{ else }}
+            {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
+            {{ range $index, $user := .Data.Admins }}
+            <p> {{ $user.Name }} ({{ $user.ID }}) </p>
+            {{ end }}
         {{ end }}
-    {{ end }}
+    </section>
 
-    <h2> Users </h2>
+    <section>
+        <h2> Users </h2>
+        {{ if len .Data.Users | eq 0 }} 
+            <p> there are no other users </p>
+        {{ else }}
+        <table>
+            {{ range $index, $user := .Data.Users }}
+            <tr>
+                <td>{{ $user.Name }} ({{ $user.ID }})</td>
+                <td>
+                    <select name="admin-action" id="{{$user.ID}}">
+                        <option>Reset password</option>
+                        <option>Remove account</option>
+                        <option>Make admin</option>
+                    </select>
+                </td>
+                <td>
+                    <button>Submit</button>
+                </td>
+            </tr>
+            {{ end }}
+        </table>
+        {{ end }}
+    </section>
+
+    {{ end }}
 </main>
 {{ template "footer" . }}
