@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cerca/crypto"
 	"cerca/database"
 	"cerca/util"
 	"flag"
@@ -55,9 +54,6 @@ func main() {
 	if username == "" {
 		complain(usage)
 	}
-	if !keypairFlag && !passwordFlag {
-		complain("nothing to reset, exiting")
-	}
 
 	// check if database exists! we dont wanna create a new db in this case ':)
 	if !database.CheckExists(dbPath) {
@@ -66,35 +62,12 @@ func main() {
 
 	db := database.InitDB(dbPath)
 	ed := util.Describe("admin reset")
+	newPassword, err := db.ResetPassword(userid)
 
-	userid, err := db.GetUserID(username)
 	if err != nil {
-		complain("username %s not in database", username)
+		complain("reset password failed (%w)", err)
 	}
 
-	// generate new password for user and set it in the database
-	if passwordFlag {
-		newPassword := crypto.GeneratePassword()
-		passwordHash, err := crypto.HashPassword(newPassword)
-		ed.Check(err, "hash new password")
-		db.UpdateUserPasswordHash(userid, passwordHash)
-
-		inform("successfully updated %s's password hash", username)
-		inform("new temporary password %s", newPassword)
-	}
-
-	// generate a new keypair for user and update user's pubkey record with new pubkey
-	if keypairFlag {
-		kp, err := crypto.GenerateKeypair()
-		ed.Check(err, "generate keypair")
-		kpBytes, err := kp.Marshal()
-		ed.Check(err, "marshal keypair")
-		pubkey, err := kp.PublicString()
-		ed.Check(err, "get pubkey string")
-		err = db.SetPubkey(userid, pubkey)
-		ed.Check(err, "set new pubkey in database")
-
-		inform("successfully changed %s's stored public key", username)
-		inform("new keypair\n%s", string(kpBytes))
-	}
+	inform("successfully updated %s's password hash", username)
+	inform("new temporary password %s", newPassword)
 }

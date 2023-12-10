@@ -3,12 +3,12 @@
     <h1>{{ .Title }}</h1>
     <!-- { if .IsAdmin } -->
         <section>
-            <div>
+            <p>
             Does someone wish admittance? You can <button>Add new user</button>.
-            </div>
-            <div>
+            </p>
+            <p>
             If you want to stop being an admin, you can <button>Step down</button>.
-            </div>
+            </p>
         </section>
     {{ if .LoggedIn }}
     <section>
@@ -30,19 +30,23 @@
         {{ else }}
         <table>
             {{ range $index, $user := .Data.Users }}
+            <form method="POST">
+            <input type="hidden" name="userid" value="{{$user.ID}}">
             <tr>
                 <td>{{ $user.Name }} ({{ $user.ID }})</td>
                 <td>
-                    <select name="admin-action" id="{{$user.ID}}">
-                        <option>Reset password</option>
-                        <option>Remove account</option>
-                        <option>Make admin</option>
+                    <!-- TODO only have one form and use select's form attribute to target that form -->
+                    <select name="admin-action" action="/admin/" id="select-{{$user.ID}}">
+                        <option selected value="reset-password">Reset password</option>
+                        <option value="remove-account">Remove account</option>
+                        <option value="make-admin">Make admin</option>
                     </select>
                 </td>
                 <td>
-                    <button>Submit</button>
+                    <button type="submit">Submit</button>
                 </td>
             </tr>
+            </form>
             {{ end }}
         </table>
         {{ end }}

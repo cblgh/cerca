@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"cerca/crypto"
 	"errors"
 	"fmt"
 	"html/template"
@@ -416,6 +417,24 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 	return nil
 }
 
+func (d DB) ResetPassword(userid int) (string, error) {
+	ed := util.Describe("reset password")
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+	} else if err != nil {
+		return "", fmt.Errorf("reset password encountered an error (%w)", err)
+	}
+	// generate new password for user and set it in the database
+	newPassword := crypto.GeneratePassword()
+	passwordHash, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return "", ed.Eout(err, "hash password")
+	}
+	d.UpdateUserPasswordHash(userid, passwordHash)
+	return newPassword, nil
+}
+
 type User struct { 
 	Name string
 	ID int 
@@ -447,24 +466,9 @@ func (d DB) AddAdmin(userid int) error {
 	}
 	return nil
 }
-
-func (d DB) IsUserAdmin(userid int) (bool, error) {
-	// make sure they're not already an admin, if they are just return (don't error)
-	query := `SELECT id FROM admins WHERE id = ?`
-	stmt, err := d.db.Prepare(query)
-	util.Check(err, "is user admin: prepare query")
-	id := -1
-	defer stmt.Close()
-	err = stmt.QueryRow(userid).Scan(&id)
-	if err == nil && id != -1 {
-		// the given userid was already an admin
-		return true, nil
-	}
-	// the user was not an admin 
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	return false, err
+func (d DB) IsUserAdmin (userid int) (bool, error) {
+	stmt := `SELECT 1 FROM admins WHERE id = ?`
+	return d.existsQuery(stmt, userid)
 }
 
 func (d DB) GetAdmins() []User {

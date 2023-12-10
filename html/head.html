@@ -196,6 +196,9 @@
                     {{ if .QuickNav }}
                     <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
                     {{end}}
+                    {{ if .IsAdmin }}
+                    <li><a href="/admin">admin</a></li>
+                    {{end}}
                     <li><a href="/about">{{ "About" | translate }}</a></li>
                     {{ if .HasRSS }}
                     <li><a href="/rss.xml">rss</a></li>
