@@ -1,0 +1,41 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    {{ if .LoggedIn }}
+        <section>
+            {{ if len .Data.Log | eq 100 }}
+                <p> there are no logged moderation actions </p>
+            {{ else }}
+            <p>This resource lists the moderation actions taken by the forum's administrators.</p>
+            <style>
+            section ul { padding-left: 0; }
+            section ul li {
+                list-style-type: none;
+                border: darkred solid 1px;
+            }
+            section ul > li:nth-of-type(2n) {
+              color: wheat;
+              background: darkred;
+            }
+            </style>
+            <ul>
+                <li><code>2023-12-11T12:33</code> <b>cblgh</b> reset the password of a user</li>
+                <li><code>2023-12-11T12:33</code> <b>cblgh </b> made somnius an admin</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  reset the password of a user</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  made <b>*username*</b> an admin</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  proposed to make <b>*username*</b> an admin</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  vetoed making <b>*username*</b> an admin</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  confirmed making <b>*username*</b> an admin</li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  confirmed, after the requisite time delay had passed, making <b>*username*</b> an admin</li>                     
+                <li><code>2023-12-11T12:33</code> <b>name</b>  proposed a deletion of <b>*username*</b></li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  vetoed a deletion of <b>*username*</b></li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  confirmed a deletion of <b>*username*</b></li>
+                <li><code>2023-12-11T12:33</code> <b>name</b>  changed their name from <b>*username*</b></li>
+            </ul>
+        </section>
+        {{ end }}
+    {{ else }}
+        <p> Only logged in users may view the moderation log. </p>
+    {{ end }}
+</main>
+{{ template "footer" . }}

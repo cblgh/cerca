@@ -18,7 +18,7 @@
         {{ else }}
             {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
             {{ range $index, $user := .Data.Admins }}
-            <p> {{ $user.Name }} ({{ $user.ID }}) </p>
+            <p> {{ $user.Name }} ({{ $user.ID }}) {{ if eq $userID $user.ID }} <i>(this is you!)</i>{{ end }}</p>
             {{ end }}
         {{ end }}
     </section>

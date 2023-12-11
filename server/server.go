@@ -262,6 +262,8 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"register-success",
 		"thread",
 		"admin",
+		"admins-list",
+		"moderation-log",
 		"password-reset",
 		"change-password",
 		"change-password-success",
@@ -400,6 +402,15 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 	h.renderGenericMessage(res, req, data)
 	return
 }
+type moderationData struct {
+	Log []string
+}
+func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.Request) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	data := moderationData{Log: make([]string, 0)}
+	view := TemplateData{Title: "Moderation log", LoggedIn: loggedIn, Data: data}
+	h.renderView(res, "moderation-log", view)
+}
 // TODO (2023-12-10): introduce 2-quorum for consequential actions like
 // * make admin
 // * remove account
@@ -429,7 +440,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 	if req.Method == "GET" && loggedIn {
 		if !isAdmin {
 			// TODO (2023-12-10):	redirect to /admins
-			IndexRedirect(res, req)
+			h.ListAdminsRoute(res, req)
 			return
 		}
 		admins := h.db.GetAdmins()
@@ -438,6 +449,15 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
+}
+
+func (h *RequestHandler) ListAdminsRoute(res http.ResponseWriter, req *http.Request) {
+	loggedIn, _ := h.IsLoggedIn(req)
+	admins := h.db.GetAdmins()
+	data := AdminsData{Admins: admins}
+	view := TemplateData{Title: "Forum Administrators", Data: &data, HasRSS: false, LoggedIn: loggedIn}
+	h.renderView(res, "admins-list", view)
+	return
 }
 
 func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
@@ -1033,6 +1053,8 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
+	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
+	s.ServeMux.HandleFunc("/admins", handler.ListAdminsRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
