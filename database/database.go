@@ -69,6 +69,18 @@ func createTables(db *sql.DB) {
   );
   `,
 		`
+  CREATE TABLE IF NOT EXISTS moderation_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+		actingid INTEGER NOT NULL,
+		recipientid INTEGER,
+		action INTEGER,
+    time DATE,
+
+    FOREIGN KEY (actingid) REFERENCES users(id),
+    FOREIGN KEY (recipientid) REFERENCES users(id)
+  );
+  `,
+		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -417,6 +429,57 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 	return nil
 }
 
+func (d DB) AddModerationLog(actingid, recipientid, action int) error {
+	ed := util.Describe("add moderation log")
+	t := time.Now()
+	// we have a recipient
+	var err error
+	if recipientid > 0 {
+		stmt := `INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`
+		_, err = d.Exec(stmt, actingid, recipientid, action, t)
+		} else {
+			// we are not listing a recipient
+		stmt := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?, ?)`
+		_, err = d.Exec(stmt, actingid, action, t)
+	}
+	if err = ed.Eout(err, "exec prepared statement"); err != nil {
+		return err
+	}
+	return nil
+}
+
+type ModerationEntry struct {
+	ActingUsername, RecipientUsername string
+	Action int
+	Time time.Time
+}
+func (d DB) GetModerationLogs () []ModerationEntry {
+	ed := util.Describe("moderation log")
+	query := `SELECT uact.name, urecp.name, m.action, m.time 
+	FROM moderation_LOG m 
+	INNER JOIN users uact ON uact.id = m.actingid
+	INNER JOIN users urecp ON urecp.id = m.recipientid
+	ORDER BY time DESC`
+
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var entry ModerationEntry
+	var logs []ModerationEntry
+	for rows.Next() {
+		if err := rows.Scan(&entry.ActingUsername, &entry.RecipientUsername, &entry.Action, &entry.Time); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		logs = append(logs, entry)
+	}
+	return logs
+}
+
 func (d DB) ResetPassword(userid int) (string, error) {
 	ed := util.Describe("reset password")
 	exists, err := d.CheckUserExists(userid)
@@ -466,6 +529,7 @@ func (d DB) AddAdmin(userid int) error {
 	}
 	return nil
 }
+
 func (d DB) IsUserAdmin (userid int) (bool, error) {
 	stmt := `SELECT 1 FROM admins WHERE id = ?`
 	return d.existsQuery(stmt, userid)
@@ -496,6 +560,7 @@ func (d DB) GetAdmins() []User {
 	}
 	return admins
 }
+
 func (d DB) GetUsers(includeAdmin bool) []User {
 	ed := util.Describe("get users")
 	query := `SELECT u.name, u.id

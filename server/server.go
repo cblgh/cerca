@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"cerca/crypto"
+	"cerca/constants"
 	"cerca/database"
 	"cerca/defaults"
 	cercaHTML "cerca/html"
@@ -368,7 +369,7 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserid int) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, _ := h.IsAdmin(req)
+	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		// redirect to index
 		IndexRedirect(res, req)
@@ -386,8 +387,11 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 		h.renderGenericMessage(res, req, data)
 		return
 	}
-	// adminUsername, _ := h.db.GetUsername(adminUserid)
-	// TODO (2023-12-12): h.db.LogModerationAction(adminUserid, targerUserid, fmt.Sprintf("%s changed reset a user's password", adminUsername))
+
+	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_RESETPW)
+	if err != nil {
+		fmt.Printf("error adding moderation log (%w)\n", err)
+	}
 
 	username, _ := h.db.GetUsername(targetUserid)
 
@@ -402,13 +406,40 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 	h.renderGenericMessage(res, req, data)
 	return
 }
-type moderationData struct {
+
+
+
+type ModerationData struct {
 	Log []string
 }
+
+// Note: this will by definition contain ugc, so we need to escape all usernames with html.EscapeString(username) before
+// populating ModerationLogEntry
+/*
+* "modlogAdminResetPassword": `<code>{{ .Data.Time | formatDateTime }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`
+* "modlogAdminPropose": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUser }}</b> proposed to make <b>{{ .Data.Recipient }}</b> an admin`
+*/
+/* sort by time descending, from latest entry to oldest */
+
 func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	data := moderationData{Log: make([]string, 0)}
-	view := TemplateData{Title: "Moderation log", LoggedIn: loggedIn, Data: data}
+	logs := h.db.GetModerationLogs()
+	viewData := ModerationData{Log: make([]string, 0)}
+	type translationData struct {	
+		Time, ActingUsername, RecipientUsername string
+	}
+	for _, entry := range logs {
+		var tdata translationData
+		tdata.Time = entry.Time.Format("2006-01-02 15:04:05")
+		tdata.ActingUsername = template.HTMLEscapeString(entry.ActingUsername)
+		tdata.RecipientUsername = template.HTMLEscapeString(entry.RecipientUsername)
+		switch entry.Action {
+		case constants.MODLOG_RESETPW:
+			str := h.translator.TranslateWithData("modlogResetPassword", i18n.TranslationData{Data: tdata})
+			viewData.Log = append(viewData.Log, str)
+		}
+	}
+	view := TemplateData{Title: "Moderation log", LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
 // TODO (2023-12-10): introduce 2-quorum for consequential actions like

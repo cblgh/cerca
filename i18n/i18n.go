@@ -27,6 +27,14 @@ var English = map[string]string{
 	"SortRecentPosts":   "recent posts",
 	"SortRecentThreads": "most recent threads",
 
+  "modlogResetPassword": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
+  "modlogProposeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed to make <b> {{ .Data.RecipientUsername}} an admin`,
+  "modlogVetoAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> vetoed making {{ .Data.RecipientUsername }} an admin`,
+  "modlogConfirmAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> confirmed making {{ .Data.RecipientUsername }} a new admin`,
+  "modlogProposeDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed deleting a user's account`,
+  "modlogVetoDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> vetoed deleting a user's account`,
+  "modlogConfirmDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> confirmed deleting a user's account`,
+
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
