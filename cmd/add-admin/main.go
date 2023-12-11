@@ -56,6 +56,7 @@ func main() {
 		complain("username %s not in database", username)
 	}
 	inform("Attempting to make %s (id %d) admin...", username, userid)
+	// TODO (2023-12-12): log cmd actions just as admin web-actions are logged
 	err = db.AddAdmin(userid)
 	if err != nil {
 		complain("Something went wrong: %s", err)
