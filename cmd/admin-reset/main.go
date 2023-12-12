@@ -63,6 +63,7 @@ func main() {
 	db := database.InitDB(dbPath)
 	ed := util.Describe("admin reset")
 	newPassword, err := db.ResetPassword(userid)
+	// TODO (2023-12-12): log cmd actions just as admin web-actions are logged
 
 	if err != nil {
 		complain("reset password failed (%w)", err)

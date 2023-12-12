@@ -30,22 +30,23 @@
         {{ else }}
         <table>
             {{ range $index, $user := .Data.Users }}
-            <form method="POST">
-            <input type="hidden" name="userid" value="{{$user.ID}}">
-            <tr>
-                <td>{{ $user.Name }} ({{ $user.ID }})</td>
-                <td>
-                    <!-- TODO only have one form and use select's form attribute to target that form -->
-                    <select name="admin-action" action="/admin/" id="select-{{$user.ID}}">
-                        <option selected value="reset-password">Reset password</option>
-                        <option value="remove-account">Remove account</option>
-                        <option value="make-admin">Make admin</option>
-                    </select>
-                </td>
-                <td>
-                    <button type="submit">Submit</button>
-                </td>
-            </tr>
+            {{ if ne $user.Name "deleted user" }} 
+                <form method="POST">
+                <input type="hidden" name="userid" value="{{$user.ID}}">
+                <tr>
+                    <td>{{ $user.Name }} ({{ $user.ID }})</td>
+                    <td>
+                        <select name="admin-action" action="/admin/" id="select-{{$user.ID}}">
+                            <option selected value="reset-password">Reset password</option>
+                            <option value="remove-account">Remove account</option>
+                            <option value="make-admin">Make admin</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button type="submit">Submit</button>
+                    </td>
+                </tr>
+                {{ end }}
             </form>
             {{ end }}
         </table>

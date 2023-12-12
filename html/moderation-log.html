@@ -6,7 +6,8 @@
             {{ if len .Data.Log | eq 100 }}
                 <p> there are no logged moderation actions </p>
             {{ else }}
-            <p>This resource lists the moderation actions taken by the forum's administrators.</p>
+            <p>This resource lists the moderation actions taken by the forum's administrators. {{ if .IsAdmin }} You are
+            viewing this page as an admin, you will see slightly more details. {{ end }}</p>
             <style>
             section ul { padding-left: 0; }
             section ul li {

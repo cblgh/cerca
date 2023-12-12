@@ -306,7 +306,6 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 	}
 }
 
-
 func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.Request, incomingData GenericMessageData) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	data := TemplateData{
@@ -320,40 +319,68 @@ func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.
 	return
 }
 
-func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request, targetUserid int) {
+	ed := util.Describe("Admin remove user")
 	loggedIn, _ := h.IsLoggedIn(req)
-	if req.Method == "POST" && loggedIn {
-		// perform action
-		// get results
-		// render simple page saying "user <x> was removed but their posts were kept"
-	}
-}
-
-func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserid int) {
-	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, _ := h.IsAdmin(req)
+	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		// redirect to index
 		IndexRedirect(res, req)
 		return
 	}
-	// TODO (2023-12-10): introduce 2-quorom 
-	err := h.db.AddAdmin(targetUserid)
+
+	err := h.db.RemoveUser(targetUserid)
+
 	if err != nil {
 		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		errMsg := fmt.Sprintf("make admin failed (%w)\n", err)
+		errMsg := ed.Eout(err, "remove user failed")
 		fmt.Println(errMsg)
 		data := GenericMessageData{
-			Title:   "Make admin",
-			Message: errMsg,
+			Title:   "User removal",
+			Message: errMsg.Error(),
 		}
 		h.renderGenericMessage(res, req, data)
 		return
 	}
-	// adminUsername, _ := h.db.GetUsername(adminUserid)
+
+	err = h.db.AddModerationLog(adminUserid, -1, constants.MODLOG_REMOVE_USER)
+	if err != nil {
+		fmt.Println(ed.Eout(err, "error adding moderation log"))
+	}
+	// success! redirect back to /admin
+	http.Redirect(res, req, "/admin", http.StatusSeeOther)
+}
+
+func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserid int) {
+	ed := util.Describe("make user admin")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserid := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		// redirect to index
+		IndexRedirect(res, req)
+		return
+	}
+
+	// TODO (2023-12-10): introduce 2-quorom 
+	err := h.db.AddAdmin(targetUserid)
+
+	if err != nil {
+		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
+		errMsg := ed.Eout(err, "make admin failed")
+		fmt.Println(errMsg)
+		data := GenericMessageData{
+			Title:   "Make admin",
+			Message: errMsg.Error(),
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+
 	username, _ := h.db.GetUsername(targetUserid)
-	// TODO (2023-12-12): h.db.LogModerationAction(adminUserid, targerUserid, fmt.Sprintf("%s made %s an admin",
-	// adminUsername, username))
+	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_MAKE)
+	if err != nil {
+		fmt.Println(ed.Eout(err, "error adding moderation log"))
+	}
 
 	// output copy-pastable credentials page for admin to send to the user
 	data := GenericMessageData{
@@ -364,10 +391,10 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 		Link: "/admin",
 	}
 	h.renderGenericMessage(res, req, data)
-	return
 }
 
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserid int) {
+	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
@@ -375,14 +402,16 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 		IndexRedirect(res, req)
 		return
 	}
+
 	newPassword, err := h.db.ResetPassword(targetUserid)
+
 	if err != nil {
 		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		errMsg := fmt.Sprintf("reset password failed (%w)\n", err)
+		errMsg := ed.Eout(err, "reset password failed")
 		fmt.Println(errMsg)
 		data := GenericMessageData{
 			Title:   "Admin reset password",
-			Message: errMsg,
+			Message: errMsg.Error(),
 		}
 		h.renderGenericMessage(res, req, data)
 		return
@@ -390,7 +419,7 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 
 	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_RESETPW)
 	if err != nil {
-		fmt.Printf("error adding moderation log (%w)\n", err)
+		fmt.Println(ed.Eout(err, "error adding moderation log"))
 	}
 
 	username, _ := h.db.GetUsername(targetUserid)
@@ -404,10 +433,7 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 		Link: "/admin",
 	}
 	h.renderGenericMessage(res, req, data)
-	return
 }
-
-
 
 type ModerationData struct {
 	Log []string
@@ -415,31 +441,38 @@ type ModerationData struct {
 
 // Note: this will by definition contain ugc, so we need to escape all usernames with html.EscapeString(username) before
 // populating ModerationLogEntry
-/*
-* "modlogAdminResetPassword": `<code>{{ .Data.Time | formatDateTime }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`
-* "modlogAdminPropose": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUser }}</b> proposed to make <b>{{ .Data.Recipient }}</b> an admin`
-*/
-/* sort by time descending, from latest entry to oldest */
+/* sorted by time descending, from latest entry to oldest */
 
 func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
 	logs := h.db.GetModerationLogs()
+	fmt.Println("logs", logs)
 	viewData := ModerationData{Log: make([]string, 0)}
 	type translationData struct {	
 		Time, ActingUsername, RecipientUsername string
 	}
 	for _, entry := range logs {
 		var tdata translationData
+		var translationString string
 		tdata.Time = entry.Time.Format("2006-01-02 15:04:05")
 		tdata.ActingUsername = template.HTMLEscapeString(entry.ActingUsername)
 		tdata.RecipientUsername = template.HTMLEscapeString(entry.RecipientUsername)
 		switch entry.Action {
 		case constants.MODLOG_RESETPW:
-			str := h.translator.TranslateWithData("modlogResetPassword", i18n.TranslationData{Data: tdata})
-			viewData.Log = append(viewData.Log, str)
+			translationString = "modlogResetPassword"
+			if isAdmin {
+				translationString += "Admin"
+			}
+		case constants.MODLOG_ADMIN_MAKE:
+			translationString = "modlogMakeAdmin"
+		case constants.MODLOG_REMOVE_USER:
+			translationString = "modlogRemoveUser"
 		}
+		str := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
+		viewData.Log = append(viewData.Log, str)
 	}
-	view := TemplateData{Title: "Moderation log", LoggedIn: loggedIn, Data: viewData}
+	view := TemplateData{Title: "Moderation log", IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
 // TODO (2023-12-10): introduce 2-quorum for consequential actions like
@@ -454,17 +487,18 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 	if req.Method == "POST" && loggedIn && isAdmin {
 		action := req.PostFormValue("admin-action")
 		useridString := req.PostFormValue("userid")
-		targetUserId, err := strconv.Atoi(useridString)
+		targetUserid, err := strconv.Atoi(useridString)
 		util.Check(err, "convert user id string to a plain userid")
 		
 		switch action {
 		case "reset-password":
-			h.AdminResetUserPassword(res, req, targetUserId)
+			h.AdminResetUserPassword(res, req, targetUserid)
 		case "make-admin":
-			h.AdminMakeUserAdmin(res, req, targetUserId)
+			h.AdminMakeUserAdmin(res, req, targetUserid)
 			fmt.Println("make admin!")
 		case "remove-account":
 			fmt.Println("gone with the account!")
+			h.AdminRemoveUser(res, req, targetUserid)
 		}
 		return
 	}
@@ -867,7 +901,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		if err = ed.Eout(err, "add registration"); err != nil {
 			dump(err)
 		}
-		h.renderView(res, "register-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("RegisterSuccess")})
+		h.renderView(res, "register-success", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: true, Title: h.translator.Translate("RegisterSuccess")})
 	default:
 		fmt.Println("non get/post method, redirecting to index")
 		IndexRedirect(res, req)

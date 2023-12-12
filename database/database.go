@@ -44,7 +44,25 @@ func InitDB(filepath string) DB {
 		log.Fatalln("db is nil")
 	}
 	createTables(db)
-	return DB{db}
+	instance := DB{db}
+	instance.makeSureDefaultUsersExist()
+	return instance
+}
+
+const DELETED_USER_NAME = "deleted user"
+func (d DB) makeSureDefaultUsersExist() {
+	ed := util.Describe("create default users")
+	deletedUserExists, err := d.CheckUsernameExists(DELETED_USER_NAME)
+	if err != nil {
+		log.Fatalln(ed.Eout(err, "check username exists"))
+	}
+	if !deletedUserExists {
+		passwordHash, err := crypto.HashPassword(crypto.GeneratePassword())
+		_, err = d.CreateUser(DELETED_USER_NAME, passwordHash)
+		if err != nil {
+			log.Fatalln(ed.Eout(err, "create deleted user"))
+		}
+	}
 }
 
 func createTables(db *sql.DB) {
@@ -408,10 +426,89 @@ func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	util.Check(err, "changing user %d's description to %s", userid, newhash)
 }
 
-func (d DB) DeleteUser(userid int) {
-	stmt := `DELETE FROM users WHERE id = ?`
-	_, err := d.Exec(stmt, userid)
-	util.Check(err, "deleting user %d", userid)
+// there are a bunch of places that reference a user's id, so i don't want to break all of those
+//
+// i also want to avoid big invisible holes in a conversation's history
+
+// remove user performs the following operation:
+// 1. checks to see if the DELETED USER exists; otherwise create it and remember its id
+// 
+// 2. if it exists, we swap out the userid for the DELETED_USER in tables:
+// - table threads authorid
+// - table posts authorid
+// - table moderation_log actingid or recipientid
+// 
+// the entry in registrations correlating to userid is removed
+
+// if allowing deletion of post contents as well when removing account, 
+// userid should be used to get all posts from table posts and change the contents
+// to say _deleted_
+func (d DB) RemoveUser(userid int) (finalErr error) {
+	ed := util.Describe("remove user")
+	// there is a single user we call the "deleted user", and we make sure this deleted user exists on startup
+	// they will take the place of the old user when they remove their account.
+	deletedUserID, err := d.GetUserID(DELETED_USER_NAME)
+	if err != nil {
+		log.Fatalln(ed.Eout(err, "get deleted user id"))
+	}
+	// create a transaction spanning all our removal-related ops
+	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
+	rollbackOnErr:= func(incomingErr error) {
+		if incomingErr != nil {
+			_ = tx.Rollback()
+			log.Println(incomingErr, "rolling back")
+			finalErr = incomingErr
+			return 
+		}
+	}
+	rollbackOnErr(ed.Eout(err, "start transaction"))
+
+	// create prepared statements performing the required removal operations for tables that reference a userid as a
+	// foreign key: threads, posts, moderation_log, and registrations
+	threadsStmt, err := tx.Prepare("UPDATE threads SET authorid = ? WHERE authorid = ?")
+	rollbackOnErr(ed.Eout(err, "prepare threads stmt"))
+	defer threadsStmt.Close()
+
+	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
+	rollbackOnErr(ed.Eout(err, "prepare posts stmt"))
+	defer postsStmt.Close()
+
+	modlogStmt1, err := tx.Prepare("UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?")
+	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #1"))
+	defer modlogStmt1.Close()
+
+	modlogStmt2, err := tx.Prepare("UPDATE moderation_log SET actingid = ? WHERE actingid = ?")
+	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #2"))
+	defer modlogStmt2.Close()
+
+	stmtReg, err := tx.Prepare("DELETE FROM registrations where userid = ?")
+	rollbackOnErr(ed.Eout(err, "prepare registrations stmt"))
+	defer stmtReg.Close()
+
+	// and finally: removing the entry from the user's table itself
+	stmtUsers, err := tx.Prepare("DELETE FROM users where id = ?")
+	rollbackOnErr(ed.Eout(err, "prepare users stmt"))
+	defer stmtUsers.Close()
+
+	_, err = threadsStmt.Exec(deletedUserID, userid)
+	rollbackOnErr(ed.Eout(err, "exec threads stmt"))
+	_, err = postsStmt.Exec(deletedUserID, userid)
+	rollbackOnErr(ed.Eout(err, "exec posts stmt"))
+	_, err = modlogStmt1.Exec(deletedUserID, userid)
+	fmt.Println("modlog1: err?", err)
+	rollbackOnErr(ed.Eout(err, "exec modlog #1 stmt"))
+	_, err = modlogStmt2.Exec(deletedUserID, userid)
+	fmt.Println("modlog2: err?", err)
+	rollbackOnErr(ed.Eout(err, "exec modlog #2 stmt"))
+	_, err = stmtReg.Exec(userid)
+	rollbackOnErr(ed.Eout(err, "exec registration stmt"))
+	_, err = stmtUsers.Exec(userid)
+	rollbackOnErr(ed.Eout(err, "exec users stmt"))
+
+	err = tx.Commit()
+	ed.Check(err, "commit transaction")
+	finalErr = nil
+	return
 }
 
 func (d DB) AddRegistration(userid int, verificationLink string) error {
