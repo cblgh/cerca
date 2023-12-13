@@ -536,7 +536,7 @@ func (d DB) AddModerationLog(actingid, recipientid, action int) error {
 		_, err = d.Exec(stmt, actingid, recipientid, action, t)
 		} else {
 			// we are not listing a recipient
-		stmt := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?, ?)`
+		stmt := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?)`
 		_, err = d.Exec(stmt, actingid, action, t)
 	}
 	if err = ed.Eout(err, "exec prepared statement"); err != nil {
@@ -554,8 +554,8 @@ func (d DB) GetModerationLogs () []ModerationEntry {
 	ed := util.Describe("moderation log")
 	query := `SELECT uact.name, urecp.name, m.action, m.time 
 	FROM moderation_LOG m 
-	INNER JOIN users uact ON uact.id = m.actingid
-	INNER JOIN users urecp ON urecp.id = m.recipientid
+	LEFT JOIN users uact ON uact.id = m.actingid
+	LEFT JOIN users urecp ON urecp.id = m.recipientid
 	ORDER BY time DESC`
 
 	stmt, err := d.db.Prepare(query)
@@ -569,8 +569,15 @@ func (d DB) GetModerationLogs () []ModerationEntry {
 	var entry ModerationEntry
 	var logs []ModerationEntry
 	for rows.Next() {
-		if err := rows.Scan(&entry.ActingUsername, &entry.RecipientUsername, &entry.Action, &entry.Time); err != nil {
+		var actingUsername, recipientUsername sql.NullString
+		if err := rows.Scan(&actingUsername, &recipientUsername, &entry.Action, &entry.Time); err != nil {
 			ed.Check(err, "scanning loop")
+		}
+		if actingUsername.Valid {
+			entry.ActingUsername = actingUsername.String
+		}
+		if recipientUsername.Valid {
+			entry.RecipientUsername = recipientUsername.String
 		}
 		logs = append(logs, entry)
 	}
