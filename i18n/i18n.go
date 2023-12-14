@@ -29,7 +29,8 @@ var English = map[string]string{
 
   "modlogResetPassword": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
   "modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
-  "modlogMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}} an admin`,
+  "modlogMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}}</b> an admin`,
+  "modlogAddUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for <b> {{ .Data.RecipientUsername }}</b>`,
   // "modlogProposeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}} an admin`,
   // "modlogVetoAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> vetoed making {{ .Data.RecipientUsername }} an admin`,
   // "modlogConfirmAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> confirmed making {{ .Data.RecipientUsername }} a new admin`,
