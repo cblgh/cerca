@@ -1,15 +1,18 @@
 {{ template "head" . }}
 <main>
     <h1>{{ .Title }}</h1>
-    <!-- { if .IsAdmin } -->
-        <section>
-            <p>
-            Does someone wish admittance? You can <button>Add new user</button>.
-            </p>
-            <p>
-            If you want to stop being an admin, you can <button>Step down</button>.
-            </p>
-        </section>
+    <section>
+        <form method="GET" id="add-user" action="/add-user"></form>
+        <p>
+        Does someone wish admittance? You can <button form="add-user" type="submit" href="/add-user">Add new user</button>.
+        </p>
+        <p>
+        If you want to stop being an admin, you can <button>Step down</button>.
+        </p>
+        <p>
+        View past actions in the <a href="/moderations">moderation log</a>.
+        </p>
+    </section>
     {{ if .LoggedIn }}
     <section>
         <h2> Admins </h2>
