@@ -264,6 +264,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"thread",
 		"admin",
 		"admins-list",
+		"admin-add-user",
 		"moderation-log",
 		"password-reset",
 		"change-password",
@@ -308,12 +309,14 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 
 func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.Request, incomingData GenericMessageData) {
 	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
 	data := TemplateData{
 		Data: incomingData,
 		// the following two fields are defaults that usually are not set and which are cumbersome to set each time since
 		// they don't really matter / vary across invocations
 		HasRSS: h.config.RSS.URL != "",
 		LoggedIn: loggedIn,
+		IsAdmin: isAdmin,
 	}
 	h.renderView(res, "generic-message", data)
 	return
@@ -393,6 +396,79 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 	h.renderGenericMessage(res, req, data)
 }
 
+func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("admin manually add user")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserid := h.IsAdmin(req)
+
+	if  !isAdmin {
+		// redirect to index
+		IndexRedirect(res, req)
+		return
+	}
+
+	type AddUser struct {
+		ErrorMessage string
+	}
+
+	var data AddUser
+	view := TemplateData{Title: "Add a new user", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+
+	if req.Method == "GET" {
+		h.renderView(res, "admin-add-user", view)
+		return
+	}
+
+	if req.Method == "POST" && isAdmin {
+		username := req.PostFormValue("username")
+
+		// do a lil quick checky check to see if we already have that username registered, 
+		// and if we do re-render the page with an error
+		existed, err := h.db.CheckUsernameExists(username)
+		ed.Check(err, "check username exists")
+
+		if existed {
+			data.ErrorMessage = fmt.Sprintf("Username (%s) is already registered", username)
+			h.renderView(res, "admin-add-user", view)
+			return
+		}
+
+		// set up basic credentials
+		newPassword := crypto.GeneratePassword()
+		passwordHash, err := crypto.HashPassword(newPassword)
+		ed.Check(err, "hash password")
+		targetUserid, err := h.db.CreateUser(username, passwordHash)
+		ed.Check(err, "create new user %s", username)
+
+		// if err != nil {
+		// 	// TODO (2023-12-09): bubble up error to visible page as feedback for admin
+		// 	errMsg := ed.Eout(err, "reset password failed")
+		// 	fmt.Println(errMsg)
+		// 	data := GenericMessageData{
+		// 		Title:   "Admin reset password",
+		// 		Message: errMsg.Error(),
+		// 	}
+		// 	h.renderGenericMessage(res, req, data)
+		// 	return
+		// }
+
+		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_ADD_USER)
+		if err != nil {
+			fmt.Println(ed.Eout(err, "error adding moderation log"))
+		}
+
+		// output copy-pastable credentials page for admin to send to the user
+		data := GenericMessageData{
+			Title: "User successfully added",
+			Message: fmt.Sprintf("Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset", username, newPassword),
+			LinkMessage: "Go back to the",
+			LinkText: "add user view",
+			Link: "/add-user",
+		}
+		h.renderGenericMessage(res, req, data)
+	}
+}
+
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserid int) {
 	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
@@ -468,6 +544,8 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogMakeAdmin"
 		case constants.MODLOG_REMOVE_USER:
 			translationString = "modlogRemoveUser"
+		case constants.MODLOG_ADMIN_ADD_USER:
+			translationString = "modlogAddUser"
 		}
 		str := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
 		viewData.Log = append(viewData.Log, str)
@@ -502,10 +580,10 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		}
 		return
 	}
-	if req.Method == "GET" && loggedIn {
-		if !isAdmin {
-			// TODO (2023-12-10):	redirect to /admins
-			h.ListAdminsRoute(res, req)
+	if req.Method == "GET" {
+		if !loggedIn || !isAdmin {
+			// non-admin users get a different view
+			h.ListAdmins(res, req)
 			return
 		}
 		admins := h.db.GetAdmins()
@@ -516,7 +594,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *RequestHandler) ListAdminsRoute(res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) ListAdmins(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	admins := h.db.GetAdmins()
 	data := AdminsData{Admins: admins}
@@ -1118,8 +1196,8 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
+	s.ServeMux.HandleFunc("/add-user", handler.AdminManualAddUserRoute)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
-	s.ServeMux.HandleFunc("/admins", handler.ListAdminsRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
