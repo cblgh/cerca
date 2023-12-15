@@ -632,6 +632,33 @@ func (d DB) AddAdmin(userid int) error {
 	return nil
 }
 
+func (d DB) DemoteAdmin(userid int) error {
+	ed := util.Describe("demote admin")
+	// make sure the id exists
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return errors.New(fmt.Sprintf("demote admin: userid %d did not exist", userid))
+	}
+	if err != nil {
+		return ed.Eout(err, "CheckUserExists had an error")
+	}
+	isAdmin, err := d.IsUserAdmin(userid)
+	if !isAdmin {
+		return errors.New(fmt.Sprintf("demote admin: userid %d was not an admin", userid))
+	}
+	if err != nil {
+		// some kind of error, let's bubble it up
+		return ed.Eout(err, "IsUserAdmin")
+	}
+	// all checks are done: perform the removal
+	stmt := `DELETE FROM admins WHERE id = ?`
+	_, err = d.db.Exec(stmt, userid)
+	if err != nil {
+		return ed.Eout(err, "inserting new admin")
+	}
+	return nil
+}
+
 func (d DB) IsUserAdmin (userid int) (bool, error) {
 	stmt := `SELECT 1 FROM admins WHERE id = ?`
 	return d.existsQuery(stmt, userid)
