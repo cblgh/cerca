@@ -4,10 +4,14 @@
     <section>
         <form method="GET" id="add-user" action="/add-user"></form>
         <p>
-        Does someone wish admittance? You can <button form="add-user" type="submit" href="/add-user">Add new user</button>.
+        <form method="POST" id="demote-self" action="/demote-admin">
+            <input type="hidden" name="userid" value="{{ .LoggedInID }}">
+        </form>
+        <p>
+        Does someone wish admittance? You can <button form="add-user" type="submit">Add new user</button>.
         </p>
         <p>
-        If you want to stop being an admin, you can <button>Step down</button>.
+        If you want to stop being an admin, you can <button form="demote-self" type="submit">Step down</button>.
         </p>
         <p>
         View past actions in the <a href="/moderations">moderation log</a>.
@@ -19,9 +23,15 @@
         {{ if len .Data.Admins | eq 0 }} 
             <p> there are no admins; chaos reigns </p>
         {{ else }}
-            {{ $userID := .LoggedInID }} <!-- do some kind of extra styling to indicate "hey this is you!" -->
+            {{ $userID := .LoggedInID }}
             {{ range $index, $user := .Data.Admins }}
-            <p> {{ $user.Name }} ({{ $user.ID }}) {{ if eq $userID $user.ID }} <i>(this is you!)</i>{{ end }}</p>
+            <form method="POST" id="demote-admin-{{$user.ID}}" action="/demote-admin">
+            <input type="hidden" name="userid" value="{{ $user.ID }}">
+            </form>
+            <p> {{ $user.Name }} ({{ $user.ID }}) 
+            {{ if eq $userID $user.ID }} <i>(this is you!)</i> 
+            {{ else }}<button type="submit" form="demote-admin-{{$user.ID}}">Demote</button>{{ end }}
+            </p>
             {{ end }}
         {{ end }}
     </section>

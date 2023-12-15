@@ -327,7 +327,6 @@ func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Requ
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
-		// redirect to index
 		IndexRedirect(res, req)
 		return
 	}
@@ -359,7 +358,6 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
-		// redirect to index
 		IndexRedirect(res, req)
 		return
 	}
@@ -396,13 +394,55 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 	h.renderGenericMessage(res, req, data)
 }
 
+func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("demote admin route")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserid := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+	useridString := req.PostFormValue("userid")
+	targetUserid, err := strconv.Atoi(useridString)
+	util.Check(err, "convert user id string to a plain userid")
+
+	// TODO (2023-12-10): introduce 2-quorom 
+	err = h.db.DemoteAdmin(targetUserid)
+
+	if err != nil {
+		errMsg := ed.Eout(err, "demote admin failed")
+		fmt.Println(errMsg)
+		data := GenericMessageData{
+			Title:   "Demote admin",
+			Message: errMsg.Error(),
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+
+	username, _ := h.db.GetUsername(targetUserid)
+	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_DEMOTE)
+	if err != nil {
+		fmt.Println(ed.Eout(err, "error adding moderation log"))
+	}
+
+	// output copy-pastable credentials page for admin to send to the user
+	data := GenericMessageData{
+		Title: "Demote admin success",
+		Message: fmt.Sprintf("User %s is now a regular user", username),
+		LinkMessage: "Go back to the",
+		LinkText: "admin view",
+		Link: "/admin",
+	}
+	h.renderGenericMessage(res, req, data)
+}
+
 func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("admin manually add user")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserid := h.IsAdmin(req)
 
 	if  !isAdmin {
-		// redirect to index
 		IndexRedirect(res, req)
 		return
 	}
@@ -474,7 +514,6 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserid := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
-		// redirect to index
 		IndexRedirect(res, req)
 		return
 	}
@@ -546,6 +585,8 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogRemoveUser"
 		case constants.MODLOG_ADMIN_ADD_USER:
 			translationString = "modlogAddUser"
+		case constants.MODLOG_ADMIN_DEMOTE:
+			translationString = "modlogDemoteAdmin"
 		}
 		str := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
 		viewData.Log = append(viewData.Log, str)
@@ -1196,6 +1237,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
+	s.ServeMux.HandleFunc("/demote-admin", handler.AdminDemoteAdmin)
 	s.ServeMux.HandleFunc("/add-user", handler.AdminManualAddUserRoute)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
