@@ -50,17 +50,21 @@ func InitDB(filepath string) DB {
 }
 
 const DELETED_USER_NAME = "deleted user"
+const SYSTEM_USER_NAME = "CERCA_CMD"
+
 func (d DB) makeSureDefaultUsersExist() {
 	ed := util.Describe("create default users")
-	deletedUserExists, err := d.CheckUsernameExists(DELETED_USER_NAME)
-	if err != nil {
-		log.Fatalln(ed.Eout(err, "check username exists"))
-	}
-	if !deletedUserExists {
-		passwordHash, err := crypto.HashPassword(crypto.GeneratePassword())
-		_, err = d.CreateUser(DELETED_USER_NAME, passwordHash)
+	for _, defaultUser := range []string{DELETED_USER_NAME, SYSTEM_USER_NAME} {
+		userExists, err := d.CheckUsernameExists(defaultUser)
 		if err != nil {
-			log.Fatalln(ed.Eout(err, "create deleted user"))
+			log.Fatalln(ed.Eout(err, "check username for %s exists", defaultUser))
+		}
+		if !userExists {
+			passwordHash, err := crypto.HashPassword(crypto.GeneratePassword())
+			_, err = d.CreateUser(defaultUser, passwordHash)
+			if err != nil {
+				log.Fatalln(ed.Eout(err, "create %s", defaultUser))
+			}
 		}
 	}
 }
@@ -439,6 +443,16 @@ func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 // - table moderation_log actingid or recipientid
 // 
 // the entry in registrations correlating to userid is removed
+
+func (d DB) GetSystemUserid() int {
+	ed := util.Describe("get system user id")
+	systemUserid, err := d.GetUserID(SYSTEM_USER_NAME)
+	// it should always exist
+	if err != nil {
+		log.Fatalln(ed.Eout(err, "get system user id"))
+	}
+	return systemUserid
+}
 
 // if allowing deletion of post contents as well when removing account, 
 // userid should be used to get all posts from table posts and change the contents
