@@ -2,7 +2,7 @@ package main
 
 import (
 	"cerca/database"
-	"cerca/util"
+	"cerca/constants"
 	"flag"
 	"fmt"
 	"os"
@@ -26,29 +26,18 @@ func complain(msg string, args ...interface{}) {
 }
 
 func main() {
-	var keypairFlag bool
-	var passwordFlag bool
 	var username string
 	var dbPath string
 	flag.StringVar(&username, "username", "", "username whose credentials should be reset")
 	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
-	flag.BoolVar(&keypairFlag, "keypair", false, "reset the keypair")
-	flag.BoolVar(&passwordFlag, "password", false, "reset the password. if true generates a random new password")
 	flag.Parse()
 
 	usage := `usage
-  admin-reset --database ./data/forum.db --username <username to reset> [--keypair, --password]
+  admin-reset --database ./data/forum.db --username <username to reset>
   admin-reset --help for more information
 
-  examples:
-  # only reset the keypair, leaving the password intact
-  ./admin-reset --database ../../testdata/forum.db --username bambas --keypair   
-
-  # reset password only 
-  ./admin-reset --database ../../testdata/forum.db --username bambas --password
-
-  # reset both password and keypair
-  ./admin-reset --database ../../testdata/forum.db --username bambas --password --keypair   
+  # example
+  ./admin-reset --database ../../testdata/forum.db --username bambas 
   `
 
 	if username == "" {
@@ -61,14 +50,25 @@ func main() {
 	}
 
 	db := database.InitDB(dbPath)
-	ed := util.Describe("admin reset")
+
+	userid, err := db.GetUserID(username)
+	if err != nil {
+		complain("reset password failed (%w)", err)
+	}
 	newPassword, err := db.ResetPassword(userid)
-	// TODO (2023-12-12): log cmd actions just as admin web-actions are logged
 
 	if err != nil {
 		complain("reset password failed (%w)", err)
 	}
 
-	inform("successfully updated %s's password hash", username)
-	inform("new temporary password %s", newPassword)
+	// log cmd actions just as admin web-actions are logged
+	systemUserid := db.GetSystemUserid()
+	err = db.AddModerationLog(systemUserid, userid, constants.MODLOG_RESETPW)
+	if err != nil {
+		complain("adding mod log for password reset failed (%w)", err)
+	}
+
+	inform("Successfully updated %s's password hash", username)
+	inform("New temporary password: %s", newPassword)
+	inform("Admin action has been logged to /moderations")
 }

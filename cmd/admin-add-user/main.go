@@ -3,6 +3,7 @@ package main
 import (
 	"cerca/crypto"
 	"cerca/database"
+	"cerca/constants"
 	"cerca/util"
 	"flag"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 )
 
 type UserInfo struct {
+	ID int
 	Username, Password string
 }
 
@@ -35,7 +37,7 @@ func createUser (username, password string, db *database.DB) UserInfo {
 	if err = ed.Eout(err, "add registration"); err != nil {
 		complain("Database had a problem saving user registration location")
 	}
-	return UserInfo{Username: username, Password: password}
+	return UserInfo{ID: userID, Username: username, Password: password}
 }
 
 func inform(msg string, args ...interface{}) {
@@ -79,8 +81,16 @@ func main() {
 	}
 
 	db := database.InitDB(dbPath)
+
 	newPassword := crypto.GeneratePassword()
-	_ = createUser(username, newPassword, &db)
+	userInfo := createUser(username, newPassword, &db)
+
+	// log cmd actions just as admin web-actions are logged
+	systemUserid := db.GetSystemUserid()
+	err := db.AddModerationLog(systemUserid, userInfo.ID, constants.MODLOG_ADMIN_ADD_USER)
+	if err != nil {
+		complain("adding mod log for adding new user failed (%w)", err)
+	}
 
 	loginRoute := fmt.Sprintf("%s/login", forumDomain)
 	resetRoute := fmt.Sprintf("%s/reset", forumDomain)
@@ -89,4 +99,5 @@ func main() {
 	inform("[password]\n%s", newPassword)
 	inform("Please login at %s\n", loginRoute)
 	inform("After logging in, visit %s to reset your password", resetRoute)
+	inform("Admin action has been logged to /moderations")
 }
