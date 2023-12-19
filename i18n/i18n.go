@@ -29,18 +29,18 @@ var English = map[string]string{
 
   "modlogResetPassword": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
   "modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
+  "modlogRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,
   "modlogMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}}</b> an admin`,
   "modlogAddUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for <b> {{ .Data.RecipientUsername }}</b>`,
   "modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> demoted <b> 
 	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} themselves 
 	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> from admin back to normal user`,
-  // "modlogProposeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}} an admin`,
-  // "modlogVetoAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> vetoed making {{ .Data.RecipientUsername }} an admin`,
-  // "modlogConfirmAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> confirmed making {{ .Data.RecipientUsername }} a new admin`,
-  // "modlogProposeDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed deleting a user's account`,
-  // "modlogVetoDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> vetoed deleting a user's account`,
-  // "modlogConfirmDelete": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> confirmed deleting a user's account`,
-  "modlogRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,
+	"modlogXProposedY": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: {{ .Data.Action }}`,
+	"modlogProposalMakeAdmin": `Make <b> {{ .Data.RecipientUsername}}</b> admin`,
+	"modlogProposalDemoteAdmin": `Demote <b> {{ .Data.RecipientUsername}}</b> from role admin`,
+	"modlogProposalRemoveUser": `Remove user <b> {{ .Data.RecipientUsername }} </b>`,
+	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.ActingUsername }}</i>",
+	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.ActingUsername }}</i>",
 
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
