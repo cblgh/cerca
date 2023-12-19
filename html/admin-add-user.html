@@ -1,0 +1,22 @@
+{{ template "head" . }}
+<main>
+    <h1> {{ .Title }}</h1>
+    <p>Register a new user account. After registering the account you will be given a generated password and
+    instructions to pass onto the user.</p>
+
+    <form method="post">
+        <label for="username">{{ "Username" | translate | capitalize }}:</label>
+        <input type="text" required id="username" name="username">
+        <div>
+        <input type="submit" value='{{ "Register" | translate | capitalize }}'>
+        </div>
+    </form>
+
+    {{ if .Data.ErrorMessage }}
+    <div>
+        <p><b> {{ .Data.ErrorMessage }} </b></p>
+    </div>
+    {{ end }}
+
+</main>
+{{ template "footer" . }}
