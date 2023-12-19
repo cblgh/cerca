@@ -90,18 +90,40 @@ func createTables(db *sql.DB) {
     id INTEGER PRIMARY KEY
   );
   `,
+	/* add optional columns: quorumuser quorum_action (confirm, veto)? */
 		`
   CREATE TABLE IF NOT EXISTS moderation_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
 		actingid INTEGER NOT NULL,
 		recipientid INTEGER,
-		action INTEGER,
-    time DATE,
+		action INTEGER NOT NULL,
+    time DATE NOT NULL,
 
     FOREIGN KEY (actingid) REFERENCES users(id),
     FOREIGN KEY (recipientid) REFERENCES users(id)
   );
   `,
+	`
+	CREATE TABLE IF NOT EXISTS quorum_decisions (
+		userid INTEGER NOT NULL,
+		decision BOOL NOT NULL,
+		modlogid INTEGER NOT NULL,
+
+		FOREIGN KEY (modlogid) REFERENCES moderation_log(id)
+	);
+	`,
+	`
+	CREATE TABLE IF NOT EXISTS moderation_proposals (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		proposerid INTEGER NOT NULL,
+		recipientid INTEGER NOT NULL,
+		action INTEGER NOT NULL,
+		time DATE NOT NULL,
+
+		FOREIGN KEY (proposerid) REFERENCES users(id),
+		FOREIGN KEY (recipientid) REFERENCES users(id)
+	);
+		`,
 		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -430,20 +452,6 @@ func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	util.Check(err, "changing user %d's description to %s", userid, newhash)
 }
 
-// there are a bunch of places that reference a user's id, so i don't want to break all of those
-//
-// i also want to avoid big invisible holes in a conversation's history
-
-// remove user performs the following operation:
-// 1. checks to see if the DELETED USER exists; otherwise create it and remember its id
-// 
-// 2. if it exists, we swap out the userid for the DELETED_USER in tables:
-// - table threads authorid
-// - table posts authorid
-// - table moderation_log actingid or recipientid
-// 
-// the entry in registrations correlating to userid is removed
-
 func (d DB) GetSystemUserid() int {
 	ed := util.Describe("get system user id")
 	systemUserid, err := d.GetUserID(SYSTEM_USER_NAME)
@@ -452,75 +460,6 @@ func (d DB) GetSystemUserid() int {
 		log.Fatalln(ed.Eout(err, "get system user id"))
 	}
 	return systemUserid
-}
-
-// if allowing deletion of post contents as well when removing account, 
-// userid should be used to get all posts from table posts and change the contents
-// to say _deleted_
-func (d DB) RemoveUser(userid int) (finalErr error) {
-	ed := util.Describe("remove user")
-	// there is a single user we call the "deleted user", and we make sure this deleted user exists on startup
-	// they will take the place of the old user when they remove their account.
-	deletedUserID, err := d.GetUserID(DELETED_USER_NAME)
-	if err != nil {
-		log.Fatalln(ed.Eout(err, "get deleted user id"))
-	}
-	// create a transaction spanning all our removal-related ops
-	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
-	rollbackOnErr:= func(incomingErr error) {
-		if incomingErr != nil {
-			_ = tx.Rollback()
-			log.Println(incomingErr, "rolling back")
-			finalErr = incomingErr
-			return 
-		}
-	}
-	rollbackOnErr(ed.Eout(err, "start transaction"))
-
-	// create prepared statements performing the required removal operations for tables that reference a userid as a
-	// foreign key: threads, posts, moderation_log, and registrations
-	threadsStmt, err := tx.Prepare("UPDATE threads SET authorid = ? WHERE authorid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare threads stmt"))
-	defer threadsStmt.Close()
-
-	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
-	rollbackOnErr(ed.Eout(err, "prepare posts stmt"))
-	defer postsStmt.Close()
-
-	modlogStmt1, err := tx.Prepare("UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #1"))
-	defer modlogStmt1.Close()
-
-	modlogStmt2, err := tx.Prepare("UPDATE moderation_log SET actingid = ? WHERE actingid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #2"))
-	defer modlogStmt2.Close()
-
-	stmtReg, err := tx.Prepare("DELETE FROM registrations where userid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare registrations stmt"))
-	defer stmtReg.Close()
-
-	// and finally: removing the entry from the user's table itself
-	stmtUsers, err := tx.Prepare("DELETE FROM users where id = ?")
-	rollbackOnErr(ed.Eout(err, "prepare users stmt"))
-	defer stmtUsers.Close()
-
-	_, err = threadsStmt.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec threads stmt"))
-	_, err = postsStmt.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec posts stmt"))
-	_, err = modlogStmt1.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec modlog #1 stmt"))
-	_, err = modlogStmt2.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec modlog #2 stmt"))
-	_, err = stmtReg.Exec(userid)
-	rollbackOnErr(ed.Eout(err, "exec registration stmt"))
-	_, err = stmtUsers.Exec(userid)
-	rollbackOnErr(ed.Eout(err, "exec users stmt"))
-
-	err = tx.Commit()
-	ed.Check(err, "commit transaction")
-	finalErr = nil
-	return
 }
 
 func (d DB) AddRegistration(userid int, verificationLink string) error {
@@ -538,171 +477,7 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 	return nil
 }
 
-func (d DB) AddModerationLog(actingid, recipientid, action int) error {
-	ed := util.Describe("add moderation log")
-	t := time.Now()
-	// we have a recipient
-	var err error
-	if recipientid > 0 {
-		stmt := `INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`
-		_, err = d.Exec(stmt, actingid, recipientid, action, t)
-		} else {
-			// we are not listing a recipient
-		stmt := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?)`
-		_, err = d.Exec(stmt, actingid, action, t)
-	}
-	if err = ed.Eout(err, "exec prepared statement"); err != nil {
-		return err
-	}
-	return nil
-}
-
-type ModerationEntry struct {
-	ActingUsername, RecipientUsername string
-	Action int
-	Time time.Time
-}
-func (d DB) GetModerationLogs () []ModerationEntry {
-	ed := util.Describe("moderation log")
-	query := `SELECT uact.name, urecp.name, m.action, m.time 
-	FROM moderation_LOG m 
-	LEFT JOIN users uact ON uact.id = m.actingid
-	LEFT JOIN users urecp ON urecp.id = m.recipientid
-	ORDER BY time DESC`
-
-	stmt, err := d.db.Prepare(query)
-	ed.Check(err, "prep stmt")
-	defer stmt.Close()
-
-	rows, err := stmt.Query()
-	util.Check(err, "run query")
-	defer rows.Close()
-
-	var entry ModerationEntry
-	var logs []ModerationEntry
-	for rows.Next() {
-		var actingUsername, recipientUsername sql.NullString
-		if err := rows.Scan(&actingUsername, &recipientUsername, &entry.Action, &entry.Time); err != nil {
-			ed.Check(err, "scanning loop")
-		}
-		if actingUsername.Valid {
-			entry.ActingUsername = actingUsername.String
-		}
-		if recipientUsername.Valid {
-			entry.RecipientUsername = recipientUsername.String
-		}
-		logs = append(logs, entry)
-	}
-	return logs
-}
-
-func (d DB) ResetPassword(userid int) (string, error) {
-	ed := util.Describe("reset password")
-	exists, err := d.CheckUserExists(userid)
-	if !exists {
-		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
-	} else if err != nil {
-		return "", fmt.Errorf("reset password encountered an error (%w)", err)
-	}
-	// generate new password for user and set it in the database
-	newPassword := crypto.GeneratePassword()
-	passwordHash, err := crypto.HashPassword(newPassword)
-	if err != nil {
-		return "", ed.Eout(err, "hash password")
-	}
-	d.UpdateUserPasswordHash(userid, passwordHash)
-	return newPassword, nil
-}
-
-type User struct { 
-	Name string
-	ID int 
-}
-
-func (d DB) AddAdmin(userid int) error {
-	ed := util.Describe("add admin")
-	// make sure the id exists
-	exists, err := d.CheckUserExists(userid)
-	if !exists {
-		return errors.New(fmt.Sprintf("add admin: userid %d did not exist", userid))
-	}
-	if err != nil {
-		return ed.Eout(err, "CheckUserExists had an error")
-	}
-	isAdminAlready, err := d.IsUserAdmin(userid)
-	if isAdminAlready {
-		return errors.New(fmt.Sprintf("userid %d was already an admin", userid))
-	}
-	if err != nil {
-		// some kind of error, let's bubble it up
-		return ed.Eout(err, "IsUserAdmin")
-	}
-	// insert into table, we gots ourselves a new sheriff in town [|:D
-	stmt := `INSERT INTO admins (id) VALUES (?)`
-	_, err = d.db.Exec(stmt, userid)
-	if err != nil {
-		return ed.Eout(err, "inserting new admin")
-	}
-	return nil
-}
-
-func (d DB) DemoteAdmin(userid int) error {
-	ed := util.Describe("demote admin")
-	// make sure the id exists
-	exists, err := d.CheckUserExists(userid)
-	if !exists {
-		return errors.New(fmt.Sprintf("demote admin: userid %d did not exist", userid))
-	}
-	if err != nil {
-		return ed.Eout(err, "CheckUserExists had an error")
-	}
-	isAdmin, err := d.IsUserAdmin(userid)
-	if !isAdmin {
-		return errors.New(fmt.Sprintf("demote admin: userid %d was not an admin", userid))
-	}
-	if err != nil {
-		// some kind of error, let's bubble it up
-		return ed.Eout(err, "IsUserAdmin")
-	}
-	// all checks are done: perform the removal
-	stmt := `DELETE FROM admins WHERE id = ?`
-	_, err = d.db.Exec(stmt, userid)
-	if err != nil {
-		return ed.Eout(err, "inserting new admin")
-	}
-	return nil
-}
-
-func (d DB) IsUserAdmin (userid int) (bool, error) {
-	stmt := `SELECT 1 FROM admins WHERE id = ?`
-	return d.existsQuery(stmt, userid)
-}
-
-func (d DB) GetAdmins() []User {
-	ed := util.Describe("get admins")
-	query := `SELECT u.name, a.id 
-  FROM users u 
-  INNER JOIN admins a ON u.id = a.id 
-  ORDER BY u.name
-  `
-	stmt, err := d.db.Prepare(query)
-	ed.Check(err, "prep stmt")
-	defer stmt.Close()
-
-	rows, err := stmt.Query()
-	util.Check(err, "run query")
-	defer rows.Close()
-
-	var user User
-	var admins []User
-	for rows.Next() {
-		if err := rows.Scan(&user.Name, &user.ID); err != nil {
-			ed.Check(err, "scanning loop")
-		}
-		admins = append(admins, user)
-	}
-	return admins
-}
+/* for moderation operations and queries, see database/moderation.go */
 
 func (d DB) GetUsers(includeAdmin bool) []User {
 	ed := util.Describe("get users")
@@ -736,3 +511,22 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 	}
 	return users
 }
+
+func (d DB) ResetPassword(userid int) (string, error) {
+       ed := util.Describe("reset password")
+       exists, err := d.CheckUserExists(userid)
+       if !exists {
+               return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+       } else if err != nil {
+               return "", fmt.Errorf("reset password encountered an error (%w)", err)
+       }
+       // generate new password for user and set it in the database
+       newPassword := crypto.GeneratePassword()
+       passwordHash, err := crypto.HashPassword(newPassword)
+       if err != nil {
+               return "", ed.Eout(err, "hash password")
+       }
+       d.UpdateUserPasswordHash(userid, passwordHash)
+       return newPassword, nil
+}
+

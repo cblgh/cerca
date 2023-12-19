@@ -88,6 +88,7 @@ type ThreadData struct {
 type AdminsData struct {
 	Admins []database.User
 	Users []database.User
+	Proposals []database.ModProposal
 	IsAdmin bool
 }
 
@@ -331,7 +332,13 @@ func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	err := h.db.RemoveUser(targetUserid)
+	quorumActivated := h.db.QuorumActivated()
+	var err error
+	if quorumActivated {
+		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER)
+	} else {
+		err = h.db.RemoveUser(targetUserid)
+	}
 
 	if err != nil {
 		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
@@ -345,12 +352,14 @@ func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	err = h.db.AddModerationLog(adminUserid, -1, constants.MODLOG_REMOVE_USER)
-	if err != nil {
-		fmt.Println(ed.Eout(err, "error adding moderation log"))
+	if !quorumActivated {
+		err = h.db.AddModerationLog(adminUserid, -1, constants.MODLOG_REMOVE_USER)
+		if err != nil {
+			fmt.Println(ed.Eout(err, "error adding moderation log"))
+		}
 	}
 	// success! redirect back to /admin
-	http.Redirect(res, req, "/admin", http.StatusSeeOther)
+	http.Redirect(res, req, "/admin", http.StatusFound)
 }
 
 func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserid int) {
@@ -362,8 +371,13 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	// TODO (2023-12-10): introduce 2-quorom 
-	err := h.db.AddAdmin(targetUserid)
+	quorumActivated := h.db.QuorumActivated()
+	var err error
+	if quorumActivated {
+		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN)
+	} else {
+		err = h.db.AddAdmin(targetUserid)
+	}
 
 	if err != nil {
 		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
@@ -377,21 +391,26 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	username, _ := h.db.GetUsername(targetUserid)
-	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_MAKE)
-	if err != nil {
-		fmt.Println(ed.Eout(err, "error adding moderation log"))
-	}
+	if !quorumActivated {
+		username, _ := h.db.GetUsername(targetUserid)
+		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_MAKE)
+		if err != nil {
+			fmt.Println(ed.Eout(err, "error adding moderation log"))
+		}
 
-	// output copy-pastable credentials page for admin to send to the user
-	data := GenericMessageData{
-		Title: "Make admin success",
-		Message: fmt.Sprintf("User %s is now a fellow admin user!", username),
-		LinkMessage: "Go back to the",
-		LinkText: "admin view",
-		Link: "/admin",
+		// output copy-pastable credentials page for admin to send to the user
+		data := GenericMessageData{
+			Title: "Make admin success",
+			Message: fmt.Sprintf("User %s is now a fellow admin user!", username),
+			LinkMessage: "Go back to the",
+			LinkText: "admin view",
+			Link: "/admin",
+		}
+		h.renderGenericMessage(res, req, data)
+	} else {
+		// redirect to admin view, which should have a proposal now
+		http.Redirect(res, req, "/admin", http.StatusFound)
 	}
-	h.renderGenericMessage(res, req, data)
 }
 
 func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Request) {
@@ -406,8 +425,12 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 	targetUserid, err := strconv.Atoi(useridString)
 	util.Check(err, "convert user id string to a plain userid")
 
-	// TODO (2023-12-10): introduce 2-quorom 
-	err = h.db.DemoteAdmin(targetUserid)
+	quorumActivated := h.db.QuorumActivated()
+	if quorumActivated {
+		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN)
+	} else {
+		err = h.db.DemoteAdmin(targetUserid)
+	}
 
 	if err != nil {
 		errMsg := ed.Eout(err, "demote admin failed")
@@ -420,21 +443,25 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	username, _ := h.db.GetUsername(targetUserid)
-	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_DEMOTE)
-	if err != nil {
-		fmt.Println(ed.Eout(err, "error adding moderation log"))
-	}
+	if !quorumActivated {
+		username, _ := h.db.GetUsername(targetUserid)
+		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_DEMOTE)
+		if err != nil {
+			fmt.Println(ed.Eout(err, "error adding moderation log"))
+		}
 
-	// output copy-pastable credentials page for admin to send to the user
-	data := GenericMessageData{
-		Title: "Demote admin success",
-		Message: fmt.Sprintf("User %s is now a regular user", username),
-		LinkMessage: "Go back to the",
-		LinkText: "admin view",
-		Link: "/admin",
+		// output copy-pastable credentials page for admin to send to the user
+		data := GenericMessageData{
+			Title: "Demote admin success",
+			Message: fmt.Sprintf("User %s is now a regular user", username),
+			LinkMessage: "Go back to the",
+			LinkText: "admin view",
+			Link: "/admin",
+		}
+		h.renderGenericMessage(res, req, data)
+	} else {
+		http.Redirect(res, req, "/admin", http.StatusFound)
 	}
-	h.renderGenericMessage(res, req, data)
 }
 
 func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *http.Request) {
@@ -567,6 +594,9 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	type translationData struct {	
 		Time, ActingUsername, RecipientUsername string
 	}
+	type proposalData struct {	
+		QuorumUsername, Action string
+	}
 	for _, entry := range logs {
 		var tdata translationData
 		var translationString string
@@ -587,9 +617,27 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogAddUser"
 		case constants.MODLOG_ADMIN_DEMOTE:
 			translationString = "modlogDemoteAdmin"
+		case constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN:
+			translationString = "modlogProposalDemoteAdmin"
+		case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
+			translationString = "modlogProposalMakeAdmin"
+		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
+			translationString = "modlogProposalRemoveUser"
 		}
-		str := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
-		viewData.Log = append(viewData.Log, str)
+		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
+		if entry.QuorumUsername != ""{
+			// use the translated actionString to embed in the translated proposal decision (confirmation/veto)
+			propdata := proposalData{QuorumUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: actionString}
+			// if quorumDecision is true -> proposal was confirmed
+			translationString = "modlogConfirm"
+			if !entry.QuorumDecision {
+				translationString = "modlogVeto"
+			} 
+			proposalString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: propdata})
+			viewData.Log = append(viewData.Log, proposalString)
+		} else {
+			viewData.Log = append(viewData.Log, actionString)
+		}
 	}
 	view := TemplateData{Title: "Moderation log", IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
@@ -629,7 +677,9 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		}
 		admins := h.db.GetAdmins()
 		normalUsers := h.db.GetUsers(false) // do not include admins
-		data := AdminsData{Admins: admins, Users: normalUsers}
+		// convert database representation of actions to something more useful for template
+		proposedActions := h.db.GetProposedActions()
+		data := AdminsData{Admins: admins, Users: normalUsers, Proposals: proposedActions}
 		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}

@@ -18,23 +18,49 @@
         </p>
     </section>
     {{ if .LoggedIn }}
+    {{ $userID := .LoggedInID }}
     <section>
         <h2> Admins </h2>
         {{ if len .Data.Admins | eq 0 }} 
             <p> there are no admins; chaos reigns </p>
         {{ else }}
-            {{ $userID := .LoggedInID }}
+        <table>
             {{ range $index, $user := .Data.Admins }}
-            <form method="POST" id="demote-admin-{{$user.ID}}" action="/demote-admin">
-            <input type="hidden" name="userid" value="{{ $user.ID }}">
-            </form>
-            <p> {{ $user.Name }} ({{ $user.ID }}) 
-            {{ if eq $userID $user.ID }} <i>(this is you!)</i> 
-            {{ else }}<button type="submit" form="demote-admin-{{$user.ID}}">Demote</button>{{ end }}
-            </p>
+            <tr>
+                <form method="POST" id="demote-admin-{{$user.ID}}" action="/demote-admin">
+                    <input type="hidden" name="userid" value="{{ $user.ID }}">
+                </form>
+                <td>{{ $user.Name }} ({{ $user.ID }}) </td>
+                <td>
+                    {{ if eq $userID $user.ID }} <i>(you!)</i> 
+                    {{ else }}<button type="submit" form="demote-admin-{{$user.ID}}">Demote</button>{{ end }}
+                </td>
+            </tr>
             {{ end }}
+        </table>
         {{ end }}
     </section>
+    <section> 
+    <h2> Pending actions</h2>
+    <p>Two admins are required for <i>making a user an admin</i>, <i>demoting an existing admin</i>, or <i>removing a user</i>. The
+    first proposes the action, the second confirms (or vetos) it. If enough time elapses without a veto, the
+    proposer may confirm their own proposal.</p>
+    <table>
+        <tr>
+            <th>Proposal</th>
+            <th colspan="3">Date self-proposals become valid</th>
+        {{ range $index, $prop := .Data.Proposals }}
+        <tr>
+            <td> {{ $prop }} </td>
+            <!-- <td><b>beans</b>: Make <b>spout</b> admin</td> -->
+            <!-- <td>2023&#45;12&#45;20 12:32+02</td>  -->
+            <!-- TODO (2023-12-19): remember to offset data from proposal with a fixed amount of time! e.g. in
+            a var in this template, which can be reused to turn off interactivity of the buttons as a ux measure-->
+            <td><button>Veto</button></td>
+            <td><button>Confirm</button></td>
+        </tr>
+        {{ end }}
+    </table>
 
     <section>
         <h2> Users </h2>
@@ -43,7 +69,7 @@
         {{ else }}
         <table>
             {{ range $index, $user := .Data.Users }}
-            {{ if ne $user.Name "deleted user" }} 
+            {{ if and (ne $user.Name "CERCA_CMD") (ne $user.Name "deleted user") }} 
                 <form method="POST">
                 <input type="hidden" name="userid" value="{{$user.ID}}">
                 <tr>
