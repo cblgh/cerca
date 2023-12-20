@@ -243,6 +243,7 @@ func (d DB) GetProposedActions() []ModProposal {
 // finalize a proposal by either confirming or vetoing it, logging the requisite information and then finally executing
 // the proposed action itself
 func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (finalErr error) {
+	fmt.Println("DECISION", decision)
 	ed := util.Describe("finalize proposed mod action")
 
 	t := time.Now()
@@ -290,19 +291,26 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	// the admin who proposed the action will be logged as the one performing it
 	// get the modlog so we can reference it in the quorum_decisions table. this will be used to augment the moderation
 	// log view with quorum info
-	modlogid, err := stmt.Exec(proposerid, recipientid, action, t)
+	result, err := stmt.Exec(proposerid, recipientid, action, t)
 	rollbackOnErr(ed.Eout(err, "insert into modlog"))
+	modlogid, err := result.LastInsertId()
+	rollbackOnErr(ed.Eout(err, "get last insert id"))
 
 	// update the quorum decisions table so that we can use its info to augment the moderation log view
 	stmt, err = tx.Prepare(`INSERT INTO quorum_decisions (userid, decision, modlogid) VALUES (?, ?, ?)`)
 	rollbackOnErr(ed.Eout(err, "prepare quorum insertion stmt"))
 	// decision = confirm or veto => values true or false
+	fmt.Println("admin", adminid, "decision", decision, "modlog", modlogid)
 	_, err = stmt.Exec(adminid, decision, modlogid)
 	rollbackOnErr(ed.Eout(err, "execute quorum insertion"))
 
 	err = tx.Commit()
 	ed.Check(err, "commit transaction")
 
+	// the decision was to veto the proposal: there's nothing more to do! except return outta this function ofc ofc
+	if decision == constants.PROPOSAL_VETO {
+		return 
+	}
 	// perform the actual action; would be preferable to do this in the transaction somehow
 	// but hell no am i copying in those bits here X)
 	switch proposalAction {

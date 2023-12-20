@@ -14,3 +14,6 @@ const (
 	/* NOTE: when adding new values, only add them after already existing values! otherwise the existing variables will
 	* receive new values which affects the stored values in table moderation_log */
 )
+
+const PROPOSAL_VETO = false
+const PROPOSAL_CONFIRM = true

@@ -49,15 +49,21 @@
         <tr>
             <th>Proposal</th>
             <th colspan="3">Date self-proposals become valid</th>
-        {{ range $index, $prop := .Data.Proposals }}
+        </tr>
+        {{ range $index, $proposal := .Data.Proposals }}
         <tr>
-            <td> {{ $prop }} </td>
-            <!-- <td><b>beans</b>: Make <b>spout</b> admin</td> -->
-            <!-- <td>2023&#45;12&#45;20 12:32+02</td>  -->
+            <form method="POST" id="confirm-{{$proposal.ID}}" action="/proposal-confirm">
+                <input type="hidden" name="proposalid" value="{{ $proposal.ID }}">
+            </form>
+            <form method="POST" id="veto-{{$proposal.ID}}" action="/proposal-veto">
+                <input type="hidden" name="proposalid" value="{{ $proposal.ID }}">
+            </form>
+            <td> {{ $proposal.Action | tohtml }} </td>
+            <td> {{ $proposal.Time | formatDateTime }} </td>
             <!-- TODO (2023-12-19): remember to offset data from proposal with a fixed amount of time! e.g. in
             a var in this template, which can be reused to turn off interactivity of the buttons as a ux measure-->
-            <td><button>Veto</button></td>
-            <td><button>Confirm</button></td>
+            <td><button {{ if  $proposal.TimePassed }} disabled {{ end }} type="submit" form="veto-{{$proposal.ID}}">Veto</button></td>
+            <td><button {{ if  $proposal.TimePassed }} disabled {{ end }} type="submit" form="confirm-{{$proposal.ID}}">Confirm</button></td>
         </tr>
         {{ end }}
     </table>

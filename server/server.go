@@ -88,7 +88,7 @@ type ThreadData struct {
 type AdminsData struct {
 	Admins []database.User
 	Users []database.User
-	Proposals []database.ModProposal
+	Proposals []PendingProposal
 	IsAdmin bool
 }
 
@@ -577,6 +577,35 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 	h.renderGenericMessage(res, req, data)
 }
 
+func (h *RequestHandler) HandleProposal(res http.ResponseWriter, req *http.Request, decision bool) {
+	ed := util.Describe("handle proposal proposal")
+	isAdmin, adminUserid := h.IsAdmin(req)
+
+	if !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+
+	if req.Method == "POST" && isAdmin {
+		proposalidString := req.PostFormValue("proposalid")
+		proposalid, err := strconv.Atoi(proposalidString)
+		ed.Check(err, "convert proposalid")
+		err = h.db.FinalizeProposedAction(proposalid, adminUserid, decision)
+		ed.Check(err, "finalize proposal error")
+		http.Redirect(res, req, "/admin", http.StatusFound)
+		return
+	}
+	IndexRedirect(res, req)
+}
+
+func (h *RequestHandler) ConfirmProposal(res http.ResponseWriter, req *http.Request) {
+	h.HandleProposal(res, req, constants.PROPOSAL_CONFIRM)
+}
+
+func (h *RequestHandler) VetoProposal(res http.ResponseWriter, req *http.Request) {
+	h.HandleProposal(res, req, constants.PROPOSAL_VETO)
+}
+
 type ModerationData struct {
 	Log []string
 }
@@ -642,11 +671,19 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	view := TemplateData{Title: "Moderation log", IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
+// used for rendering /admin's pending proposals
 // TODO (2023-12-10): introduce 2-quorum for consequential actions like
 // * make admin
 // * remove account
 // * (later: demote admin)
 // note: only make a 2-quorum if there are actually 2 admins
+
+type PendingProposal struct {
+	ID, ProposerID int
+	Action string
+	Time time.Time // the time self-confirmations become possible for proposers
+	TimePassed bool // self-confirmations valid or not
+}
 func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
@@ -656,7 +693,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		useridString := req.PostFormValue("userid")
 		targetUserid, err := strconv.Atoi(useridString)
 		util.Check(err, "convert user id string to a plain userid")
-		
+
 		switch action {
 		case "reset-password":
 			h.AdminResetUserPassword(res, req, targetUserid)
@@ -677,9 +714,32 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		}
 		admins := h.db.GetAdmins()
 		normalUsers := h.db.GetUsers(false) // do not include admins
-		// convert database representation of actions to something more useful for template
 		proposedActions := h.db.GetProposedActions()
-		data := AdminsData{Admins: admins, Users: normalUsers, Proposals: proposedActions}
+		// massage pending proposals into something we can use in the rendered view
+		pendingProposals := make([]PendingProposal, len(proposedActions))
+		now := time.Now()
+		for i, prop := range proposedActions {
+			// escape all ugc
+			prop.ActingUsername = template.HTMLEscapeString(prop.ActingUsername)
+			prop.RecipientUsername = template.HTMLEscapeString(prop.RecipientUsername)
+			// one week from when the proposal was made
+			t := prop.Time.Add(time.Hour * 24 * 7)
+			var str string
+			switch prop.Action {
+			case constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN:
+				str = "ProposedDemoteAdmin"
+			case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
+				str = "ProposedMakeAdmin"
+			case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
+				str = "ProposedRemoveUser"
+			}
+
+			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
+			fmt.Println("behold, a translation!", proposalString)
+			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
+		}
+		fmt.Println(pendingProposals, "<-- proposals that are pending")
+		data := AdminsData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
 		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
@@ -1285,11 +1345,15 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
+	// moderation and admin related routes
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/demote-admin", handler.AdminDemoteAdmin)
 	s.ServeMux.HandleFunc("/add-user", handler.AdminManualAddUserRoute)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
+	s.ServeMux.HandleFunc("/proposal-veto", handler.VetoProposal)
+	s.ServeMux.HandleFunc("/proposal-confirm", handler.ConfirmProposal)
+	// regular ol forum routes
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
