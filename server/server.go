@@ -185,6 +185,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"formatDate": func(t time.Time) string {
 			return t.Format("2006-01-02")
 		},
+		"formatDateTimeRelative": util.RelativeTime,
 		"formatDateRelative": func(t time.Time) string {
 			diff := time.Since(t)
 			if diff < time.Hour*24 {
