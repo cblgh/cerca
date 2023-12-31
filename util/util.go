@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/komkom/toml"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/exp/utf8string"
@@ -96,7 +97,8 @@ func Markup(md template.HTML) template.HTML {
 	mdBytes := []byte(string(md))
 	// fix newlines
 	mdBytes = markdown.NormalizeNewlines(mdBytes)
-	maybeUnsafeHTML := markdown.ToHTML(mdBytes, nil, nil)
+	mdParser := parser.NewWithExtensions(parser.CommonExtensions ^ parser.MathJax)
+	maybeUnsafeHTML := markdown.ToHTML(mdBytes, mdParser, nil)
 	// guard against malicious code being embedded
 	html := contentGuardian.SanitizeBytes(maybeUnsafeHTML)
 	return template.HTML(html)
