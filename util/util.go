@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/komkom/toml"
@@ -180,6 +181,35 @@ func CreateIfNotExist(docpath, content string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+const solarYearSecs = 31556926
+
+func RelativeTime(t time.Time) string {
+	d := time.Since(t)
+	var metric string
+	var amount int
+	if d.Seconds() < 60 {
+		amount = int(d.Seconds())
+		metric = "second"
+	} else if d.Minutes() < 60 {
+		amount = int(d.Minutes())
+		metric = "minute"
+	} else if d.Hours() < 24 {
+		amount = int(d.Hours())
+		metric = "hour"
+	} else if d.Seconds() < solarYearSecs {
+		amount = int(d.Hours()) / 24
+		metric = "day"
+	} else {
+		amount = int(d.Seconds()) / solarYearSecs
+		metric = "year"
+	}
+	if amount == 1 {
+		return fmt.Sprintf("%d %s ago", amount, metric)
+	} else {
+		return fmt.Sprintf("%d %ss ago", amount, metric)
+	}
 }
 
 func ReadConfig(confpath string) types.Config {
