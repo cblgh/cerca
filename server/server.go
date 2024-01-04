@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
@@ -11,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -81,6 +81,11 @@ type ThreadData struct {
 	Title     string
 	Posts     []database.Post
 	ThreadURL string
+}
+
+type EditPostData struct {
+	Title   string
+	Content string
 }
 
 type RequestHandler struct {
@@ -204,6 +209,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
 		"capitalize": util.Capitalize,
+		"markup":     util.Markup,
 		"tohtml": func(s string) template.HTML {
 			// use of this function is risky cause it interprets the passed in string and renders it as unescaped html.
 			// can allow for attacks!
@@ -219,6 +225,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"footer",
 		"generic-message",
 		"head",
+		"edit-post",
 		"index",
 		"login",
 		"login-component",
@@ -322,16 +329,6 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 	// TODO (2022-01-07):
 	// * handle error
 	thread := h.db.GetThread(threadid)
-	pattern := regexp.MustCompile("<img")
-	// markdownize content (but not title)
-	for i, post := range thread {
-		content := []byte(util.Markup(post.Content))
-		// make sure images are lazy loaded
-		if pattern.Match(content) {
-			content = pattern.ReplaceAll(content, []byte(`<img loading="lazy"`))
-		}
-		thread[i].Content = template.HTML(content)
-	}
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
 	view := TemplateData{Data: &data, IsAdmin: isAdmin, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
@@ -578,8 +575,8 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	rules := util.Markup(template.HTML(h.files["rules"]))
-	verification := util.Markup(template.HTML(h.files["verification-instructions"]))
+	rules := util.Markup(string(h.files["rules"]))
+	verification := util.Markup(string(h.files["verification-instructions"]))
 	conduct := h.config.Community.ConductLink
 	var verificationCode string
 	renderErr := func(errFmt string, args ...interface{}) {
@@ -683,7 +680,7 @@ func (h RequestHandler) GenericRoute(res http.ResponseWriter, req *http.Request)
 
 func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
-	input := util.Markup(template.HTML(h.files["about"]))
+	input := util.Markup(string(h.files["about"]))
 	h.renderView(res, "about-template", TemplateData{Data: input, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("About")})
 }
 
@@ -791,6 +788,39 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
 
+func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Request) {
+	postid, ok := util.GetURLPortion(req, 3)
+	loggedIn, userid := h.IsLoggedIn(req)
+	post, err := h.db.GetPost(postid)
+
+	if !ok || errors.Is(err, sql.ErrNoRows) {
+		title := h.translator.Translate("ErrEdit404")
+		data := GenericMessageData{
+			Title:   title,
+			Message: h.translator.Translate("ErrEdit404Message"),
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+	if !loggedIn || userid != post.AuthorID {
+		res.WriteHeader(401)
+		title := h.translator.Translate("ErrGeneric401")
+		data := GenericMessageData{
+			Title:   title,
+			Message: h.translator.Translate("ErrGeneric401Message"),
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
+	if req.Method == "POST" {
+		content := req.PostFormValue("content")
+		h.db.EditPost(content, postid)
+		post.Content = content
+	}
+	view := TemplateData{Data: post, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
+	h.renderView(res, "edit-post", view)
+}
+
 func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf types.Config) {
 	port := ":8272"
 
@@ -892,6 +922,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
 	s.ServeMux.HandleFunc("/register", handler.RegisterRoute)
 	s.ServeMux.HandleFunc("/post/delete/", handler.DeletePostRoute)
+	s.ServeMux.HandleFunc("/post/edit/", handler.EditPostRoute)
 	s.ServeMux.HandleFunc("/thread/new/", handler.NewThreadRoute)
 	s.ServeMux.HandleFunc("/thread/", handler.ThreadRoute)
 	s.ServeMux.HandleFunc("/robots.txt", handler.RobotsRoute)
