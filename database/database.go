@@ -6,7 +6,6 @@ import (
 	"cerca/crypto"
 	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"net/url"
 	"os"
@@ -226,7 +225,8 @@ func (d DB) CreateThread(title, content string, authorid, topicid int) (int, err
 type Post struct {
 	ID          int
 	ThreadTitle string
-	Content     template.HTML
+	ThreadID    int
+	Content     string // markdown
 	Author      string
 	AuthorID    int
 	Publish     time.Time
@@ -274,14 +274,14 @@ func (d DB) GetThread(threadid int) []Post {
 
 func (d DB) GetPost(postid int) (Post, error) {
 	stmt := `
-  SELECT p.id, t.title, content, u.name, p.authorid, p.publishtime, p.lastedit
+  SELECT p.id, t.title, t.id, content, u.name, p.authorid, p.publishtime, p.lastedit
   FROM posts p 
   INNER JOIN users u ON u.id = p.authorid 
   INNER JOIN threads t ON t.id = p.threadid
   WHERE p.id = ?
   `
 	var data Post
-	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
+	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.ThreadID, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
 	err = util.Eout(err, "get data for thread %d", postid)
 	return data, err
 }

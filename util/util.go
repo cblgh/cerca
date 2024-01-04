@@ -94,7 +94,7 @@ var contentGuardian = bluemonday.UGCPolicy()
 var strictContentGuardian = bluemonday.StrictPolicy()
 
 // Turns Markdown input into HTML
-func Markup(md template.HTML) template.HTML {
+func Markup(md string) template.HTML {
 	mdBytes := []byte(string(md))
 	// fix newlines
 	mdBytes = markdown.NormalizeNewlines(mdBytes)
@@ -102,6 +102,11 @@ func Markup(md template.HTML) template.HTML {
 	maybeUnsafeHTML := markdown.ToHTML(mdBytes, mdParser, nil)
 	// guard against malicious code being embedded
 	html := contentGuardian.SanitizeBytes(maybeUnsafeHTML)
+	// lazy load images
+	pattern := regexp.MustCompile("<img")
+	if pattern.Match(html) {
+		html = pattern.ReplaceAll(html, []byte(`<img loading="lazy"`))
+	}
 	return template.HTML(html)
 }
 
