@@ -45,6 +45,10 @@
     <p>Two admins are required for <i>making a user an admin</i>, <i>demoting an existing admin</i>, or <i>removing a user</i>. The
     first proposes the action, the second confirms (or vetos) it. If enough time elapses without a veto, the
     proposer may confirm their own proposal.</p>
+
+    {{ if len .Data.Proposals | eq 0}}
+    <p><i>there are no pending proposals</i></p>
+    {{ else }}
     <table>
         <tr>
             <th>Proposal</th>
@@ -67,6 +71,7 @@
         </tr>
         {{ end }}
     </table>
+    {{ end }}
 
     <section>
         <h2> Users </h2>

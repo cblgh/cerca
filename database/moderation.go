@@ -143,9 +143,9 @@ func (d DB) GetModerationLogs () []ModerationEntry {
 	util.Check(err, "run query")
 	defer rows.Close()
 
-	var entry ModerationEntry
 	var logs []ModerationEntry
 	for rows.Next() {
+		var entry ModerationEntry
 		var actingUsername, recipientUsername, quorumUsername sql.NullString
 		var quorumDecision sql.NullBool
 		if err := rows.Scan(&actingUsername, &recipientUsername, &quorumUsername, &quorumDecision, &entry.Action, &entry.Time); err != nil {

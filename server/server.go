@@ -618,13 +618,13 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
 	logs := h.db.GetModerationLogs()
-	fmt.Println("logs", logs)
 	viewData := ModerationData{Log: make([]string, 0)}
 	type translationData struct {	
 		Time, ActingUsername, RecipientUsername string
 	}
 	type proposalData struct {	
-		QuorumUsername, Action string
+		QuorumUsername string
+		Action template.HTML
 	}
 	for _, entry := range logs {
 		var tdata translationData
@@ -656,7 +656,7 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
 		if entry.QuorumUsername != ""{
 			// use the translated actionString to embed in the translated proposal decision (confirmation/veto)
-			propdata := proposalData{QuorumUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: actionString}
+			propdata := proposalData{QuorumUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: template.HTML(actionString)}
 			// if quorumDecision is true -> proposal was confirmed
 			translationString = "modlogConfirm"
 			if !entry.QuorumDecision {

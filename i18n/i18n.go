@@ -35,11 +35,11 @@ var English = map[string]string{
   "modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> demoted <b> 
 	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} themselves 
 	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> from admin back to normal user`,
-	"ProposedMakeAdmin": `<b>{{ .Data.ActingUsername }}</b> ({{ .Data.ActingID }}): Make <b> {{ .Data.RecipientUsername}}</b> ({{ .Data.RecipientID }}) admin`,
-	"ProposedDemoteAdmin": `<b>{{ .Data.ActingUsername }} ({{ .Data.ActingID }})</b>: Demote <b> {{ .Data.RecipientUsername}}</b> ({{ .Data.RecipientID }})  from role admin`,
-	"ProposedRemoveUser": `<b>{{ .Data.ActingUsername }}</b> ({{ .Data.ActingID }}): Remove user <b> {{ .Data.RecipientUsername }} </b> ({{ .Data.RecipientID }})`,
-	"modlogConfirm": "{{ .Data.QuorumUser }} confirmed: {{ .Data.Action }}",
-	"modlogVeto": "{{ .Data.QuorumUser }} vetoed: {{ .Data.Action }}",
+	"modlogProposalMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Make <b> {{ .Data.RecipientUsername}}</b> admin`,
+	"modlogProposalDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Demote <b> {{ .Data.RecipientUsername}}</b>  from role admin`,
+	"modlogProposalRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Remove user <b> {{ .Data.RecipientUsername }} </b>`,
+	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.QuorumUsername }}</i>",
+	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.QuorumUsername }}</i>",
 
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
