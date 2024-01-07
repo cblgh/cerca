@@ -1,4 +1,5 @@
 package constants
+import "time"
 
 const (
 	MODLOG_RESETPW = iota
@@ -17,3 +18,4 @@ const (
 
 const PROPOSAL_VETO = false
 const PROPOSAL_CONFIRM = true
+const PROPOSAL_SELF_CONFIRMATION_WAIT = time.Hour * 24 * 7 /* 1 week */

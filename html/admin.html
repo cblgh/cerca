@@ -64,10 +64,8 @@
             </form>
             <td> {{ $proposal.Action | tohtml }} </td>
             <td> {{ $proposal.Time | formatDateTime }} </td>
-            <!-- TODO (2023-12-19): remember to offset data from proposal with a fixed amount of time! e.g. in
-            a var in this template, which can be reused to turn off interactivity of the buttons as a ux measure-->
-            <td><button {{ if  $proposal.TimePassed }} disabled {{ end }} type="submit" form="veto-{{$proposal.ID}}">Veto</button></td>
-            <td><button {{ if  $proposal.TimePassed }} disabled {{ end }} type="submit" form="confirm-{{$proposal.ID}}">Confirm</button></td>
+            <td><button type="submit" form="veto-{{$proposal.ID}}">Veto</button></td>
+            <td><button {{ if not $proposal.TimePassed }} disabled title="a week must pass before self-confirmations are ok" {{ end }} type="submit" form="confirm-{{$proposal.ID}}">Confirm</button></td>
         </tr>
         {{ end }}
     </table>

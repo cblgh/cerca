@@ -243,7 +243,6 @@ func (d DB) GetProposedActions() []ModProposal {
 // finalize a proposal by either confirming or vetoing it, logging the requisite information and then finally executing
 // the proposed action itself
 func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (finalErr error) {
-	fmt.Println("DECISION", decision)
 	ed := util.Describe("finalize proposed mod action")
 
 	t := time.Now()
@@ -262,9 +261,20 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	/* start tx */
 	// retrieve the proposal & populate with our dramatis personae
 	var proposerid, recipientid, proposalAction int
-	stmt, err := tx.Prepare(`SELECT proposerid, recipientid, action from moderation_proposals WHERE id = ?`)
-	err = stmt.QueryRow(proposalid).Scan(&proposerid, &recipientid, &proposalAction)
+	var proposalDate time.Time
+	stmt, err := tx.Prepare(`SELECT proposerid, recipientid, action, time from moderation_proposals WHERE id = ?`)
+	err = stmt.QueryRow(proposalid).Scan(&proposerid, &recipientid, &proposalAction, &proposalDate)
 	rollbackOnErr(ed.Eout(err, "retrieve proposal vals"))
+
+	timeSelfConfirmOK := proposalDate.Add(constants.PROPOSAL_SELF_CONFIRMATION_WAIT)
+	// TODO (2024-01-07): render err message in admin view?
+	// self confirms are not allowed at this point in time, exit early without performing any changes
+	if decision == constants.PROPOSAL_CONFIRM && !time.Now().After(timeSelfConfirmOK) {
+		err = tx.Commit()
+		ed.Check(err, "commit transaction")
+		finalErr = nil
+		return 
+	}
 
 	// convert proposed action (semantically different for the sake of logs) from the finalized action
 	var action int
@@ -300,7 +310,6 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	stmt, err = tx.Prepare(`INSERT INTO quorum_decisions (userid, decision, modlogid) VALUES (?, ?, ?)`)
 	rollbackOnErr(ed.Eout(err, "prepare quorum insertion stmt"))
 	// decision = confirm or veto => values true or false
-	fmt.Println("admin", adminid, "decision", decision, "modlog", modlogid)
 	_, err = stmt.Exec(adminid, decision, modlogid)
 	rollbackOnErr(ed.Eout(err, "execute quorum insertion"))
 

@@ -621,6 +621,7 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	viewData := ModerationData{Log: make([]string, 0)}
 	type translationData struct {	
 		Time, ActingUsername, RecipientUsername string
+		Action template.HTML
 	}
 	type proposalData struct {	
 		QuorumUsername string
@@ -654,7 +655,8 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogProposalRemoveUser"
 		}
 		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
-		if entry.QuorumUsername != ""{
+		/* rendering of decision (confirm/veto) taken on a pending proposal */
+		if entry.QuorumUsername != "" {
 			// use the translated actionString to embed in the translated proposal decision (confirmation/veto)
 			propdata := proposalData{QuorumUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: template.HTML(actionString)}
 			// if quorumDecision is true -> proposal was confirmed
@@ -664,6 +666,13 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			} 
 			proposalString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: propdata})
 			viewData.Log = append(viewData.Log, proposalString)
+			/* rendering of "X proposed: <Y>" */
+		} else if entry.Action == constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN || 
+			entry.Action == constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN ||
+			entry.Action == constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER {
+				propXforY := translationData{Time: tdata.Time, ActingUsername: tdata.ActingUsername, Action: template.HTML(actionString)}
+				proposalString := h.translator.TranslateWithData("modlogXProposedY", i18n.TranslationData{Data: propXforY})
+				viewData.Log = append(viewData.Log, proposalString)
 		} else {
 			viewData.Log = append(viewData.Log, actionString)
 		}
@@ -723,22 +732,20 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			prop.ActingUsername = template.HTMLEscapeString(prop.ActingUsername)
 			prop.RecipientUsername = template.HTMLEscapeString(prop.RecipientUsername)
 			// one week from when the proposal was made
-			t := prop.Time.Add(time.Hour * 24 * 7)
+			t := prop.Time.Add(constants.PROPOSAL_SELF_CONFIRMATION_WAIT)
 			var str string
 			switch prop.Action {
 			case constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN:
-				str = "ProposedDemoteAdmin"
+				str = "modlogProposalDemoteAdmin"
 			case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
-				str = "ProposedMakeAdmin"
+				str = "modlogProposalMakeAdmin"
 			case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
-				str = "ProposedRemoveUser"
+				str = "modlogProposalRemoveUser"
 			}
 
 			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
-			fmt.Println("behold, a translation!", proposalString)
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
-		fmt.Println(pendingProposals, "<-- proposals that are pending")
 		data := AdminsData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
 		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)

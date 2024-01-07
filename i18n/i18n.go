@@ -35,9 +35,10 @@ var English = map[string]string{
   "modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> demoted <b> 
 	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} themselves 
 	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> from admin back to normal user`,
-	"modlogProposalMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Make <b> {{ .Data.RecipientUsername}}</b> admin`,
-	"modlogProposalDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Demote <b> {{ .Data.RecipientUsername}}</b>  from role admin`,
-	"modlogProposalRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: Remove user <b> {{ .Data.RecipientUsername }} </b>`,
+	"modlogXProposedY": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: {{ .Data.Action }}`,
+	"modlogProposalMakeAdmin": `Make <b> {{ .Data.RecipientUsername}}</b> admin`,
+	"modlogProposalDemoteAdmin": `Demote <b> {{ .Data.RecipientUsername}}</b> from role admin`,
+	"modlogProposalRemoveUser": `Remove user <b> {{ .Data.RecipientUsername }} </b>`,
 	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.QuorumUsername }}</i>",
 	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.QuorumUsername }}</i>",
 
