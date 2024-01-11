@@ -39,8 +39,8 @@ var English = map[string]string{
 	"modlogProposalMakeAdmin": `Make <b> {{ .Data.RecipientUsername}}</b> admin`,
 	"modlogProposalDemoteAdmin": `Demote <b> {{ .Data.RecipientUsername}}</b> from role admin`,
 	"modlogProposalRemoveUser": `Remove user <b> {{ .Data.RecipientUsername }} </b>`,
-	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.QuorumUsername }}</i>",
-	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.QuorumUsername }}</i>",
+	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.ActingUsername }}</i>",
+	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.ActingUsername }}</i>",
 
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",

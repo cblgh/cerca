@@ -876,7 +876,8 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
-	// moderation and admin related routes
+
+	// moderation and admin related routes, for contents see file server/moderation.go
 	s.ServeMux.HandleFunc("/reset/", handler.ResetPasswordRoute)
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/demote-admin", handler.AdminDemoteAdmin)

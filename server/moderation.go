@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"time"
 
+	"cerca/database"
 	"cerca/crypto"
 	"cerca/constants"
 	"cerca/i18n"
 	"cerca/util"
 )
 
-type AdminsData struct {
+type AdminData struct {
 	Admins []database.User
 	Users []database.User
 	Proposals []PendingProposal
@@ -25,10 +26,31 @@ type ModerationData struct {
 }
 
 type PendingProposal struct {
+	// ID is the id of the proposal
 	ID, ProposerID int
 	Action string
 	Time time.Time // the time self-confirmations become possible for proposers
 	TimePassed bool // self-confirmations valid or not
+}
+
+func (h RequestHandler) displayErr(res http.ResponseWriter, req *http.Request, err error, title string) {
+	errMsg := util.Eout(err, fmt.Sprintf("%s failed", title))
+	fmt.Println(errMsg)
+	data := GenericMessageData{
+		Title:   title,
+		Message: errMsg.Error(),
+	}
+	h.renderGenericMessage(res, req, data)
+}
+
+func (h RequestHandler) displaySuccess(res http.ResponseWriter, req *http.Request, title, message, backRoute string) {
+	data := GenericMessageData{
+		Title: title,
+		Message: message,
+		LinkText: h.translator.Translate("GoBack"),
+		Link: backRoute,
+	}
+	h.renderGenericMessage(res, req, data)
 }
 
 // TODO (2023-12-10): any vulns with this approach? could a user forge a session cookie with the user id of an admin?
@@ -60,90 +82,88 @@ func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
 	return true, userid
 }
 
-func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request, targetUserid int) {
+// there is a 2-quorum (requires 2 admins to take effect) imposed for the following actions, which are regarded as
+// consequential:
+// * make admin
+// * remove account
+// * demote admin
+
+// note: there is only a 2-quorum constraint imposed if there are actually 2 admins. an admin may also confirm their own
+// proposal if constants.PROPOSAL_SELF_CONFIRMATION_WAIT seconds have passed (1 week)
+func performQuorumCheck (ed util.ErrorDescriber, db *database.DB, adminUserId, targetUserId, proposedAction int) error {
+	// checks if a quorum is necessary for the proposed action: if a quorum constarin is in effect, a proposal is created
+	// otherwise (if no quorum threshold has been achieved) the action is taken directly
+	quorumActivated := db.QuorumActivated()
+
+	var err error
+	var modlogErr error
+	if quorumActivated {
+		err = db.ProposeModerationAction(adminUserId, targetUserId, proposedAction)
+	} else {
+		switch proposedAction {
+		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
+			err = db.RemoveUser(targetUserId)
+			modlogErr = db.AddModerationLog(adminUserId, -1, constants.MODLOG_REMOVE_USER)
+		case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
+			err = db.AddAdmin(targetUserId)
+			modlogErr = db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_ADMIN_MAKE)
+		case constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN:
+			err = db.DemoteAdmin(targetUserId)
+			modlogErr = db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_ADMIN_DEMOTE)
+		}
+	}
+	if modlogErr != nil {
+		fmt.Println(ed.Eout(err, "error adding moderation log"))
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("Admin remove user")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserid := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
 
-	quorumActivated := h.db.QuorumActivated()
-	var err error
-	if quorumActivated {
-		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER)
-	} else {
-		err = h.db.RemoveUser(targetUserid)
-	}
+	err := performQuorumCheck(ed, h.db, adminUserId, targetUserId, constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER)
 
 	if err != nil {
-		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		errMsg := ed.Eout(err, "remove user failed")
-		fmt.Println(errMsg)
-		data := GenericMessageData{
-			Title:   "User removal",
-			Message: errMsg.Error(),
-		}
-		h.renderGenericMessage(res, req, data)
+		h.displayErr(res, req, err, "User removal")
 		return
 	}
 
-	if !quorumActivated {
-		err = h.db.AddModerationLog(adminUserid, -1, constants.MODLOG_REMOVE_USER)
-		if err != nil {
-			fmt.Println(ed.Eout(err, "error adding moderation log"))
-		}
-	}
 	// success! redirect back to /admin
 	http.Redirect(res, req, "/admin", http.StatusFound)
 }
 
-func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserid int) {
+func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("make user admin")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserid := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
 
-	quorumActivated := h.db.QuorumActivated()
-	var err error
-	if quorumActivated {
-		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN)
-	} else {
-		err = h.db.AddAdmin(targetUserid)
-	}
+	title := "Make admin"
+
+	err := performQuorumCheck(ed, h.db, adminUserId, targetUserId, constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN)
 
 	if err != nil {
-		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		errMsg := ed.Eout(err, "make admin failed")
-		fmt.Println(errMsg)
-		data := GenericMessageData{
-			Title:   "Make admin",
-			Message: errMsg.Error(),
-		}
-		h.renderGenericMessage(res, req, data)
+		h.displayErr(res, req, err, title)
 		return
 	}
 
-	if !quorumActivated {
-		username, _ := h.db.GetUsername(targetUserid)
-		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_MAKE)
-		if err != nil {
-			fmt.Println(ed.Eout(err, "error adding moderation log"))
-		}
-
-		// output copy-pastable credentials page for admin to send to the user
-		data := GenericMessageData{
-			Title: "Make admin success",
-			Message: fmt.Sprintf("User %s is now a fellow admin user!", username),
-			LinkMessage: "Go back to the",
-			LinkText: "admin view",
-			Link: "/admin",
-		}
-		h.renderGenericMessage(res, req, data)
+	if !h.db.QuorumActivated() {
+		username, _ := h.db.GetUsername(targetUserId)
+		message := fmt.Sprintf("User %s is now a fellow admin user!", username)
+		h.displaySuccess(res, req, title, message, "/admin")
 	} else {
 		// redirect to admin view, which should have a proposal now
 		http.Redirect(res, req, "/admin", http.StatusFound)
@@ -153,49 +173,31 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("demote admin route")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserid := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
+
+	title := "Demote admin"
+
 	useridString := req.PostFormValue("userid")
-	targetUserid, err := strconv.Atoi(useridString)
+	targetUserId, err := strconv.Atoi(useridString)
 	util.Check(err, "convert user id string to a plain userid")
 
-	quorumActivated := h.db.QuorumActivated()
-	if quorumActivated {
-		err = h.db.ProposeModerationAction(adminUserid, targetUserid, constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN)
-	} else {
-		err = h.db.DemoteAdmin(targetUserid)
-	}
+	err = performQuorumCheck(ed, h.db, adminUserId, targetUserId, constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN)
 
 	if err != nil {
-		errMsg := ed.Eout(err, "demote admin failed")
-		fmt.Println(errMsg)
-		data := GenericMessageData{
-			Title:   "Demote admin",
-			Message: errMsg.Error(),
-		}
-		h.renderGenericMessage(res, req, data)
+		h.displayErr(res, req, err, title)
 		return
 	}
 
-	if !quorumActivated {
-		username, _ := h.db.GetUsername(targetUserid)
-		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_DEMOTE)
-		if err != nil {
-			fmt.Println(ed.Eout(err, "error adding moderation log"))
-		}
-
+	if !h.db.QuorumActivated() {
+		username, _ := h.db.GetUsername(targetUserId)
+		message := fmt.Sprintf("User %s is now a regular user", username)
 		// output copy-pastable credentials page for admin to send to the user
-		data := GenericMessageData{
-			Title: "Demote admin success",
-			Message: fmt.Sprintf("User %s is now a regular user", username),
-			LinkMessage: "Go back to the",
-			LinkText: "admin view",
-			Link: "/admin",
-		}
-		h.renderGenericMessage(res, req, data)
+		h.displaySuccess(res, req, title, message, "/admin")
 	} else {
 		http.Redirect(res, req, "/admin", http.StatusFound)
 	}
@@ -204,7 +206,7 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *http.Request) {
 	ed := util.Describe("admin manually add user")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserid := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
 
 	if  !isAdmin {
 		IndexRedirect(res, req)
@@ -241,98 +243,46 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 		newPassword := crypto.GeneratePassword()
 		passwordHash, err := crypto.HashPassword(newPassword)
 		ed.Check(err, "hash password")
-		targetUserid, err := h.db.CreateUser(username, passwordHash)
+		targetUserId, err := h.db.CreateUser(username, passwordHash)
 		ed.Check(err, "create new user %s", username)
 
-		// if err != nil {
-		// 	// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		// 	errMsg := ed.Eout(err, "reset password failed")
-		// 	fmt.Println(errMsg)
-		// 	data := GenericMessageData{
-		// 		Title:   "Admin reset password",
-		// 		Message: errMsg.Error(),
-		// 	}
-		// 	h.renderGenericMessage(res, req, data)
-		// 	return
-		// }
-
-		err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_ADMIN_ADD_USER)
+		err = h.db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_ADMIN_ADD_USER)
 		if err != nil {
 			fmt.Println(ed.Eout(err, "error adding moderation log"))
 		}
 
-		// output copy-pastable credentials page for admin to send to the user
-		data := GenericMessageData{
-			Title: "User successfully added",
-			Message: fmt.Sprintf("Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset", username, newPassword),
-			LinkMessage: "Go back to the",
-			LinkText: "add user view",
-			Link: "/add-user",
-		}
-		h.renderGenericMessage(res, req, data)
+		title := "User successfully added"
+		message := fmt.Sprintf("Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset", username, newPassword)
+		h.displaySuccess(res, req, title, message, "/add-user")
 	}
 }
 
-func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserid int) {
+func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserid := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
 
-	newPassword, err := h.db.ResetPassword(targetUserid)
+	title := "Admin reset password"
+	newPassword, err := h.db.ResetPassword(targetUserId)
 
 	if err != nil {
-		// TODO (2023-12-09): bubble up error to visible page as feedback for admin
-		errMsg := ed.Eout(err, "reset password failed")
-		fmt.Println(errMsg)
-		data := GenericMessageData{
-			Title:   "Admin reset password",
-			Message: errMsg.Error(),
-		}
-		h.renderGenericMessage(res, req, data)
+		h.displayErr(res, req, err, title)
 		return
 	}
 
-	err = h.db.AddModerationLog(adminUserid, targetUserid, constants.MODLOG_RESETPW)
+	err = h.db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_RESETPW)
 	if err != nil {
 		fmt.Println(ed.Eout(err, "error adding moderation log"))
 	}
 
-	username, _ := h.db.GetUsername(targetUserid)
+	username, _ := h.db.GetUsername(targetUserId)
 
-	// output copy-pastable credentials page for admin to send to the user
-	data := GenericMessageData{
-		Title: "Password reset successful!",
-		Message: fmt.Sprintf("Instructions: %s's password was reset to: %s. After logging in, please change your password by going to /reset", username, newPassword),
-		LinkMessage: "Go back to the",
-		LinkText: "admin view",
-		Link: "/admin",
-	}
-	h.renderGenericMessage(res, req, data)
-}
-
-func (h *RequestHandler) HandleProposal(res http.ResponseWriter, req *http.Request, decision bool) {
-	ed := util.Describe("handle proposal proposal")
-	isAdmin, adminUserid := h.IsAdmin(req)
-
-	if !isAdmin {
-		IndexRedirect(res, req)
-		return
-	}
-
-	if req.Method == "POST" && isAdmin {
-		proposalidString := req.PostFormValue("proposalid")
-		proposalid, err := strconv.Atoi(proposalidString)
-		ed.Check(err, "convert proposalid")
-		err = h.db.FinalizeProposedAction(proposalid, adminUserid, decision)
-		ed.Check(err, "finalize proposal error")
-		http.Redirect(res, req, "/admin", http.StatusFound)
-		return
-	}
-	IndexRedirect(res, req)
+	message := fmt.Sprintf("Instructions: User %s's password was reset to: %s. After logging in, please change your password by going to /reset", username, newPassword)
+	h.displaySuccess(res, req, title, message, "/admin")
 }
 
 func (h *RequestHandler) ConfirmProposal(res http.ResponseWriter, req *http.Request) {
@@ -343,22 +293,38 @@ func (h *RequestHandler) VetoProposal(res http.ResponseWriter, req *http.Request
 	h.HandleProposal(res, req, constants.PROPOSAL_VETO)
 }
 
-// Note: this will by definition contain ugc, so we need to escape all usernames with html.EscapeString(username) before
-// populating ModerationLogEntry
-/* sorted by time descending, from latest entry to oldest */
+func (h *RequestHandler) HandleProposal(res http.ResponseWriter, req *http.Request, decision bool) {
+	ed := util.Describe("handle proposal proposal")
+	isAdmin, adminUserId := h.IsAdmin(req)
 
+	if !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+
+	if req.Method == "POST" {
+		proposalidString := req.PostFormValue("proposalid")
+		proposalid, err := strconv.Atoi(proposalidString)
+		ed.Check(err, "convert proposalid")
+		err = h.db.FinalizeProposedAction(proposalid, adminUserId, decision)
+		ed.Check(err, "finalize proposal error")
+		http.Redirect(res, req, "/admin", http.StatusFound)
+		return
+	}
+	IndexRedirect(res, req)
+}
+
+// Note: this route by definition contains user generated content, so we escape all usernames with
+// html.EscapeString(username)
 func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
+	// logs are sorted by time descending, from latest entry to oldest
 	logs := h.db.GetModerationLogs()
 	viewData := ModerationData{Log: make([]string, 0)}
 
 	type translationData struct {	
 		Time, ActingUsername, RecipientUsername string
-		Action template.HTML
-	}
-	type proposalData struct {	
-		QuorumUsername string
 		Action template.HTML
 	}
 
@@ -389,11 +355,13 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
 			translationString = "modlogProposalRemoveUser"
 		}
+
 		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
+
 		/* rendering of decision (confirm/veto) taken on a pending proposal */
 		if entry.QuorumUsername != "" {
 			// use the translated actionString to embed in the translated proposal decision (confirmation/veto)
-			propdata := proposalData{QuorumUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: template.HTML(actionString)}
+			propdata := translationData{ActingUsername: template.HTMLEscapeString(entry.QuorumUsername), Action: template.HTML(actionString)}
 			// if quorumDecision is true -> proposal was confirmed
 			translationString = "modlogConfirm"
 			if !entry.QuorumDecision {
@@ -415,16 +383,8 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	view := TemplateData{Title: "Moderation log", IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
+
 // used for rendering /admin's pending proposals
-// TODO (2023-12-10): there is a 2-quorum (requires 2 admins to take effect) imposed for the following actions, which
-// are regarded as consequential:
-// * make admin
-// * remove account
-// * demote admin
-
-// note: there is only a 2-quorum constraint if there are actually 2 admins. an admin may also confirm their own
-// proposal if constants.PROPOSAL_SELF_CONFIRMATION_WAIT seconds have passed (1 week)
-
 func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
@@ -432,16 +392,16 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 	if req.Method == "POST" && loggedIn && isAdmin {
 		action := req.PostFormValue("admin-action")
 		useridString := req.PostFormValue("userid")
-		targetUserid, err := strconv.Atoi(useridString)
+		targetUserId, err := strconv.Atoi(useridString)
 		util.Check(err, "convert user id string to a plain userid")
 
 		switch action {
 		case "reset-password":
-			h.AdminResetUserPassword(res, req, targetUserid)
+			h.AdminResetUserPassword(res, req, targetUserId)
 		case "make-admin":
-			h.AdminMakeUserAdmin(res, req, targetUserid)
+			h.AdminMakeUserAdmin(res, req, targetUserId)
 		case "remove-account":
-			h.AdminRemoveUser(res, req, targetUserid)
+			h.AdminRemoveUser(res, req, targetUserId)
 		}
 		return
 	}
@@ -477,16 +437,17 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
-		data := AdminsData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
+		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
 		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
 }
 
+// view of /admin for non-admin users (contains less information)
 func (h *RequestHandler) ListAdmins(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	admins := h.db.GetAdmins()
-	data := AdminsData{Admins: admins}
+	data := AdminData{Admins: admins}
 	view := TemplateData{Title: "Forum Administrators", Data: &data, HasRSS: false, LoggedIn: loggedIn}
 	h.renderView(res, "admins-list", view)
 	return
