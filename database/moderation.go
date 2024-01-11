@@ -168,10 +168,6 @@ func (d DB) GetModerationLogs () []ModerationEntry {
 	return logs
 }
 
-// TODO (2023-12-19): check to see if there is already a proposal for that recipient of that action type, if so
-// gracefully error out with a database exported error, so we can render a message to that effect
-// 
-// ditto for confirm / veto wrt "No such proposal (somebody probably beat you to it :)"
 func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalErr error) {
 	ed := util.Describe("propose mod action")
 
@@ -189,8 +185,19 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 	}
 
 	// start tx
+	propRecipientId := -1
+	// there should only be one pending proposal of each type for any given recipient
+	// so let's check to make sure that's true!
+	stmt, err := tx.Prepare("SELECT recipientid FROM moderation_proposals WHERE action = ?")
+	err = stmt.QueryRow(action).Scan(&propRecipientId)
+	if err == nil && propRecipientId != -1 {
+		finalErr = tx.Commit()
+		return
+	}
+	// there was no pending proposal of the proposed action for recipient - onwards!
+
 	// add the proposal
-	stmt, err := tx.Prepare("INSERT INTO moderation_proposals (proposerid, recipientid, time, action) VALUES (?, ?, ?, ?)")
+	stmt, err = tx.Prepare("INSERT INTO moderation_proposals (proposerid, recipientid, time, action) VALUES (?, ?, ?, ?)")
 	rollbackOnErr(ed.Eout(err, "prepare proposal stmt"))
 	_, err = stmt.Exec(proposerid, recipientid, t, action)
 	rollbackOnErr(ed.Eout(err, "insert into proposals table"))
@@ -259,10 +266,20 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	}
 
 	/* start tx */
+	// make sure the proposal is still there (i.e. nobody has beat us to acting on it yet)
+	stmt, err := tx.Prepare("SELECT 1 FROM moderation_proposals WHERE id = ?")
+	rollbackOnErr(ed.Eout(err, "prepare proposal existence stmt"))
+	existence := -1
+	err = stmt.QueryRow(proposalid).Scan(&existence)
+	// proposal id did not exist (it was probably already acted on!)
+	if err != nil {
+		_ = tx.Commit()
+		return
+	}
 	// retrieve the proposal & populate with our dramatis personae
 	var proposerid, recipientid, proposalAction int
 	var proposalDate time.Time
-	stmt, err := tx.Prepare(`SELECT proposerid, recipientid, action, time from moderation_proposals WHERE id = ?`)
+	stmt, err = tx.Prepare(`SELECT proposerid, recipientid, action, time from moderation_proposals WHERE id = ?`)
 	err = stmt.QueryRow(proposalid).Scan(&proposerid, &recipientid, &proposalAction, &proposalDate)
 	rollbackOnErr(ed.Eout(err, "retrieve proposal vals"))
 

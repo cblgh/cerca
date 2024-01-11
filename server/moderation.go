@@ -307,7 +307,9 @@ func (h *RequestHandler) HandleProposal(res http.ResponseWriter, req *http.Reque
 		proposalid, err := strconv.Atoi(proposalidString)
 		ed.Check(err, "convert proposalid")
 		err = h.db.FinalizeProposedAction(proposalid, adminUserId, decision)
-		ed.Check(err, "finalize proposal error")
+		if err != nil {
+			ed.Eout(err, "finalizing the proposed action returned early with an error")
+		}
 		http.Redirect(res, req, "/admin", http.StatusFound)
 		return
 	}
