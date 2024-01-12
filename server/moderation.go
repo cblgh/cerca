@@ -151,7 +151,7 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	title := "Make admin"
+	title := h.translator.Translate("AdminMakeAdmin")
 
 	err := performQuorumCheck(ed, h.db, adminUserId, targetUserId, constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN)
 
@@ -180,7 +180,7 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	title := "Demote admin"
+	title := h.translator.Translate("AdminDemote")
 
 	useridString := req.PostFormValue("userid")
 	targetUserId, err := strconv.Atoi(useridString)
@@ -218,7 +218,7 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	}
 
 	var data AddUser
-	view := TemplateData{Title: "Add a new user", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+	view := TemplateData{Title: h.translator.Translate("AdminAddNewUser"), Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
 
 	if req.Method == "GET" {
 		h.renderView(res, "admin-add-user", view)
@@ -251,8 +251,8 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 			fmt.Println(ed.Eout(err, "error adding moderation log"))
 		}
 
-		title := "User successfully added"
-		message := fmt.Sprintf("Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset", username, newPassword)
+		title := h.translator.Translate("AdminAddNewUser")
+		message := fmt.Sprintf(h.translator.Translate("AdminPasswordSuccessInstructions"), template.HTMLEscapeString(username), newPassword)
 		h.displaySuccess(res, req, title, message, "/add-user")
 	}
 }
@@ -266,7 +266,7 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 		return
 	}
 
-	title := "Admin reset password"
+	title := util.Capitalize(h.translator.Translate("PasswordReset"))
 	newPassword, err := h.db.ResetPassword(targetUserId)
 
 	if err != nil {
@@ -281,7 +281,7 @@ func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *ht
 
 	username, _ := h.db.GetUsername(targetUserId)
 
-	message := fmt.Sprintf("Instructions: User %s's password was reset to: %s. After logging in, please change your password by going to /reset", username, newPassword)
+	message := fmt.Sprintf(h.translator.Translate("AdminPasswordSuccessInstructions"), template.HTMLEscapeString(username), newPassword)
 	h.displaySuccess(res, req, title, message, "/admin")
 }
 
@@ -348,6 +348,9 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogRemoveUser"
 		case constants.MODLOG_ADMIN_ADD_USER:
 			translationString = "modlogAddUser"
+			if isAdmin {
+				translationString += "Admin"
+			}
 		case constants.MODLOG_ADMIN_DEMOTE:
 			translationString = "modlogDemoteAdmin"
 		case constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN:
@@ -382,7 +385,7 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			viewData.Log = append(viewData.Log, actionString)
 		}
 	}
-	view := TemplateData{Title: "Moderation log", IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
+	view := TemplateData{Title: h.translator.Translate("ModerationLog"), IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
 
@@ -440,7 +443,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
 		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
-		view := TemplateData{Title: "Forum Administration", Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
+		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
 }
@@ -450,7 +453,7 @@ func (h *RequestHandler) ListAdmins(res http.ResponseWriter, req *http.Request) 
 	loggedIn, _ := h.IsLoggedIn(req)
 	admins := h.db.GetAdmins()
 	data := AdminData{Admins: admins}
-	view := TemplateData{Title: "Forum Administrators", Data: &data, HasRSS: false, LoggedIn: loggedIn}
+	view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn}
 	h.renderView(res, "admins-list", view)
 	return
 }

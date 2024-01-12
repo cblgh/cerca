@@ -31,7 +31,8 @@ var English = map[string]string{
   "modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
   "modlogRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,
   "modlogMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}}</b> an admin`,
-  "modlogAddUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for <b> {{ .Data.RecipientUsername }}</b>`,
+  "modlogAddUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for a new user`,
+  "modlogAddUserAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for <b> {{ .Data.RecipientUsername }}</b>`,
   "modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> demoted <b> 
 	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} themselves 
 	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> from admin back to normal user`,
@@ -41,6 +42,47 @@ var English = map[string]string{
 	"modlogProposalRemoveUser": `Remove user <b> {{ .Data.RecipientUsername }} </b>`,
 	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.ActingUsername }}</i>",
 	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.ActingUsername }}</i>",
+
+
+
+	"Admins": "admins",
+	"AdminVeto": "Veto",
+	"AdminConfirm": "Confirm",
+	"AdminForumAdministration": "Forum Administration",
+	"AdminYou": "you!",
+	"AdminUsers": "Users", 
+	"AdminNoAdmins": "There are no admins",
+	"AdminNoUsers": "There are no other users",
+	"AdminNoPendingProposals": "There are no pending proposals",
+	"AdminAddNewUser": "Add new user",
+	"AdminAddNewUserQuestion": "Does someone wish attendence? You can ",
+	"AdminStepDown": "Step down",
+	"AdminStepDownExplanation": "If you want to stop being an admin, you can",
+	"AdminViewPastActions": "View past actions in the",
+	"ModerationLog": "moderation log",
+	"AdminDemote": "Demote",
+	"DeletedUser": "deleted user",
+	"RemoveAccount": "remove account",
+	"AdminMakeAdmin": "Make admin", 
+	"Submit": "Submit",
+	"AdminSelfConfirmationsHover": "a week must pass before self-confirmations are ok",
+	"Proposal": "Proposal",
+	"PendingProposals": "Pending Proposals",
+	"AdminSelfProposalsBecomeValid": "Date self-proposals become valid",
+	"AdminPendingExplanation": `Two admins are required for <i>making a user an admin</i>, <i>demoting an existing
+															admin</i>, or <i>removing a user</i>. The first proposes the action, the second confirms
+															(or vetos) it. If enough time elapses without a veto, the proposer may confirm their own
+															proposal.`,
+	
+	"AdminAddUserExplanation": "Register a new user account. After registering the account you will be given a generated password and instructions to pass onto the user.",
+	"AdminForumHasAdmins": "The forum currently has the following admins",
+	"AdminOnlyLoggedInMayView": "Only logged in users may view the forum's admins.",
+	"AdminPasswordSuccessInstructions": `Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset`,
+
+	"ModLogNoActions": "there are no logged moderation actions",
+	"ModLogExplanation": `This resource lists the moderation actions taken by the forum's administrators.`,
+	"ModLogExplanationAdmin": `You are viewing this page as an admin, you will see slightly more details.`,
+	"ModLogOnlyLoggedInMayView": "Only logged in users may view the moderation log.",
 
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
