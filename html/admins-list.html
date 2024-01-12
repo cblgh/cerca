@@ -3,11 +3,11 @@
     <h1>{{ .Title }}</h1>
     {{ if .LoggedIn }}
         <section>
-            <p>View the <a href="/moderations">moderation log</a>.</p>
+            <p>{{ "AdminViewPastActions" | translate }} <a href="/moderations">{{ "ModerationLog" | translate }}</a>.</p>
             {{ if len .Data.Admins | eq 0 }}
-                <p> there are no admins; chaos reigns </p>
+                <p> {{ "AdminNoAdmins" | translate }} </p>
             {{ else }}
-            <p>This forum currently has the following {{ len .Data.Admins }} admins: 
+            <p>{{ "AdminForumHasAdmins" | translate }}:</p> 
             <ul>
                 {{ range $index, $user := .Data.Admins }}
                 <li> {{ $user.Name }} </li>
@@ -16,7 +16,7 @@
         </section>
         {{ end }}
     {{ else }}
-        <p> Only logged in users may view the forum's admins. </p>
+        <p> {{ "AdminOnlyLoggedInMayView" | translate }} </p>
     {{ end }}
 </main>
 {{ template "footer" . }}
