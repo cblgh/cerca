@@ -4,10 +4,9 @@
     {{ if .LoggedIn }}
         <section>
             {{ if len .Data.Log | eq 100 }}
-                <p> there are no logged moderation actions </p>
+                <p> {{ "ModLogNoActions" | translate }} </p>
             {{ else }}
-            <p>This resource lists the moderation actions taken by the forum's administrators. {{ if .IsAdmin }} You are
-            viewing this page as an admin, you will see slightly more details. {{ end }}</p>
+            <p>{{ "ModLogExplanation" | translate }} {{ if .IsAdmin }} {{ "ModLogExplanationAdmin" | translate }} {{ end }} </p>
             <style>
             section ul { padding-left: 0; }
             section ul li {
@@ -27,7 +26,7 @@
         </section>
         {{ end }}
     {{ else }}
-        <p> Only logged-in users may view the moderation log. </p>
+        <p> {{ "ModLogOnlyLoggedInMayView" | translate }} </p>
     {{ end }}
 </main>
 {{ template "footer" . }}

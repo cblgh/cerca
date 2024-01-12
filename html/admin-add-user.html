@@ -1,8 +1,7 @@
 {{ template "head" . }}
 <main>
     <h1> {{ .Title }}</h1>
-    <p>Register a new user account. After registering the account you will be given a generated password and
-    instructions to pass onto the user.</p>
+    <p>{{ "AdminAddUserExplanation" | translate }}</p>
 
     <form method="post">
         <label for="username">{{ "Username" | translate | capitalize }}:</label>
