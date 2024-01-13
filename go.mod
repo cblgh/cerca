@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/komkom/toml v0.1.2
 	github.com/matthewhartstonge/argon2 v1.0.0
-	github.com/mattn/go-sqlite3 v1.14.9
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/microcosm-cc/bluemonday v1.0.26
 	golang.org/x/exp v0.0.0-20221023144134-a1e5550cf13e
 	golang.org/x/time v0.3.0
