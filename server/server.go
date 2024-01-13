@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -78,9 +79,10 @@ type LoginData struct {
 }
 
 type ThreadData struct {
-	Title     string
-	Posts     []database.Post
-	ThreadURL string
+	Title        string
+	Posts        []database.Post
+	ThreadURL    string
+	ReplyContent string
 }
 
 type EditPostData struct {
@@ -330,6 +332,20 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 	// * handle error
 	thread := h.db.GetThread(threadid)
 	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
+
+	// optional pre-fill replies
+	id := req.URL.Query().Get("reply")
+	if id != "" {
+		// just squash errs here to degrade nicely
+		idn, err := strconv.Atoi(id)
+		if err == nil {
+			p, err := h.db.GetPost(idn)
+			fmt.Println(p)
+			if err == nil {
+				data.ReplyContent = p.BuildReply()
+			}
+		}
+	}
 	view := TemplateData{Data: &data, IsAdmin: isAdmin, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle

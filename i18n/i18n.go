@@ -138,6 +138,7 @@ var English = map[string]string{
 	"PromptDeleteQuestion":  "Delete post for all posterity?",
 	"Delete":                "delete",
 	"Edit":                  "edit",
+	"Reply":                 "reply",
 	"Post":                  "post",
 	"Save":                  "Save",
 	"Author":                "Author",

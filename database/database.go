@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"cerca/util"
@@ -231,6 +232,17 @@ type Post struct {
 	AuthorID    int
 	Publish     time.Time
 	LastEdit    sql.NullTime // TODO: handle json marshalling with custom type
+}
+
+// Build a markdown reply string
+func (p Post) BuildReply() string {
+	// TODO 18n
+	lines := strings.Split(p.Content, "\n")
+	var blockquoted string
+	for _, l := range lines {
+		blockquoted += "> " + l
+	}
+	return fmt.Sprintf("*%s [wrote](#%d)*:\n\n%s", p.Author, p.ID, blockquoted)
 }
 
 func (d DB) DeleteThread() {}

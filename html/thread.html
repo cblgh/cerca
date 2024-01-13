@@ -28,6 +28,7 @@
 			{{ end }}
         </section>
         {{ $post.Content | markup }}
+		<a href=".?reply={{$post.ID}}#content">{{ "Reply" | translate}}</a>
     </article>
     {{ end }}
     {{ if .LoggedIn }}
@@ -35,7 +36,7 @@
         <form method="POST">
             <div id="bottom" class="post-container" >
                 <label class="visually-hidden" for="content">{{ "YourAnswer" | translate }}:</label>
-                <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'></textarea>
+				<textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{ .Data.ReplyContent}}</textarea>
                 <button type="submit">{{ "Post" | translate | capitalize }}</button>
             </div>
         </form>
