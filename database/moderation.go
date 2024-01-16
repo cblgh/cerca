@@ -45,7 +45,7 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
 			finalErr = incomingErr
-			return 
+			return
 		}
 	}
 	rollbackOnErr(ed.Eout(err, "start transaction"))
@@ -180,7 +180,7 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
 			finalErr = incomingErr
-			return 
+			return
 		}
 	}
 
