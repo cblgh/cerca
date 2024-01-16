@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/komkom/toml v0.1.2
 	github.com/matthewhartstonge/argon2 v1.0.0
-	github.com/mattn/go-sqlite3 v1.14.9
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/synacor/argon2id v0.0.0-20190318165710-18569dfc600b
