@@ -609,27 +609,31 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		}
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
-		// read verification code from form
-		verificationLink := req.PostFormValue("verificationlink")
-		// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
-		u, err := url.Parse(verificationLink)
-		if err != nil {
-			renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
-			return
-		}
-		// check verification link domain against allowlist
-		if !util.Contains(h.allowlist, u.Host) {
-			fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
-			renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
-			return
-		}
-
-		// parse out verification code from verification link and compare against verification code in session
-		has := hasVerificationCode(verificationLink, verificationCode)
-		if !has {
-			if !developing {
-				renderErr("Verification code from link (%s) does not match", verificationLink)
+		var verificationLink string
+		// skip verification code during dev registering
+		if !developing {
+			// read verification code from form
+			verificationLink = req.PostFormValue("verificationlink")
+			// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
+			u, err := url.Parse(verificationLink)
+			if err != nil {
+				renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
 				return
+			}
+			// check verification link domain against allowlist
+			if !util.Contains(h.allowlist, u.Host) {
+				fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
+				renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
+				return
+			}
+
+			// parse out verification code from verification link and compare against verification code in session
+			has := hasVerificationCode(verificationLink, verificationCode)
+			if !has {
+				if !developing {
+					renderErr("Verification code from link (%s) does not match", verificationLink)
+					return
+				}
 			}
 		}
 		// make sure username is not registered already
