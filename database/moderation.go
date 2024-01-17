@@ -40,55 +40,82 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 	}
 	// create a transaction spanning all our removal-related ops
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
-	rollbackOnErr:= func(incomingErr error) {
+	rollbackOnErr:= func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
 			finalErr = incomingErr
-			return
+			return true
 		}
+		return false
 	}
-	rollbackOnErr(ed.Eout(err, "start transaction"))
+	if rollbackOnErr(ed.Eout(err, "start transaction")) {
+		return
+	}
 
 	// create prepared statements performing the required removal operations for tables that reference a userid as a
 	// foreign key: threads, posts, moderation_log, and registrations
 	threadsStmt, err := tx.Prepare("UPDATE threads SET authorid = ? WHERE authorid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare threads stmt"))
 	defer threadsStmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare threads stmt")) {
+		return
+	}
 
 	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
-	rollbackOnErr(ed.Eout(err, "prepare posts stmt"))
 	defer postsStmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare posts stmt")) {
+		return
+	}
 
 	modlogStmt1, err := tx.Prepare("UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #1"))
 	defer modlogStmt1.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt #1")) {
+		return
+	}
 
 	modlogStmt2, err := tx.Prepare("UPDATE moderation_log SET actingid = ? WHERE actingid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt #2"))
 	defer modlogStmt2.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt #2")) {
+		return
+	}
 
 	stmtReg, err := tx.Prepare("DELETE FROM registrations where userid = ?")
-	rollbackOnErr(ed.Eout(err, "prepare registrations stmt"))
 	defer stmtReg.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare registrations stmt")) {
+		return
+	}
 
 	// and finally: removing the entry from the user's table itself
 	stmtUsers, err := tx.Prepare("DELETE FROM users where id = ?")
-	rollbackOnErr(ed.Eout(err, "prepare users stmt"))
 	defer stmtUsers.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare users stmt")) {
+		return
+	}
 
 	_, err = threadsStmt.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec threads stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec threads stmt")) {
+		return
+	}
 	_, err = postsStmt.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec posts stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec posts stmt")) {
+		return
+	}
 	_, err = modlogStmt1.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec modlog #1 stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec modlog #1 stmt")) {
+		return
+	}
 	_, err = modlogStmt2.Exec(deletedUserID, userid)
-	rollbackOnErr(ed.Eout(err, "exec modlog #2 stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec modlog #2 stmt")) {
+		return
+	}
 	_, err = stmtReg.Exec(userid)
-	rollbackOnErr(ed.Eout(err, "exec registration stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec registration stmt")) {
+		return
+	}
 	_, err = stmtUsers.Exec(userid)
-	rollbackOnErr(ed.Eout(err, "exec users stmt"))
+	if rollbackOnErr(ed.Eout(err, "exec users stmt")) {
+		return
+	}
 
 	err = tx.Commit()
 	ed.Check(err, "commit transaction")
@@ -102,12 +129,12 @@ func (d DB) AddModerationLog(actingid, recipientid, action int) error {
 	// we have a recipient
 	var err error
 	if recipientid > 0 {
-		stmt := `INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`
-		_, err = d.Exec(stmt, actingid, recipientid, action, t)
+		insert := `INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`
+		_, err = d.Exec(insert, actingid, recipientid, action, t)
 		} else {
 			// we are not listing a recipient
-		stmt := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?)`
-		_, err = d.Exec(stmt, actingid, action, t)
+		insert := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?)`
+		_, err = d.Exec(insert, actingid, action, t)
 	}
 	if err = ed.Eout(err, "exec prepared statement"); err != nil {
 		return err
@@ -136,12 +163,12 @@ func (d DB) GetModerationLogs () []ModerationEntry {
 	ORDER BY time DESC`
 
 	stmt, err := d.db.Prepare(query)
-	ed.Check(err, "prep stmt")
 	defer stmt.Close()
+	ed.Check(err, "prep stmt")
 
 	rows, err := stmt.Query()
-	util.Check(err, "run query")
 	defer rows.Close()
+	util.Check(err, "run query")
 
 	var logs []ModerationEntry
 	for rows.Next() {
@@ -175,13 +202,14 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
 	ed.Check(err, "open transaction")
 
-	rollbackOnErr:= func(incomingErr error) {
+	rollbackOnErr:= func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
 			finalErr = incomingErr
-			return
+			return true
 		}
+		return false
 	}
 
 	// start tx
@@ -189,6 +217,7 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 	// there should only be one pending proposal of each type for any given recipient
 	// so let's check to make sure that's true!
 	stmt, err := tx.Prepare("SELECT recipientid FROM moderation_proposals WHERE action = ?")
+	defer stmt.Close()
 	err = stmt.QueryRow(action).Scan(&propRecipientId)
 	if err == nil && propRecipientId != -1 {
 		finalErr = tx.Commit()
@@ -198,18 +227,28 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 
 	// add the proposal
 	stmt, err = tx.Prepare("INSERT INTO moderation_proposals (proposerid, recipientid, time, action) VALUES (?, ?, ?, ?)")
-	rollbackOnErr(ed.Eout(err, "prepare proposal stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare proposal stmt")) {
+		return
+	}
 	_, err = stmt.Exec(proposerid, recipientid, t, action)
-	rollbackOnErr(ed.Eout(err, "insert into proposals table"))
+	if rollbackOnErr(ed.Eout(err, "insert into proposals table")) {
+		return
+	}
 
 	// TODO (2023-12-18): hmm how do we do this properly now? only have one constant per action 
 	// {demote, make admin, remove user} but vary translations for these three depending on if there is also a decision or not?
 
 	// add moderation log that user x proposed action y for recipient z
 	stmt, err = tx.Prepare(`INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`)
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt")) {
+		return
+	}
 	_, err = stmt.Exec(proposerid, recipientid, action, t)
-	rollbackOnErr(ed.Eout(err, "insert into modlog"))
+	if rollbackOnErr(ed.Eout(err, "insert into modlog")) {
+		return
+	}
 
 	err = tx.Commit()
 	ed.Check(err, "commit transaction")
@@ -256,19 +295,23 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
 	ed.Check(err, "open transaction")
 
-	rollbackOnErr:= func(incomingErr error) {
+	rollbackOnErr:= func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
 			finalErr = incomingErr
-			return 
+			return true
 		}
+		return false
 	}
 
 	/* start tx */
 	// make sure the proposal is still there (i.e. nobody has beat us to acting on it yet)
 	stmt, err := tx.Prepare("SELECT 1 FROM moderation_proposals WHERE id = ?")
-	rollbackOnErr(ed.Eout(err, "prepare proposal existence stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare proposal existence stmt")) {
+		return
+	}
 	existence := -1
 	err = stmt.QueryRow(proposalid).Scan(&existence)
 	// proposal id did not exist (it was probably already acted on!)
@@ -280,8 +323,11 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	var proposerid, recipientid, proposalAction int
 	var proposalDate time.Time
 	stmt, err = tx.Prepare(`SELECT proposerid, recipientid, action, time from moderation_proposals WHERE id = ?`)
+	defer stmt.Close()
 	err = stmt.QueryRow(proposalid).Scan(&proposerid, &recipientid, &proposalAction, &proposalDate)
-	rollbackOnErr(ed.Eout(err, "retrieve proposal vals"))
+	if rollbackOnErr(ed.Eout(err, "retrieve proposal vals")) {
+		return
+	}
 
 	timeSelfConfirmOK := proposalDate.Add(constants.PROPOSAL_SELF_CONFIRMATION_WAIT)
 	// TODO (2024-01-07): render err message in admin view?
@@ -290,7 +336,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 		err = tx.Commit()
 		ed.Check(err, "commit transaction")
 		finalErr = nil
-		return 
+		return
 	}
 
 	// convert proposed action (semantically different for the sake of logs) from the finalized action
@@ -308,34 +354,51 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 
 	// remove proposal from proposal table as it has been executed as desired
 	stmt, err = tx.Prepare("DELETE FROM moderation_proposals WHERE id = ?")
-	rollbackOnErr(ed.Eout(err, "prepare proposal removal stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare proposal removal stmt")) {
+		return
+	}
 	_, err = stmt.Exec(proposalid)
-	rollbackOnErr(ed.Eout(err, "remove proposal from table"))
+	if rollbackOnErr(ed.Eout(err, "remove proposal from table")) {
+		return
+	}
 
 	// add moderation log 
 	stmt, err = tx.Prepare(`INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`)
-	rollbackOnErr(ed.Eout(err, "prepare modlog stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt")) {
+		return
+	}
 	// the admin who proposed the action will be logged as the one performing it
 	// get the modlog so we can reference it in the quorum_decisions table. this will be used to augment the moderation
 	// log view with quorum info
 	result, err := stmt.Exec(proposerid, recipientid, action, t)
-	rollbackOnErr(ed.Eout(err, "insert into modlog"))
+	if rollbackOnErr(ed.Eout(err, "insert into modlog")) {
+		return
+	}
 	modlogid, err := result.LastInsertId()
-	rollbackOnErr(ed.Eout(err, "get last insert id"))
+	if rollbackOnErr(ed.Eout(err, "get last insert id")) {
+		return
+	}
 
 	// update the quorum decisions table so that we can use its info to augment the moderation log view
 	stmt, err = tx.Prepare(`INSERT INTO quorum_decisions (userid, decision, modlogid) VALUES (?, ?, ?)`)
-	rollbackOnErr(ed.Eout(err, "prepare quorum insertion stmt"))
+	defer stmt.Close()
+	if rollbackOnErr(ed.Eout(err, "prepare quorum insertion stmt")) {
+		return
+	}
 	// decision = confirm or veto => values true or false
 	_, err = stmt.Exec(adminid, decision, modlogid)
-	rollbackOnErr(ed.Eout(err, "execute quorum insertion"))
+	if rollbackOnErr(ed.Eout(err, "execute quorum insertion")) {
+		return
+	}
 
 	err = tx.Commit()
 	ed.Check(err, "commit transaction")
 
 	// the decision was to veto the proposal: there's nothing more to do! except return outta this function ofc ofc
 	if decision == constants.PROPOSAL_VETO {
-		return 
+		return
 	}
 	// perform the actual action; would be preferable to do this in the transaction somehow
 	// but hell no am i copying in those bits here X)
@@ -350,12 +413,12 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 		d.AddAdmin(recipientid)
 		ed.Check(err, "add admin", recipientid)
 	}
-	return // return finalError = null 
+	return
 }
 
-type User struct { 
+type User struct {
 	Name string
-	ID int 
+	ID int
 }
 
 func (d DB) AddAdmin(userid int) error {
@@ -430,12 +493,12 @@ func (d DB) GetAdmins() []User {
   ORDER BY u.name
   `
 	stmt, err := d.db.Prepare(query)
-	ed.Check(err, "prep stmt")
 	defer stmt.Close()
+	ed.Check(err, "prep stmt")
 
 	rows, err := stmt.Query()
-	util.Check(err, "run query")
 	defer rows.Close()
+	util.Check(err, "run query")
 
 	var user User
 	var admins []User
