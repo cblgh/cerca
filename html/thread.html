@@ -14,6 +14,7 @@
                         <input type="hidden" name="thread" value="{{ $threadURL }}">
                     </form>
                 </span>
+			<span style="float: right; margin-right:0.5rem"><a href="/post/edit/{{ $post.ID }}">edit</a></span>
             {{ end }}
             <span class="visually-hidden">{{ "Author" | translate }}:</span>
             <span><b>{{ $post.Author }}</b>
@@ -21,11 +22,14 @@
             </span>
             <a href="#{{ $post.ID }}">
                 <span style="margin-left: 0.5rem;">
-                    <time title="{{ $post.Publish | formatDateTime }}" datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time>
+				<time title="{{ $post.Publish | formatDateTime }}" datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time></span></a>
+                 {{ if $post.LastEdit.Valid }}
+                 <span style="cursor: pointer;">
+                     <time title="{{ "EditedAt" | translate }} {{ $post.LastEdit.Time | formatDateTime }}" datetime="{{ $post.LastEdit.Time | formatDate }}">*</time>
                 </span>
-            </a>
+                {{ end }}
         </section>
-        {{ $post.Content }}
+        {{ $post.Content | markup }}
     </article>
     {{ end }}
     {{ if .LoggedIn }}

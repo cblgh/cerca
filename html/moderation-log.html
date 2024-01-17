@@ -1,0 +1,32 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    {{ if .LoggedIn }}
+        <section>
+            {{ if len .Data.Log | eq 100 }}
+                <p> {{ "ModLogNoActions" | translate }} </p>
+            {{ else }}
+            <p>{{ "ModLogExplanation" | translate }} {{ if .IsAdmin }} {{ "ModLogExplanationAdmin" | translate }} {{ end }} </p>
+            <style>
+            section ul { padding-left: 0; }
+            section ul li {
+                list-style-type: none;
+                border: darkred solid 1px;
+            }
+            section ul > li:nth-of-type(2n) {
+              color: wheat;
+              background: darkred;
+            }
+            </style>
+            <ul>
+                {{ range $index, $entry := .Data.Log }}
+                <li> {{ $entry | tohtml }} </li>
+                {{ end }}
+            </ul>
+        </section>
+        {{ end }}
+    {{ else }}
+        <p> {{ "ModLogOnlyLoggedInMayView" | translate }} </p>
+    {{ end }}
+</main>
+{{ template "footer" . }}

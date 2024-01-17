@@ -3,9 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"cerca/crypto"
 	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"net/url"
 	"os"
@@ -43,7 +43,29 @@ func InitDB(filepath string) DB {
 		log.Fatalln("db is nil")
 	}
 	createTables(db)
-	return DB{db}
+	instance := DB{db}
+	instance.makeSureDefaultUsersExist()
+	return instance
+}
+
+const DELETED_USER_NAME = "deleted user"
+const SYSTEM_USER_NAME = "CERCA_CMD"
+
+func (d DB) makeSureDefaultUsersExist() {
+	ed := util.Describe("create default users")
+	for _, defaultUser := range []string{DELETED_USER_NAME, SYSTEM_USER_NAME} {
+		userExists, err := d.CheckUsernameExists(defaultUser)
+		if err != nil {
+			log.Fatalln(ed.Eout(err, "check username for %s exists", defaultUser))
+		}
+		if !userExists {
+			passwordHash, err := crypto.HashPassword(crypto.GeneratePassword())
+			_, err = d.CreateUser(defaultUser, passwordHash)
+			if err != nil {
+				log.Fatalln(ed.Eout(err, "create %s", defaultUser))
+			}
+		}
+	}
 }
 
 func createTables(db *sql.DB) {
@@ -63,19 +85,44 @@ func createTables(db *sql.DB) {
   );
   `,
 		`
-  CREATE TABLE IF NOT EXISTS nonces (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nonce TEXT NOT NULL UNIQUE
+  CREATE TABLE IF NOT EXISTS admins(
+    id INTEGER PRIMARY KEY
   );
   `,
+	/* add optional columns: quorumuser quorum_action (confirm, veto)? */
 		`
-  CREATE TABLE IF NOT EXISTS pubkeys (
+  CREATE TABLE IF NOT EXISTS moderation_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pubkey TEXT NOT NULL UNIQUE,
-    userid integer NOT NULL UNIQUE,
-    FOREIGN KEY (userid) REFERENCES users(id)
+		actingid INTEGER NOT NULL,
+		recipientid INTEGER,
+		action INTEGER NOT NULL,
+    time DATE NOT NULL,
+
+    FOREIGN KEY (actingid) REFERENCES users(id),
+    FOREIGN KEY (recipientid) REFERENCES users(id)
   );
   `,
+	`
+	CREATE TABLE IF NOT EXISTS quorum_decisions (
+		userid INTEGER NOT NULL,
+		decision BOOL NOT NULL,
+		modlogid INTEGER NOT NULL,
+
+		FOREIGN KEY (modlogid) REFERENCES moderation_log(id)
+	);
+	`,
+	`
+	CREATE TABLE IF NOT EXISTS moderation_proposals (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		proposerid INTEGER NOT NULL,
+		recipientid INTEGER NOT NULL,
+		action INTEGER NOT NULL,
+		time DATE NOT NULL,
+
+		FOREIGN KEY (proposerid) REFERENCES users(id),
+		FOREIGN KEY (recipientid) REFERENCES users(id)
+	);
+		`,
 		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,7 +225,8 @@ func (d DB) CreateThread(title, content string, authorid, topicid int) (int, err
 type Post struct {
 	ID          int
 	ThreadTitle string
-	Content     template.HTML
+	ThreadID    int
+	Content     string // markdown
 	Author      string
 	AuthorID    int
 	Publish     time.Time
@@ -226,14 +274,14 @@ func (d DB) GetThread(threadid int) []Post {
 
 func (d DB) GetPost(postid int) (Post, error) {
 	stmt := `
-  SELECT p.id, t.title, content, u.name, p.authorid, p.publishtime, p.lastedit
+  SELECT p.id, t.title, t.id, content, u.name, p.authorid, p.publishtime, p.lastedit
   FROM posts p 
   INNER JOIN users u ON u.id = p.authorid 
   INNER JOIN threads t ON t.id = p.threadid
   WHERE p.id = ?
   `
 	var data Post
-	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
+	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.ThreadID, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
 	err = util.Eout(err, "get data for thread %d", postid)
 	return data, err
 }
@@ -387,11 +435,6 @@ func (d DB) CheckUserExists(userid int) (bool, error) {
 	return d.existsQuery(stmt, userid)
 }
 
-func (d DB) CheckNonceExists(nonce string) (bool, error) {
-	stmt := `SELECT 1 FROM nonces WHERE nonce = ?`
-	return d.existsQuery(stmt, nonce)
-}
-
 func (d DB) CheckUsernameExists(username string) (bool, error) {
 	stmt := `SELECT 1 FROM users WHERE name = ?`
 	return d.existsQuery(stmt, username)
@@ -409,55 +452,14 @@ func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	util.Check(err, "changing user %d's description to %s", userid, newhash)
 }
 
-func (d DB) DeleteUser(userid int) {
-	stmt := `DELETE FROM users WHERE id = ?`
-	_, err := d.Exec(stmt, userid)
-	util.Check(err, "deleting user %d", userid)
-}
-
-func (d DB) AddPubkey(userid int, pubkey string) error {
-	ed := util.Describe("add pubkey")
-	// TODO (2022-02-03): the insertion order is wrong >.<
-	stmt := `INSERT INTO pubkeys (pubkey, userid) VALUES (?, ?)`
-	_, err := d.Exec(stmt, userid, pubkey)
-	if err = ed.Eout(err, "inserting record"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d DB) SetPubkey(userid int, pubkey string) error {
-	ed := util.Describe("set pubkey")
-	// TODO (2022-09-27): the insertion order is still wrong >.<
-	stmt := `UPDATE pubkeys SET pubkey = ? WHERE userid = ? `
-	_, err := d.Exec(stmt, userid, pubkey)
-	if err = ed.Eout(err, "updating record"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d DB) GetPubkey(userid int) (pubkey string, err error) {
-	ed := util.Describe("get pubkey")
-	// due to a mishap in the query in AddPubkey the column `pubkey` contains the userid
-	// and the column `userid` contains the pubkey
-	// :'))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-	// TODO (2022-02-03): when we have migration logic, fix this mishap
-	stmt := `SELECT userid from pubkeys where pubkey = ?`
-	err = d.db.QueryRow(stmt, userid).Scan(&pubkey)
-	err = ed.Eout(err, "query & scan")
-	return
-}
-
-// TODO (2022-02-04): extend mrv verification code length and reuse nonce scheme to fix registration bug?
-func (d DB) AddNonce(nonce string) error {
-	ed := util.Describe("add nonce")
-	stmt := `INSERT INTO nonces (nonce) VALUES (?)`
-	_, err := d.Exec(stmt, nonce)
+func (d DB) GetSystemUserid() int {
+	ed := util.Describe("get system user id")
+	systemUserid, err := d.GetUserID(SYSTEM_USER_NAME)
+	// it should always exist
 	if err != nil {
-		return ed.Eout(err, "insert nonce")
+		log.Fatalln(ed.Eout(err, "get system user id"))
 	}
-	return nil
+	return systemUserid
 }
 
 func (d DB) AddRegistration(userid int, verificationLink string) error {
@@ -474,3 +476,57 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 	}
 	return nil
 }
+
+/* for moderation operations and queries, see database/moderation.go */
+
+func (d DB) GetUsers(includeAdmin bool) []User {
+	ed := util.Describe("get users")
+	query := `SELECT u.name, u.id
+  FROM users u 
+	%s
+  ORDER BY u.name
+  `
+
+	if includeAdmin {
+		query = fmt.Sprintf(query, "") // do nothing
+	} else {
+		query = fmt.Sprintf(query, "WHERE u.id NOT IN (select id from admins)") // do nothing
+	}
+
+	stmt, err := d.db.Prepare(query)
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	util.Check(err, "run query")
+	defer rows.Close()
+
+	var user User
+	var users []User
+	for rows.Next() {
+		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+			ed.Check(err, "scanning loop")
+		}
+		users = append(users, user)
+	}
+	return users
+}
+
+func (d DB) ResetPassword(userid int) (string, error) {
+       ed := util.Describe("reset password")
+       exists, err := d.CheckUserExists(userid)
+       if !exists {
+               return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+       } else if err != nil {
+               return "", fmt.Errorf("reset password encountered an error (%w)", err)
+       }
+       // generate new password for user and set it in the database
+       newPassword := crypto.GeneratePassword()
+       passwordHash, err := crypto.HashPassword(newPassword)
+       if err != nil {
+               return "", ed.Eout(err, "hash password")
+       }
+       d.UpdateUserPasswordHash(userid, passwordHash)
+       return newPassword, nil
+}
+

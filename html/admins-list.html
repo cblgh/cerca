@@ -1,0 +1,22 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    {{ if .LoggedIn }}
+        <section>
+            <p>{{ "AdminViewPastActions" | translate }} <a href="/moderations">{{ "ModerationLog" | translate }}</a>.</p>
+            {{ if len .Data.Admins | eq 0 }}
+                <p> {{ "AdminNoAdmins" | translate }} </p>
+            {{ else }}
+            <p>{{ "AdminForumHasAdmins" | translate }}:</p> 
+            <ul>
+                {{ range $index, $user := .Data.Admins }}
+                <li> {{ $user.Name }} </li>
+                {{ end }}
+            </ul>
+        </section>
+        {{ end }}
+    {{ else }}
+        <p> {{ "AdminOnlyLoggedInMayView" | translate }} </p>
+    {{ end }}
+</main>
+{{ template "footer" . }}

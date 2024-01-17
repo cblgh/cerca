@@ -27,6 +27,63 @@ var English = map[string]string{
 	"SortRecentPosts":   "recent posts",
 	"SortRecentThreads": "most recent threads",
 
+  "modlogResetPassword": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
+  "modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
+  "modlogRemoveUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,
+  "modlogMakeAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> made <b> {{ .Data.RecipientUsername}}</b> an admin`,
+  "modlogAddUser": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for a new user`,
+  "modlogAddUserAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> manually registered an account for <b> {{ .Data.RecipientUsername }}</b>`,
+  "modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> demoted <b> 
+	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} themselves 
+	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> from admin back to normal user`,
+	"modlogXProposedY": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> proposed: {{ .Data.Action }}`,
+	"modlogProposalMakeAdmin": `Make <b> {{ .Data.RecipientUsername}}</b> admin`,
+	"modlogProposalDemoteAdmin": `Demote <b> {{ .Data.RecipientUsername}}</b> from role admin`,
+	"modlogProposalRemoveUser": `Remove user <b> {{ .Data.RecipientUsername }} </b>`,
+	"modlogConfirm": "{{ .Data.Action }} <i>confirmed by {{ .Data.ActingUsername }}</i>",
+	"modlogVeto": "<s>{{ .Data.Action }}</s> <i>vetoed by {{ .Data.ActingUsername }}</i>",
+
+
+
+	"Admins": "admins",
+	"AdminVeto": "Veto",
+	"AdminConfirm": "Confirm",
+	"AdminForumAdministration": "Forum Administration",
+	"AdminYou": "you!",
+	"AdminUsers": "Users", 
+	"AdminNoAdmins": "There are no admins",
+	"AdminNoUsers": "There are no other users",
+	"AdminNoPendingProposals": "There are no pending proposals",
+	"AdminAddNewUser": "Add new user",
+	"AdminAddNewUserQuestion": "Does someone wish attendence? You can ",
+	"AdminStepDown": "Step down",
+	"AdminStepDownExplanation": "If you want to stop being an admin, you can",
+	"AdminViewPastActions": "View past actions in the",
+	"ModerationLog": "moderation log",
+	"AdminDemote": "Demote",
+	"DeletedUser": "deleted user",
+	"RemoveAccount": "remove account",
+	"AdminMakeAdmin": "Make admin", 
+	"Submit": "Submit",
+	"AdminSelfConfirmationsHover": "a week must pass before self-confirmations are ok",
+	"Proposal": "Proposal",
+	"PendingProposals": "Pending Proposals",
+	"AdminSelfProposalsBecomeValid": "Date self-proposals become valid",
+	"AdminPendingExplanation": `Two admins are required for <i>making a user an admin</i>, <i>demoting an existing
+															admin</i>, or <i>removing a user</i>. The first proposes the action, the second confirms
+															(or vetos) it. If enough time elapses without a veto, the proposer may confirm their own
+															proposal.`,
+	
+	"AdminAddUserExplanation": "Register a new user account. After registering the account you will be given a generated password and instructions to pass onto the user.",
+	"AdminForumHasAdmins": "The forum currently has the following admins",
+	"AdminOnlyLoggedInMayView": "Only logged in users may view the forum's admins.",
+	"AdminPasswordSuccessInstructions": `Instructions: %s's password was set to: %s. After logging in, please change your password by going to /reset`,
+
+	"ModLogNoActions": "there are no logged moderation actions",
+	"ModLogExplanation": `This resource lists the moderation actions taken by the forum's administrators.`,
+	"ModLogExplanationAdmin": `You are viewing this page as an admin, you will see slightly more details.`,
+	"ModLogOnlyLoggedInMayView": "Only logged in users may view the moderation log.",
+
 	"LoginNoAccount":       "Don't have an account yet? <a href='/register'>Register</a> one.",
 	"LoginFailure":         "<b>Failed login attempt:</b> incorrect password, wrong username, or a non-existent user.",
 	"LoginAlreadyLoggedIn": `You are already logged in. Would you like to <a href="/logout">log out</a>?`,
@@ -34,8 +91,7 @@ var English = map[string]string{
 	"Username":                  "username",
 	"Current":                   "current",
 	"New":                       "new",
-	"GenerateNewKeypair":        "I also want to generate a new keypair",
-	"ChangePasswordDescription": "Use this page to change your password. If needed, you can also regenerate your password reset keypair—used to reset a forgotten password without admin help.",
+	"ChangePasswordDescription": "Use this page to change your password.",
 	"Password":                  "password",
 	"PasswordMin":               "Must be at least 9 characters long",
 	"PasswordForgot":            "Forgot your password?",
@@ -44,6 +100,7 @@ var English = map[string]string{
 	"ThreadNew": "new thread",
 	"ThreadThe": "the thread",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
@@ -52,7 +109,6 @@ var English = map[string]string{
 	"TextareaPlaceholder": "Tabula rasa",
 
 	"PasswordReset":                   "reset password",
-	"PasswordResetMessage":            "You are logged in, log out to reset password using proof",
 	"PasswordResetSuccess":            "Reset password—success!",
 	"PasswordResetSuccessMessage":     "You reset your password!",
 	"PasswordResetSuccessLinkMessage": "Give it a try and",
@@ -62,6 +118,10 @@ var English = map[string]string{
 	"RegisterSuccess":     "registered successfully",
 
 	"ErrUnaccepted":        "Unaccepted request",
+	"ErrGeneric401":        "Unauthorized",
+	"ErrGeneric401Message": "You do not have permissions to perform this action.",
+	"ErrEdit404":           "Post not found",
+	"ErrEdit404Message":    "This post cannot be found for editing",
 	"ErrThread404":         "Thread not found",
 	"ErrThread404Message":  "The thread does not exist (anymore?)",
 	"ErrGeneric404":        "Page not found",
@@ -71,13 +131,17 @@ var English = map[string]string{
 	"NewThreadLinkMessage":        "If you are a member,",
 	"NewThreadCreateError":        "Error creating thread",
 	"NewThreadCreateErrorMessage": "There was a database error when creating the thread, apologies.",
+	"PostEdit":                    "Post preview",
 
 	"AriaPostMeta":          "Post meta",
 	"AriaDeletePost":        "Delete this post",
 	"AriaRespondIntoThread": "Respond into this thread",
 	"PromptDeleteQuestion":  "Delete post for all posterity?",
 	"Delete":                "delete",
+	"Edit":                  "edit",
+	"EditedAt":							 "edited at",
 	"Post":                  "post",
+	"Save":                  "Save",
 	"Author":                "Author",
 	"Responded":             "responded",
 	"YourAnswer":            "Your answer",
@@ -86,9 +150,6 @@ var English = map[string]string{
 	"ThreadStartNew": "Start a new thread",
 
 	"RegisterHTMLMessage":               `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
-	"RegisterKeypairExplanationStart":   `There's just one more thing: <b>save the key displayed below</b>. It is a <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">keypair</a> describing your forum identity, with a private part that only you know; the forum only stores the public portion.`,
-	"RegisterViewKeypairExplanationEnd": `With this keypair you will be able to reset your account if you ever lose your password—and without having to share your email (or require email infrastructure on the forum's part).`,
-	"RegisterKeypairWarning":            "This keypair will only be displayed once",
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
@@ -96,22 +157,6 @@ var English = map[string]string{
 	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
 	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
-	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
-	"PasswordResetUsernameQuestion":       "First up: what was your username?",
-	"PasswordResetCopyPayload":            `Now, first copy the snippet (aka <i>proof payload</i>) below`,
-	"PasswordResetFollowToolInstructions": `Follow the <b>tool instructions</b> to finalize the password reset.`,
-	"ToolInstructions":                    `tool instructions`,
-	"PasswordResetToolInstructions": fmt.Sprintf(`
-    <ul>
-        <li><a href="%s">Download the tool</a></li>
-        <li>Run as:<br><code>pwtool --payload &lt;proof payload from above&gt; --keypair &lt;path to file with yr keypair from registration&gt;</code>
-        </li>
-        <li>Copy the generated proof and paste below</li>
-        <li>(Remember to save your password :)</li>
-    </ul>
-    `, toolURL),
-	"GeneratePayload": "generate payload",
-	"Proof":           "proof",
 	"NewPassword":     "new password",
 	"ChangePassword":  "change password",
 }
@@ -140,8 +185,7 @@ var Swedish = map[string]string{
 	"Username":                  "användarnamn",
 	"Current":                   "nuvarande",
 	"New":                       "nytt",
-	"GenerateNewKeypair":        "Jag vill också generera ett nytt nyckelpar",
-	"ChangePasswordDescription": "På den här sidan kan du ändra ditt lösenord. Vid behov kan du också regenerera ditt nyckelpar—används för att nollställa ditt lösenord utan att be admin om hjälp.",
+	"ChangePasswordDescription": "På den här sidan kan du ändra ditt lösenord.",
 	"Password":                  "lösenord",
 	"PasswordMin":               "Måste vara minst 9 karaktärer långt",
 	"PasswordForgot":            "Glömt lösenordet?",
@@ -150,6 +194,7 @@ var Swedish = map[string]string{
 	"ThreadNew": "ny tråd",
 	"ThreadThe": "tråden",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Skapa en tråd",
 	"Title":               "Titel",
@@ -158,7 +203,6 @@ var Swedish = map[string]string{
 	"TextareaPlaceholder": "Tabula rasa",
 
 	"PasswordReset":                   "nollställ lösenord",
-	"PasswordResetMessage":            "Du är inloggad, logga ut för att nollställga lösenordet med skapat lösenordsbevis",
 	"PasswordResetSuccess":            "Nollställning av lösenord—lyckades!",
 	"PasswordResetSuccessMessage":     "Du har nollställt ditt lösenord!",
 	"PasswordResetSuccessLinkMessage": "Ge det ett försök och",
@@ -177,12 +221,15 @@ var Swedish = map[string]string{
 	"NewThreadLinkMessage":        "Om du är en medlem,",
 	"NewThreadCreateError":        "Fel uppstod vid trådskapning",
 	"NewThreadCreateErrorMessage": "Det uppstod ett databasfel under trådskapningen, ursäkta.",
+	"PostEdit":                    "Post preview",
 
 	"AriaPostMeta":          "Post meta",
 	"AriaDeletePost":        "Delete this post",
 	"AriaRespondIntoThread": "Respond into this thread",
 	"PromptDeleteQuestion":  "Radera post för alltid?",
 	"Delete":                "radera",
+	"Edit":                  "redigera",
+	"EditedAt":              "redigerat",
 	"Post":                  "post",
 	"Author":                "Författare",
 	"Responded":             "svarade",
@@ -192,9 +239,6 @@ var Swedish = map[string]string{
 	"ThreadStartNew": "Starta ny tråd",
 
 	"RegisterHTMLMessage":               `Du har nu ett konto! Välkommen. Besök <a href="/">trådindexet</a> för att läsa och svara på trådar, eller för att starta en ny.`,
-	"RegisterKeypairExplanationStart":   `En grej till: <b>spara nyckeln du ser nedan</b>. Det är ett <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">nyckelpar</a> som tillhandahåller din forumidentitet, och inkluderar en hemlig del som bara du vet om och endast visas nu; forumdatabasen kommer enbart ihåg den publika delen.`,
-	"RegisterViewKeypairExplanationEnd": `Med detta nyckelpar kan du återställa ditt lösenord om du skulle tappa bort det—och detta utan att behöva samla in din email (eller kräva emailinfrastruktur på forumets sida).`,
-	"RegisterKeypairWarning":            "Detta nyckelpar visas enbart denna gång",
 
 	"RegisterVerificationCode":              "Din verifikationskod är",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
@@ -204,20 +248,6 @@ var Swedish = map[string]string{
 
 	"PasswordResetDescription":            "På denna sida går vi igenom ett par steg för att säkert nollställa ditt lösenord—utan att behöva ta till mejl!",
 	"PasswordResetUsernameQuestion":       "För de första: hur löd användarnamnet?",
-	"PasswordResetCopyPayload":            `Kopiera nu textsnutten nedan (aka <i>beviset</i>)`,
-	"PasswordResetFollowToolInstructions": `Följ <b>verktygsinstruktionerna</b> för att finalisera nollställningen.`,
-	"ToolInstructions":                    `verktygsinstruktionerna`,
-	"PasswordResetToolInstructions": fmt.Sprintf(`
-    <ul>
-        <li><a href="%s">Ladda ned verktyget</a></li>
-        <li>Kör det så hör:<br><code>pwtool --payload &lt;payload från ovan&gt; --keypair &lt;filvägen innehållandes ditt nyckelpar från när du registrerade dig&gt;</code>
-        </li>
-        <li>Kopiera det genererade beviset och klistra in nedan</li>
-        <li>(Kom ihåg att spara ditt lösenord:)</li>
-    </ul>
-    `, toolURL),
-	"GeneratePayload": "skapa payload",
-	"Proof":           "bevis",
 	"NewPassword":     "nytt lösenord",
 	"ChangePassword":  "ändra lösenord",
 }
@@ -246,8 +276,7 @@ var EspanolMexicano = map[string]string{
 	"Username":                  "usuarie",
 	"Current":                   "current",
 	"New":                       "new",
-	"GenerateNewKeypair":        "I also want to generate a new keypair",
-	"ChangePasswordDescription": "Use this page to change your password. If needed, you can also regenerate your password reset keypair—used to reset a forgotten password without admin help.",
+	"ChangePasswordDescription": "Use this page to change your password.",
 	"Password":                  "contraseña",
 	"PasswordMin":               "Debe tener por lo menos 9 caracteres.",
 	"PasswordForgot":            "Olvidaste tu contraseña?",
@@ -256,6 +285,7 @@ var EspanolMexicano = map[string]string{
 	"ThreadNew": "new thread",
 	"ThreadThe": "the thread",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
@@ -264,7 +294,6 @@ var EspanolMexicano = map[string]string{
 	"TextareaPlaceholder": "Tabula rasa",
 
 	"PasswordReset":                   "reset password",
-	"PasswordResetMessage":            "You are logged in, log out to reset password using proof",
 	"PasswordResetSuccess":            "Reset password—success!",
 	"PasswordResetSuccessMessage":     "You reset your password!",
 	"PasswordResetSuccessLinkMessage": "Give it a try and",
@@ -283,6 +312,7 @@ var EspanolMexicano = map[string]string{
 	"NewThreadLinkMessage":        "If you are a member,",
 	"NewThreadCreateError":        "Error creating thread",
 	"NewThreadCreateErrorMessage": "There was a database error when creating the thread, apologies.",
+	"PostEdit":                    "Post preview",
 	"ThreadStartNew":              "Start a new thread",
 
 	"AriaPostMeta":          "Post meta",
@@ -291,15 +321,15 @@ var EspanolMexicano = map[string]string{
 	"AriaHome":              "Home",
 	"PromptDeleteQuestion":  "Delete post for all posterity?",
 	"Delete":                "delete",
+	"Edit":                  "editar",
+	"EditedAt":              "editado a las",
 	"Post":                  "post",
+	"Save":                  "Save",
 	"Author":                "Author",
 	"Responded":             "responded",
 	"YourAnswer":            "Your answer",
 
 	"RegisterHTMLMessage":               `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
-	"RegisterKeypairExplanationStart":   `There's just one more thing: <b>save the key displayed below</b>. It is a <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">keypair</a> describing your forum identity, with a private part that only you know; the forum only stores the public portion.`,
-	"RegisterViewKeypairExplanationEnd": `With this keypair you will be able to reset your account if you ever lose your password—and without having to share your email (or require email infrastructure on the forum's part).`,
-	"RegisterKeypairWarning":            "This keypair will only be displayed once",
 
 	"RegisterVerificationCode":              "Your verification code is",
 	"RegisterVerificationInstructionsTitle": "Verification instructions",
@@ -309,20 +339,6 @@ var EspanolMexicano = map[string]string{
 
 	"PasswordResetDescription":            "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion":       "First up: what was your username?",
-	"PasswordResetCopyPayload":            `Now, first copy the snippet (aka <i>proof payload</i>) below`,
-	"PasswordResetFollowToolInstructions": `Follow the <b>tool instructions</b> to finalize the password reset.`,
-	"ToolInstructions":                    `tool instructions`,
-	"PasswordResetToolInstructions": fmt.Sprintf(`
-    <ul>
-        <li><a href="%s">Download the tool</a></li>
-        <li>Run as:<br><code>pwtool --payload &lt;proof payload from above&gt; --keypair &lt;path to file with yr keypair from registration&gt;</code>
-        </li>
-        <li>Copy the generated proof and paste below</li>
-        <li>(Remember to save your password :)</li>
-    </ul>
-    `, toolURL),
-	"GeneratePayload": "generate payload",
-	"Proof":           "proof",
 	"NewPassword":     "new password",
 	"ChangePassword":  "change password",
 }

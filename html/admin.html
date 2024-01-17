@@ -1,0 +1,103 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ .Title }}</h1>
+    <section>
+        <form method="GET" id="add-user" action="/add-user"></form>
+        <p>
+        <form method="POST" id="demote-self" action="/demote-admin">
+            <input type="hidden" name="userid" value="{{ .LoggedInID }}">
+        </form>
+        <p>
+        {{ "AdminAddNewUserQuestion" | translate }} <button form="add-user" type="submit"> {{ "AdminAddNewUser" | translate }}</button>.
+        </p>
+        <p>
+        {{ "AdminStepDownExplanation" | translate }} <button form="demote-self" type="submit">{{ "AdminStepDown" | translate }}</button>.
+        </p>
+        <p>
+        {{ "AdminViewPastActions" | translate }} <a href="/moderations">{{ "ModerationLog" | translate }}</a>.
+        </p>
+    </section>
+    {{ if .LoggedIn }}
+    {{ $userID := .LoggedInID }}
+    <section>
+        <h2> {{ "Admins" | translate | capitalize }} </h2>
+        {{ if len .Data.Admins | eq 0 }} 
+        <p> {{ "AdminNoAdmins" | translate }} </p>
+        {{ else }}
+        <table>
+            {{ range $index, $user := .Data.Admins }}
+            <tr>
+                <form method="POST" id="demote-admin-{{$user.ID}}" action="/demote-admin">
+                    <input type="hidden" name="userid" value="{{ $user.ID }}">
+                </form>
+                <td>{{ $user.Name }} ({{ $user.ID }}) </td>
+                <td>
+                    {{ if eq $userID $user.ID }} <i>({{ "AdminYou" | translate }})</i> 
+                    {{ else }}<button type="submit" form="demote-admin-{{$user.ID}}">{{ "AdminDemote" | translate }}</button>{{ end }}
+                </td>
+            </tr>
+            {{ end }}
+        </table>
+        {{ end }}
+    </section>
+    <section> 
+        <h2> {{ "PendingProposals" | translate }} </h2>
+        <p> {{ "AdminPendingExplanation" | translate | tohtml }}</p>
+    {{ if len .Data.Proposals | eq 0}}
+    <p><i>{{ "AdminNoPendingProposals" | translate }}</i></p>
+    {{ else }}
+    <table>
+        <tr>
+            <th>{{ "Proposal" | translate }}</th>
+            <th colspan="3">{{ "AdminSelfProposalsBecomeValid" | translate }}</th>
+        </tr>
+        {{ range $index, $proposal := .Data.Proposals }}
+        <tr>
+            <form method="POST" id="confirm-{{$proposal.ID}}" action="/proposal-confirm">
+                <input type="hidden" name="proposalid" value="{{ $proposal.ID }}">
+            </form>
+            <form method="POST" id="veto-{{$proposal.ID}}" action="/proposal-veto">
+                <input type="hidden" name="proposalid" value="{{ $proposal.ID }}">
+            </form>
+            <td> {{ $proposal.Action | tohtml }} </td>
+            <td> {{ $proposal.Time | formatDateTime }} </td>
+            <td><button type="submit" form="veto-{{$proposal.ID}}">{{ "AdminVeto" | translate }}</button></td>
+            <td><button {{ if not $proposal.TimePassed }} disabled title='{{ "AdminSelfConfirmationHover" | translate}}' {{ end }} type="submit" form="confirm-{{$proposal.ID}}">{{"AdminConfirm" | translate}}</button></td>
+        </tr>
+        {{ end }}
+    </table>
+    {{ end }}
+
+    <section>
+        <h2> {{ "AdminUsers" | translate }} </h2>
+        {{ if len .Data.Users | eq 0 }} 
+        <p> {{ "AdminNoUsers" | translate }} </p>
+        {{ else }}
+        <table>
+            {{ range $index, $user := .Data.Users }}
+            {{ if and (ne $user.Name "CERCA_CMD") (ne $user.Name "deleted user") }} 
+                <form method="POST">
+                <input type="hidden" name="userid" value="{{$user.ID}}">
+                <tr>
+                    <td>{{ $user.Name }} ({{ $user.ID }})</td>
+                    <td>
+                        <select name="admin-action" action="/admin/" id="select-{{$user.ID}}">
+                            <option selected value="reset-password">{{ "PasswordReset" | translate | capitalize }}</option>
+                            <option value="remove-account">{{ "RemoveAccount" | translate | capitalize }}</option>
+                            <option value="make-admin">{{ "AdminMakeAdmin" | translate }}</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button type="submit">{{ "Submit" | translate }}</button>
+                    </td>
+                </tr>
+                {{ end }}
+            </form>
+            {{ end }}
+        </table>
+        {{ end }}
+    </section>
+
+    {{ end }}
+</main>
+{{ template "footer" . }}

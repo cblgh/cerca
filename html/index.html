@@ -1,8 +1,11 @@
 {{ template "head" . }}
 <main>
-	{{ range $index, $thread := .Data.Threads }}
-	<h2><a href="{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
-	{{ end }}
+    {{ if len .Data.Threads | eq 0 }} 
+    <p> There are currently no threads. </p>
+    {{ end }}
+    {{ range $index, $thread := .Data.Threads }}
+    <h2><a href="{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
+    {{ end }}
 </main>
 {{ if .LoggedIn }}
 <aside>

@@ -1,0 +1,21 @@
+{{ template "head" . }}
+<main>
+    <h1> {{ .Title }}</h1>
+    <p>{{ "AdminAddUserExplanation" | translate }}</p>
+
+    <form method="post">
+        <label for="username">{{ "Username" | translate | capitalize }}:</label>
+        <input type="text" required id="username" name="username">
+        <div>
+        <input type="submit" value='{{ "Register" | translate | capitalize }}'>
+        </div>
+    </form>
+
+    {{ if .Data.ErrorMessage }}
+    <div>
+        <p><b> {{ .Data.ErrorMessage }} </b></p>
+    </div>
+    {{ end }}
+
+</main>
+{{ template "footer" . }}

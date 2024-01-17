@@ -1,0 +1,17 @@
+{{ template "head" . }}
+<main>
+    <h1>{{ "PostEdit" | translate }}</h1>
+	<article>{{.Data.Content | markup }}
+	</article>
+    <form method="POST">
+        <div class="post-container" >
+            <label class="visually-hidden" for="content">{{ "Content" | translate }}:</label>
+			<textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{.Data.Content}}</textarea>
+            <button type="submit">{{ "Save" | translate }}</button>
+        </div>
+        <div style="margin-top: 1rem;">
+        <a style="font-style: italic;" href="/thread/{{.Data.ThreadID}}/#{{.Data.ID}}">{{ "GoBackToTheThread" | translate }}</a>
+        </div>
+    </form>
+</main>
+{{ template "footer" . }}
