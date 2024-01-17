@@ -23,9 +23,11 @@
             <a href="#{{ $post.ID }}">
                 <span style="margin-left: 0.5rem;">
 				<time title="{{ $post.Publish | formatDateTime }}" datetime="{{ $post.Publish | formatDate }}">{{ $post.Publish | formatDateRelative }}</time></span></a>
-			{{ if $post.LastEdit.Valid }}<span style="margin-left: 0.5rem;">
-			<em>(edited {{ $post.Publish | formatDateRelative }})</em></span>
-			{{ end }}
+                 {{ if $post.LastEdit.Valid }}
+                 <span style="cursor: pointer;">
+                     <time title="{{ "EditedAt" | translate }} {{ $post.LastEdit.Time | formatDateTime }}" datetime="{{ $post.LastEdit.Time | formatDate }}">*</time>
+                </span>
+                {{ end }}
         </section>
         {{ $post.Content | markup }}
     </article>
