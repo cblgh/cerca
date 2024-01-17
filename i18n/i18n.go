@@ -100,6 +100,7 @@ var English = map[string]string{
 	"ThreadNew": "new thread",
 	"ThreadThe": "the thread",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
@@ -130,7 +131,7 @@ var English = map[string]string{
 	"NewThreadLinkMessage":        "If you are a member,",
 	"NewThreadCreateError":        "Error creating thread",
 	"NewThreadCreateErrorMessage": "There was a database error when creating the thread, apologies.",
-	"PostEdit":                    "Editing post",
+	"PostEdit":                    "Post preview",
 
 	"AriaPostMeta":          "Post meta",
 	"AriaDeletePost":        "Delete this post",
@@ -138,6 +139,7 @@ var English = map[string]string{
 	"PromptDeleteQuestion":  "Delete post for all posterity?",
 	"Delete":                "delete",
 	"Edit":                  "edit",
+	"EditedAt":							 "edited at",
 	"Post":                  "post",
 	"Save":                  "Save",
 	"Author":                "Author",
@@ -192,6 +194,7 @@ var Swedish = map[string]string{
 	"ThreadNew": "ny tråd",
 	"ThreadThe": "tråden",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Skapa en tråd",
 	"Title":               "Titel",
@@ -218,7 +221,7 @@ var Swedish = map[string]string{
 	"NewThreadLinkMessage":        "Om du är en medlem,",
 	"NewThreadCreateError":        "Fel uppstod vid trådskapning",
 	"NewThreadCreateErrorMessage": "Det uppstod ett databasfel under trådskapningen, ursäkta.",
-	"PostEdit":                    "Editing post",
+	"PostEdit":                    "Post preview",
 
 	"AriaPostMeta":          "Post meta",
 	"AriaDeletePost":        "Delete this post",
@@ -226,6 +229,7 @@ var Swedish = map[string]string{
 	"PromptDeleteQuestion":  "Radera post för alltid?",
 	"Delete":                "radera",
 	"Edit":                  "redigera",
+	"EditedAt":              "redigerat",
 	"Post":                  "post",
 	"Author":                "Författare",
 	"Responded":             "svarade",
@@ -281,6 +285,7 @@ var EspanolMexicano = map[string]string{
 	"ThreadNew": "new thread",
 	"ThreadThe": "the thread",
 	"Index":     "index",
+	"GoBackToTheThread": "Go back to the thread",
 
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
@@ -307,7 +312,7 @@ var EspanolMexicano = map[string]string{
 	"NewThreadLinkMessage":        "If you are a member,",
 	"NewThreadCreateError":        "Error creating thread",
 	"NewThreadCreateErrorMessage": "There was a database error when creating the thread, apologies.",
-	"PostEdit":                    "Editing post",
+	"PostEdit":                    "Post preview",
 	"ThreadStartNew":              "Start a new thread",
 
 	"AriaPostMeta":          "Post meta",
@@ -317,6 +322,7 @@ var EspanolMexicano = map[string]string{
 	"PromptDeleteQuestion":  "Delete post for all posterity?",
 	"Delete":                "delete",
 	"Edit":                  "editar",
+	"EditedAt":              "editado a las",
 	"Post":                  "post",
 	"Save":                  "Save",
 	"Author":                "Author",
