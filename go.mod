@@ -12,7 +12,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/stretchr/testify v1.7.0 // indirect
-	github.com/synacor/argon2id v0.0.0-20190318165710-18569dfc600b
 	golang.org/x/exp v0.0.0-20221023144134-a1e5550cf13e
 	golang.org/x/time v0.3.0
 )
