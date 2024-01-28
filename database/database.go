@@ -1,9 +1,9 @@
 package database
 
 import (
+	"cerca/crypto"
 	"context"
 	"database/sql"
-	"cerca/crypto"
 	"errors"
 	"fmt"
 	"log"
@@ -89,7 +89,7 @@ func createTables(db *sql.DB) {
     id INTEGER PRIMARY KEY
   );
   `,
-	/* add optional columns: quorumuser quorum_action (confirm, veto)? */
+		/* add optional columns: quorumuser quorum_action (confirm, veto)? */
 		`
   CREATE TABLE IF NOT EXISTS moderation_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,7 +102,7 @@ func createTables(db *sql.DB) {
     FOREIGN KEY (recipientid) REFERENCES users(id)
   );
   `,
-	`
+		`
 	CREATE TABLE IF NOT EXISTS quorum_decisions (
 		userid INTEGER NOT NULL,
 		decision BOOL NOT NULL,
@@ -111,7 +111,7 @@ func createTables(db *sql.DB) {
 		FOREIGN KEY (modlogid) REFERENCES moderation_log(id)
 	);
 	`,
-	`
+		`
 	CREATE TABLE IF NOT EXISTS moderation_proposals (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		proposerid INTEGER NOT NULL,
@@ -513,20 +513,19 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 }
 
 func (d DB) ResetPassword(userid int) (string, error) {
-       ed := util.Describe("reset password")
-       exists, err := d.CheckUserExists(userid)
-       if !exists {
-               return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
-       } else if err != nil {
-               return "", fmt.Errorf("reset password encountered an error (%w)", err)
-       }
-       // generate new password for user and set it in the database
-       newPassword := crypto.GeneratePassword()
-       passwordHash, err := crypto.HashPassword(newPassword)
-       if err != nil {
-               return "", ed.Eout(err, "hash password")
-       }
-       d.UpdateUserPasswordHash(userid, passwordHash)
-       return newPassword, nil
+	ed := util.Describe("reset password")
+	exists, err := d.CheckUserExists(userid)
+	if !exists {
+		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+	} else if err != nil {
+		return "", fmt.Errorf("reset password encountered an error (%w)", err)
+	}
+	// generate new password for user and set it in the database
+	newPassword := crypto.GeneratePassword()
+	passwordHash, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return "", ed.Eout(err, "hash password")
+	}
+	d.UpdateUserPasswordHash(userid, passwordHash)
+	return newPassword, nil
 }
-

@@ -1,4 +1,5 @@
 package database
+
 import (
 	"context"
 	"database/sql"
@@ -7,11 +8,10 @@ import (
 	"log"
 	"time"
 
-	"cerca/util"
 	"cerca/constants"
+	"cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
-
 )
 
 // there are a bunch of places that reference a user's id, so i don't want to break all of those
@@ -20,14 +20,14 @@ import (
 //
 // remove user performs the following operation:
 // 1. checks to see if the DELETED USER exists; otherwise create it and remember its id
-// 
+//
 // 2. if it exists, we swap out the userid for the DELETED_USER in tables:
 // - table threads authorid
 // - table posts authorid
 // - table moderation_log actingid or recipientid
-// 
+//
 // the entry in registrations correlating to userid is removed
-// if allowing deletion of post contents as well when removing account, 
+// if allowing deletion of post contents as well when removing account,
 // userid should be used to get all posts from table posts and change the contents
 // to say _deleted_
 func (d DB) RemoveUser(userid int) (finalErr error) {
@@ -40,7 +40,7 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 	}
 	// create a transaction spanning all our removal-related ops
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
-	rollbackOnErr:= func(incomingErr error) bool {
+	rollbackOnErr := func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
@@ -131,8 +131,8 @@ func (d DB) AddModerationLog(actingid, recipientid, action int) error {
 	if recipientid > 0 {
 		insert := `INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`
 		_, err = d.Exec(insert, actingid, recipientid, action, t)
-		} else {
-			// we are not listing a recipient
+	} else {
+		// we are not listing a recipient
 		insert := `INSERT INTO moderation_log (actingid, action, time) VALUES (?, ?, ?)`
 		_, err = d.Exec(insert, actingid, action, t)
 	}
@@ -144,12 +144,12 @@ func (d DB) AddModerationLog(actingid, recipientid, action int) error {
 
 type ModerationEntry struct {
 	ActingUsername, RecipientUsername, QuorumUsername string
-	QuorumDecision bool
-	Action int
-	Time time.Time
+	QuorumDecision                                    bool
+	Action                                            int
+	Time                                              time.Time
 }
 
-func (d DB) GetModerationLogs () []ModerationEntry {
+func (d DB) GetModerationLogs() []ModerationEntry {
 	ed := util.Describe("moderation log")
 	query := `SELECT uact.name, urecp.name, uquorum.name, q.decision, m.action, m.time 
 	FROM moderation_LOG m 
@@ -202,7 +202,7 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
 	ed.Check(err, "open transaction")
 
-	rollbackOnErr:= func(incomingErr error) bool {
+	rollbackOnErr := func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
@@ -236,7 +236,7 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 		return
 	}
 
-	// TODO (2023-12-18): hmm how do we do this properly now? only have one constant per action 
+	// TODO (2023-12-18): hmm how do we do this properly now? only have one constant per action
 	// {demote, make admin, remove user} but vary translations for these three depending on if there is also a decision or not?
 
 	// add moderation log that user x proposed action y for recipient z
@@ -257,9 +257,9 @@ func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalE
 
 type ModProposal struct {
 	ActingUsername, RecipientUsername string
-	ActingID, RecipientID int
-	ProposalID, Action int
-	Time time.Time
+	ActingID, RecipientID             int
+	ProposalID, Action                int
+	Time                              time.Time
 }
 
 func (d DB) GetProposedActions() []ModProposal {
@@ -295,7 +295,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
 	ed.Check(err, "open transaction")
 
-	rollbackOnErr:= func(incomingErr error) bool {
+	rollbackOnErr := func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
 			log.Println(incomingErr, "rolling back")
@@ -363,7 +363,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 		return
 	}
 
-	// add moderation log 
+	// add moderation log
 	stmt, err = tx.Prepare(`INSERT INTO moderation_log (actingid, recipientid, action, time) VALUES (?, ?, ?, ?)`)
 	defer stmt.Close()
 	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt")) {
@@ -418,7 +418,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 
 type User struct {
 	Name string
-	ID int
+	ID   int
 }
 
 func (d DB) AddAdmin(userid int) error {
@@ -475,12 +475,12 @@ func (d DB) DemoteAdmin(userid int) error {
 	return nil
 }
 
-func (d DB) IsUserAdmin (userid int) (bool, error) {
+func (d DB) IsUserAdmin(userid int) (bool, error) {
 	stmt := `SELECT 1 FROM admins WHERE id = ?`
 	return d.existsQuery(stmt, userid)
 }
 
-func (d DB) QuorumActivated () bool {
+func (d DB) QuorumActivated() bool {
 	admins := d.GetAdmins()
 	return len(admins) >= 2
 }

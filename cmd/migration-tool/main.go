@@ -24,9 +24,8 @@ func complain(msg string, args ...interface{}) {
 	os.Exit(0)
 }
 
-
 func main() {
-	migrations := map[string]func(string) error {"2024-01-password-hash-migration": database.Migration20240116_PwhashChange}
+	migrations := map[string]func(string) error{"2024-01-password-hash-migration": database.Migration20240116_PwhashChange}
 
 	var dbPath, migration string
 	var listMigrations bool

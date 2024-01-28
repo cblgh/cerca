@@ -1,14 +1,15 @@
 package constants
+
 import "time"
 
 const (
-	MODLOG_RESETPW = iota
-	MODLOG_ADMIN_VETO // vetoing a proposal
-	MODLOG_ADMIN_MAKE // make an admin
-	MODLOG_REMOVE_USER // remove a user
+	MODLOG_RESETPW        = iota
+	MODLOG_ADMIN_VETO     // vetoing a proposal
+	MODLOG_ADMIN_MAKE     // make an admin
+	MODLOG_REMOVE_USER    // remove a user
 	MODLOG_ADMIN_ADD_USER // add a new user
-	MODLOG_ADMIN_DEMOTE // demote an admin back to a normal user
-	MODLOG_ADMIN_CONFIRM // confirming a proposal
+	MODLOG_ADMIN_DEMOTE   // demote an admin back to a normal user
+	MODLOG_ADMIN_CONFIRM  // confirming a proposal
 	MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN
 	MODLOG_ADMIN_PROPOSE_MAKE_ADMIN
 	MODLOG_ADMIN_PROPOSE_REMOVE_USER

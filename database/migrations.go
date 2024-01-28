@@ -1,18 +1,19 @@
 package database
 
 import (
-	"encoding/base64"
-	"fmt"
-	"regexp"
+	"cerca/util"
 	"context"
 	"database/sql"
-	"strconv"
-	"log"
+	"encoding/base64"
 	"errors"
-	"cerca/util"
+	"fmt"
 	"github.com/matthewhartstonge/argon2"
+	"log"
+	"regexp"
+	"strconv"
 )
-/* switched argon2 library to support 32 bit due to flaw in previous library. 
+
+/* switched argon2 library to support 32 bit due to flaw in previous library.
 * change occurred in commits:
   68a689612547ff83225f9a2727cf0c14dfbf7ceb
   27c6d5684b6b464b900889c4b8a4dbae232d6b68
@@ -20,7 +21,7 @@ import (
 	migration of the password hashes from synacor's embedded salt format to
 	matthewartstonge's key-val embedded format
 
-	migration details: 
+	migration details:
 
 	the old format had the following default parameters:
 	* time = 1
@@ -54,7 +55,7 @@ import (
 	\$argon2id19\$1,65536,4\$(\S{66})
 	diff regex from old to new
 	$argon2id$v=19$m=65536,t=${1},p=4${passwordhash}
-	new format example value: 
+	new format example value:
 	$argon2id$v=19$m=65536,t=3,p=4$222222222222222222222222222222222222222222222222222222222222222222
 */
 
@@ -74,7 +75,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 		HASH_INDEX
 	)
 
-	// regex to parse out: 
+	// regex to parse out:
 	// 1. time parameter
 	// 2. salt
 	// 3. hash
@@ -104,9 +105,11 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 	err = row.Scan(&placeholder)
 	// we *want* to have no rows
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		if rollbackOnErr(err) { return }
+		if rollbackOnErr(err) {
+			return
+		}
 	}
-	// in this migration, we should *not* have any schemaversion set 
+	// in this migration, we should *not* have any schemaversion set
 	if placeholder > 0 {
 		if rollbackOnErr(errors.New("schemaversion existed! there's a high likelihood that this migration has already been performed - exiting")) {
 			return
@@ -116,10 +119,10 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 	// alright onwards to the beesknees
 	// data struct to keep passwords and ids together - dont wanna mix things up now do we
 	type HashRecord struct {
-		id int
+		id        int
 		oldFormat string // the full encoded format of prev library. including salt and parameters, not just the hash
 		newFormat string // the full encoded format of new library. including salt and parameters, not just the hash
-		valid bool // only valid records will be updated (i.e. records whose format is confirmed by the the oldPattern regex)
+		valid     bool   // only valid records will be updated (i.e. records whose format is confirmed by the the oldPattern regex)
 	}
 
 	var records []HashRecord
@@ -163,7 +166,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 			util.Check(err, "decode hash using old format encoding")
 
 			config.TimeCost = uint32(time) // note this change, to match old time cost (necessary!)
-			raw := argon2.Raw{Config:config, Salt: saltBuf, Hash: hashBuf}
+			raw := argon2.Raw{Config: config, Salt: saltBuf, Hash: hashBuf}
 			// this is what we will store in the database instead
 			newFormatEncoded := raw.Encode()
 			ok := newRegex.Match(newFormatEncoded)
@@ -179,7 +182,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 			// (if it is, we'll just ignore it. but if it's not we error out of here)
 			ok := newRegex.MatchString(records[i].oldFormat)
 			if !ok {
-				// can't parse with regex matching old format or the new format 
+				// can't parse with regex matching old format or the new format
 				if rollbackOnErr(errors.New(fmt.Sprintf("unknown record format: %s", records[i].oldFormat))) {
 					return
 				}

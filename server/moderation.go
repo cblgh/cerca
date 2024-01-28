@@ -3,22 +3,22 @@ package server
 import (
 	"fmt"
 	"html/template"
-	"strconv"
 	"net/http"
+	"strconv"
 	"time"
 
-	"cerca/database"
-	"cerca/crypto"
 	"cerca/constants"
+	"cerca/crypto"
+	"cerca/database"
 	"cerca/i18n"
 	"cerca/util"
 )
 
 type AdminData struct {
-	Admins []database.User
-	Users []database.User
+	Admins    []database.User
+	Users     []database.User
 	Proposals []PendingProposal
-	IsAdmin bool
+	IsAdmin   bool
 }
 
 type ModerationData struct {
@@ -28,9 +28,9 @@ type ModerationData struct {
 type PendingProposal struct {
 	// ID is the id of the proposal
 	ID, ProposerID int
-	Action string
-	Time time.Time // the time self-confirmations become possible for proposers
-	TimePassed bool // self-confirmations valid or not
+	Action         string
+	Time           time.Time // the time self-confirmations become possible for proposers
+	TimePassed     bool      // self-confirmations valid or not
 }
 
 func (h RequestHandler) displayErr(res http.ResponseWriter, req *http.Request, err error, title string) {
@@ -45,10 +45,10 @@ func (h RequestHandler) displayErr(res http.ResponseWriter, req *http.Request, e
 
 func (h RequestHandler) displaySuccess(res http.ResponseWriter, req *http.Request, title, message, backRoute string) {
 	data := GenericMessageData{
-		Title: title,
-		Message: message,
+		Title:    title,
+		Message:  message,
 		LinkText: h.translator.Translate("GoBack"),
-		Link: backRoute,
+		Link:     backRoute,
 	}
 	h.renderGenericMessage(res, req, data)
 }
@@ -90,7 +90,7 @@ func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
 
 // note: there is only a 2-quorum constraint imposed if there are actually 2 admins. an admin may also confirm their own
 // proposal if constants.PROPOSAL_SELF_CONFIRMATION_WAIT seconds have passed (1 week)
-func performQuorumCheck (ed util.ErrorDescriber, db *database.DB, adminUserId, targetUserId, proposedAction int) error {
+func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, targetUserId, proposedAction int) error {
 	// checks if a quorum is necessary for the proposed action: if a quorum constarin is in effect, a proposal is created
 	// otherwise (if no quorum threshold has been achieved) the action is taken directly
 	quorumActivated := db.QuorumActivated()
@@ -208,7 +208,7 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 
-	if  !isAdmin {
+	if !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
@@ -228,7 +228,7 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	if req.Method == "POST" && isAdmin {
 		username := req.PostFormValue("username")
 
-		// do a lil quick checky check to see if we already have that username registered, 
+		// do a lil quick checky check to see if we already have that username registered,
 		// and if we do re-render the page with an error
 		existed, err := h.db.CheckUsernameExists(username)
 		ed.Check(err, "check username exists")
@@ -325,9 +325,9 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 	logs := h.db.GetModerationLogs()
 	viewData := ModerationData{Log: make([]string, 0)}
 
-	type translationData struct {	
+	type translationData struct {
 		Time, ActingUsername, RecipientUsername string
-		Action template.HTML
+		Action                                  template.HTML
 	}
 
 	for _, entry := range logs {
@@ -371,16 +371,16 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogConfirm"
 			if !entry.QuorumDecision {
 				translationString = "modlogVeto"
-			} 
+			}
 			proposalString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: propdata})
 			viewData.Log = append(viewData.Log, proposalString)
 			/* rendering of "X proposed: <Y>" */
-		} else if entry.Action == constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN || 
+		} else if entry.Action == constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN ||
 			entry.Action == constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN ||
 			entry.Action == constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER {
-				propXforY := translationData{Time: tdata.Time, ActingUsername: tdata.ActingUsername, Action: template.HTML(actionString)}
-				proposalString := h.translator.TranslateWithData("modlogXProposedY", i18n.TranslationData{Data: propXforY})
-				viewData.Log = append(viewData.Log, proposalString)
+			propXforY := translationData{Time: tdata.Time, ActingUsername: tdata.ActingUsername, Action: template.HTML(actionString)}
+			proposalString := h.translator.TranslateWithData("modlogXProposedY", i18n.TranslationData{Data: propXforY})
+			viewData.Log = append(viewData.Log, proposalString)
 		} else {
 			viewData.Log = append(viewData.Log, actionString)
 		}

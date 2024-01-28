@@ -35,8 +35,8 @@ import (
 type TemplateData struct {
 	Data       interface{}
 	QuickNav   bool
-	LoggedIn   bool 
-	IsAdmin    bool 
+	LoggedIn   bool
+	IsAdmin    bool
 	HasRSS     bool
 	LoggedInID int
 	ForumName  string
@@ -50,7 +50,7 @@ type PasswordResetData struct {
 }
 
 type ChangePasswordData struct {
-	Action  string
+	Action string
 }
 
 type IndexData struct {
@@ -285,9 +285,9 @@ func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.
 		Data: incomingData,
 		// the following two fields are defaults that usually are not set and which are cumbersome to set each time since
 		// they don't really matter / vary across invocations
-		HasRSS: h.config.RSS.URL != "",
+		HasRSS:   h.config.RSS.URL != "",
 		LoggedIn: loggedIn,
-		IsAdmin: isAdmin,
+		IsAdmin:  isAdmin,
 	}
 	h.renderView(res, "generic-message", data)
 	return

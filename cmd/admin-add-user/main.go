@@ -1,9 +1,9 @@
 package main
 
 import (
+	"cerca/constants"
 	"cerca/crypto"
 	"cerca/database"
-	"cerca/constants"
 	"cerca/util"
 	"flag"
 	"fmt"
@@ -11,11 +11,11 @@ import (
 )
 
 type UserInfo struct {
-	ID int
+	ID                 int
 	Username, Password string
 }
 
-func createUser (username, password string, db *database.DB) UserInfo {
+func createUser(username, password string, db *database.DB) UserInfo {
 	ed := util.Describe("admin reset")
 	// make sure username is not registered already
 	var err error

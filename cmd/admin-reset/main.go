@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cerca/database"
 	"cerca/constants"
+	"cerca/database"
 	"flag"
 	"fmt"
 	"os"
