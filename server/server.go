@@ -111,12 +111,13 @@ type RateLimitingWare struct {
 	limiter *limiter.TimedRateLimiter
 }
 
+// Limit POST requests to various routes
 func NewRateLimitingWare(routes []string) *RateLimitingWare {
 	ware := RateLimitingWare{}
 	// refresh one access every 15 minutes. forget about the requester after 24h of non-activity
-	ware.limiter = limiter.NewTimedRateLimiter(routes, 15*time.Minute, 24*time.Hour)
+	ware.limiter = limiter.NewTimedRateLimiter(routes, 5*time.Minute, 24*time.Hour)
 	// allow 15 requests at once, then
-	ware.limiter.SetBurstAllowance(25)
+	ware.limiter.SetBurstAllowance(10)
 	return &ware
 }
 
@@ -132,6 +133,11 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 		// set a x-real-ip header: https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
 		if !developing && ip == "127.0.0.1" {
 			next.ServeHTTP(res, req)
+			return
+		}
+		if req.Method == "POST" && ware.limiter.IsLimited(ip, req.URL.String()) {
+			res.WriteHeader(429)
+			res.Write([]byte("You are requesting too fast"))
 			return
 		}
 		err := ware.limiter.BlockUntilAllowed(ip, req.URL.String(), req.Context())
@@ -314,6 +320,11 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 		// TODO (2022-01-09): make sure rendered content won't be empty after sanitizing:
 		// * run sanitize step && strings.TrimSpace and check length **before** doing AddPost
 		// TODO(2022-01-09): send errors back to thread's posting view
+		err := validateContent(content)
+		if err != nil {
+			// TODO error handling
+			return
+		}
 		_ = h.db.AddPost(content, threadid, userid)
 		// we want to effectively redirect to <#posts+1> to mark the thread as read in the thread index
 		// TODO(2022-01-30): find a solution for either:
@@ -655,6 +666,11 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			return
 		}
 		var userID int
+		err := validateUsername(username)
+		if err != nil {
+			renderErr(http.StatusBadRequest, "Invalid username")
+			return 
+		}
 		if userID, err = h.db.CreateUser(username, hash); err != nil {
 			renderErr(http.StatusInternalServerError, "Error in db when creating user")
 			return
@@ -718,6 +734,14 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 		// Handle POST (=>
 		title := req.PostFormValue("title")
 		content := req.PostFormValue("content")
+		err := validateTitle(title)
+		if err != nil {
+			return // TODO
+		}
+		err = validateContent(content)
+		if err != nil {
+			return // TODO
+		}
 		// TODO (2022-01-10): unstub topicid, once we have other topics :)
 		// the new thread was created: forward info to database
 		threadid, err := h.db.CreateThread(title, content, userid, 1)
@@ -822,6 +846,11 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	}
 	if req.Method == "POST" {
 		content := req.PostFormValue("content")
+		err := validateContent(content)
+		if err != nil { 
+			// TODO render err
+			return
+		}
 		h.db.EditPost(content, postid)
 		post.Content = content
 	}
@@ -848,7 +877,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf t
 	}
 	fmt.Println("Serving forum on", port)
 
-	rateLimitingInstance := NewRateLimitingWare([]string{"/rss/", "/rss.xml"})
+	rateLimitingInstance := NewRateLimitingWare([]string{"/thread/", "/thread/new/", "/login/", "/register/"})
 	limitingMiddleware := rateLimitingInstance.Handler(forum)
 	http.Serve(l, limitingMiddleware)
 }
