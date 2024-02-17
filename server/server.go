@@ -339,6 +339,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 }
 
 func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, status int) {
+	res.WriteHeader(http.StatusNotFound)
 	title := h.translator.Translate("ErrGeneric404")
 	data := GenericMessageData{
 		Title:   title,
@@ -469,9 +470,10 @@ func hasVerificationCode(link, verification string) bool {
 func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.Request) {
 	// TODO (2022-10-24): add translations for change password view
 	title := h.translator.Translate("ChangePassword")
-	renderErr := func(errFmt string, args ...interface{}) {
+	renderErr := func(statusCode int, errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
+		res.WriteHeader(statusCode)
 		data := GenericMessageData{
 			Title:    title,
 			Message:  errMessage,
@@ -510,7 +512,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 
 			oldPasswordValid := crypto.ValidatePasswordHash(oldPassword, pwhashOld)
 			if !oldPasswordValid {
-				renderErr("old password did not match what was in database; not changing password")
+				renderErr(http.StatusBadRequest, "old password did not match what was in database; not changing password")
 				return
 			}
 
@@ -579,9 +581,10 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	verification := util.Markup(string(h.files["verification-instructions"]))
 	conduct := h.config.Community.ConductLink
 	var verificationCode string
-	renderErr := func(errFmt string, args ...interface{}) {
+	renderErr := func(statusCode int, errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
+		res.WriteHeader(statusCode)
 		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage, rules, verification, conduct}})
 	}
 
@@ -596,7 +599,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			verificationCode = fmt.Sprintf("%s%06d\n", prefix, crypto.GenerateVerificationCode())
 			err = h.session.SaveVerificationCode(req, res, verificationCode)
 			if err != nil {
-				renderErr("Had troubles setting the verification code on session")
+				renderErr(http.StatusInternalServerError, "Had troubles setting the verification code on session")
 				return
 			}
 		}
@@ -604,7 +607,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	case "POST":
 		verificationCode, err = h.session.GetVerificationCode(req)
 		if err != nil {
-			renderErr("There was no verification record for this browser session; missing data to compare against verification link content")
+			renderErr(http.StatusInternalServerError, "There was no verification record for this browser session; missing data to compare against verification link content")
 			return
 		}
 		username := req.PostFormValue("username")
@@ -617,13 +620,13 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
 			u, err := url.Parse(verificationLink)
 			if err != nil {
-				renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
+				renderErr(http.StatusBadRequest, "Had troubles parsing the verification link, are you sure it was a proper url?")
 				return
 			}
 			// check verification link domain against allowlist
 			if !util.Contains(h.allowlist, u.Host) {
 				fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
-				renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
+				renderErr(http.StatusUnauthorized, "Verification link's host (%s) is not in the allowlist", u.Host)
 				return
 			}
 
@@ -631,7 +634,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			has := hasVerificationCode(verificationLink, verificationCode)
 			if !has {
 				if !developing {
-					renderErr("Verification code from link (%s) does not match", verificationLink)
+					renderErr(http.StatusUnauthorized, "Verification code from link (%s) does not match", verificationLink)
 					return
 				}
 			}
@@ -639,21 +642,21 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		// make sure username is not registered already
 		var exists bool
 		if exists, err = h.db.CheckUsernameExists(username); err != nil {
-			renderErr("Database had a problem when checking username")
+			renderErr(http.StatusInternalServerError, "Database had a problem when checking username")
 			return
 		} else if exists {
-			renderErr("Username %s appears to already exist, please pick another name", username)
+			renderErr(http.StatusBadRequest, "Username %s appears to already exist, please pick another name", username)
 			return
 		}
 		var hash string
 		if hash, err = crypto.HashPassword(password); err != nil {
 			fmt.Println(ed.Eout(err, "hash password"))
-			renderErr("Database had a problem when hashing password")
+			renderErr(http.StatusInternalServerError, "Database had a problem when hashing password")
 			return
 		}
 		var userID int
 		if userID, err = h.db.CreateUser(username, hash); err != nil {
-			renderErr("Error in db when creating user")
+			renderErr(http.StatusInternalServerError, "Error in db when creating user")
 			return
 		}
 		// log the new user in
@@ -754,21 +757,22 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 		LinkText:    h.translator.Translate("ThreadThe"),
 	}
 
-	renderErr := func(msg string) {
+	renderErr := func(statusCode int, msg string) {
 		fmt.Println(msg)
 		genericErr.Message = msg
+		res.WriteHeader(http.StatusBadRequest)
 		h.renderGenericMessage(res, req, genericErr)
 	}
 
 	if !loggedIn || !ok {
-		renderErr("Invalid post id, or you were not allowed to delete it")
+		renderErr(http.StatusBadRequest, "Invalid post id, or you were not allowed to delete it")
 		return
 	}
 
 	post, err := h.db.GetPost(postid)
 	if err != nil {
 		dump(err)
-		renderErr("The post you tried to delete was not found")
+		renderErr(http.StatusNotFound, "The post you tried to delete was not found")
 		return
 	}
 
@@ -779,11 +783,11 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 			err = h.db.DeletePost(postid)
 			if err != nil {
 				dump(err)
-				renderErr("Error happened while deleting the post")
+				renderErr(http.StatusInternalServerError, "Error happened while deleting the post")
 				return
 			}
 		} else {
-			renderErr("That's not your post to delete? Sorry buddy!")
+			renderErr(http.StatusUnauthorized, "That's not your post to delete? Sorry buddy!")
 			return
 		}
 		// update the rss feed, in case the deleted post was present in feed
@@ -807,7 +811,7 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 		return
 	}
 	if !loggedIn || userid != post.AuthorID {
-		res.WriteHeader(401)
+		res.WriteHeader(http.StatusUnauthorized)
 		title := h.translator.Translate("ErrGeneric401")
 		data := GenericMessageData{
 			Title:   title,
