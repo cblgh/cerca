@@ -1,6 +1,9 @@
 {{ template "head" . }}
 <main>
     <h1>{{ .Data.Title }}</h1>
+    {{ if eq .Data.Private 1}}
+    <p>{{ "PostPrivate" | translate }}</p>
+    {{ end }}
     {{ $userID := .LoggedInID }}
     {{ $threadURL := .Data.ThreadURL }}
     {{ range $index, $post := .Data.Posts }}

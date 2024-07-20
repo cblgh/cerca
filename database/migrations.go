@@ -214,3 +214,34 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 	_ = tx.Commit()
 	return
 }
+
+func Migration20240720_ThreadPrivateChange(filepath string) (finalErr error) {
+	d := InitDB(filepath)
+
+	// always perform migrations in a single transaction
+	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
+	rollbackOnErr := func(incomingErr error) bool {
+		if incomingErr != nil {
+			_ = tx.Rollback()
+			log.Println(incomingErr, "\nrolling back")
+			finalErr = incomingErr
+			return true
+		}
+		return false
+	}
+
+	stmt := `ALTER TABLE threads
+  ADD COLUMN private INTEGER NOT NULL DEFAULT 0
+	`
+
+	_, err = tx.Exec(stmt)
+	if err != nil {
+		if rollbackOnErr(err) {
+			return
+		}
+	}
+
+	_ = tx.Commit()
+
+	return nil
+}

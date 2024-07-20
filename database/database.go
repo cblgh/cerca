@@ -150,6 +150,7 @@ func createTables(db *sql.DB) {
     publishtime DATE,
     topicid INTEGER,
     authorid INTEGER,
+    private INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(topicid) REFERENCES topics(id),
     FOREIGN KEY(authorid) REFERENCES users(id)
   );
@@ -189,19 +190,19 @@ func (d DB) Exec(stmt string, args ...interface{}) (sql.Result, error) {
 	return d.db.Exec(stmt, args...)
 }
 
-func (d DB) CreateThread(title, content string, authorid, topicid int) (int, error) {
+func (d DB) CreateThread(title, content string, authorid, topicid int, private int) (int, error) {
 	ed := util.Describe("create thread")
 	// create the new thread in a transaction spanning two statements
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
 	ed.Check(err, "start transaction")
 	// first, create the new thread
 	publish := time.Now()
-	threadStmt := `INSERT INTO threads (title, publishtime, topicid, authorid) VALUES (?, ?, ?, ?)
+	threadStmt := `INSERT INTO threads (title, publishtime, topicid, authorid, private) VALUES (?, ?, ?, ?, ?)
   RETURNING id`
 	replyStmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?)`
 	var threadid int
-	err = tx.QueryRow(threadStmt, title, publish, topicid, authorid).Scan(&threadid)
-	if err = ed.Eout(err, "add thread %s by %d in topic %d", title, authorid, topicid); err != nil {
+	err = tx.QueryRow(threadStmt, title, publish, topicid, authorid, private).Scan(&threadid)
+	if err = ed.Eout(err, "add thread %s (private: %d) by %d in topic %d", title, private, authorid, topicid); err != nil {
 		_ = tx.Rollback()
 		log.Println(err, "rolling back")
 		return -1, err
@@ -290,6 +291,7 @@ type Thread struct {
 	Title   string
 	Author  string
 	Slug    string
+	Private int
 	ID      int
 	Publish time.Time
 	PostID  int
@@ -298,11 +300,12 @@ type Thread struct {
 // get a list of threads
 // NOTE: this query is setting thread.Author not by thread creator, but latest poster. if this becomes a problem, revert
 // its use and employ Thread.PostID to perform another query for each thread to get the post author name (wrt server.go:GenerateRSS)
-func (d DB) ListThreads(sortByPost bool) []Thread {
+func (d DB) ListThreads(sortByPost bool, private int) []Thread {
 	query := `
-  SELECT count(t.id), t.title, t.id, u.name, p.publishtime, p.id FROM threads t
+  SELECT count(t.id), t.title, t.id, t.private, u.name, p.publishtime, p.id FROM threads t
   INNER JOIN users u on u.id = p.authorid
   INNER JOIN posts p ON t.id = p.threadid
+  %s
   GROUP BY t.id
   %s
   `
@@ -311,7 +314,11 @@ func (d DB) ListThreads(sortByPost bool) []Thread {
 	if sortByPost {
 		orderBy = `ORDER BY max(p.id) DESC`
 	}
-	query = fmt.Sprintf(query, orderBy)
+	where := `WHERE t.private IN (0,1)`
+	if private == 0 {
+		where = `WHERE t.private = 0`
+	}
+	query = fmt.Sprintf(query, where, orderBy)
 
 	stmt, err := d.db.Prepare(query)
 	util.Check(err, "list threads: prepare query")
@@ -325,13 +332,21 @@ func (d DB) ListThreads(sortByPost bool) []Thread {
 	var data Thread
 	var threads []Thread
 	for rows.Next() {
-		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Author, &data.Publish, &data.PostID); err != nil {
+		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Private, &data.Author, &data.Publish, &data.PostID); err != nil {
 			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
 		}
 		data.Slug = util.GetThreadSlug(data.ID, data.Title, postCount)
 		threads = append(threads, data)
 	}
 	return threads
+}
+
+func (d DB) IsThreadPrivate(threadId int) int {
+	var private int
+	stmt := `SELECT private FROM threads where id = ?`
+	err := d.db.QueryRow(stmt, threadId).Scan(&private)
+	util.Check(err, "querying if private thread %d", threadId)
+	return private
 }
 
 func (d DB) AddPost(content string, threadid, authorid int) (postID int) {

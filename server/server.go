@@ -81,6 +81,7 @@ type ThreadData struct {
 	Title     string
 	Posts     []database.Post
 	ThreadURL string
+	Private   int
 }
 
 type EditPostData struct {
@@ -298,13 +299,12 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 	loggedIn, userid := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
 
+	threadMissingData := GenericMessageData{
+		Title:   h.translator.Translate("ErrThread404"),
+		Message: h.translator.Translate("ErrThread404Message"),
+	}
 	if !ok {
-		title := h.translator.Translate("ErrThread404")
-		data := GenericMessageData{
-			Title:   title,
-			Message: h.translator.Translate("ErrThread404Message"),
-		}
-		h.renderGenericMessage(res, req, data)
+		h.renderGenericMessage(res, req, threadMissingData)
 		return
 	}
 
@@ -328,8 +328,13 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 	}
 	// TODO (2022-01-07):
 	// * handle error
+	isPrivate := h.db.IsThreadPrivate(threadid)
+	if (isPrivate == 1) && !loggedIn {
+		h.renderGenericMessage(res, req, threadMissingData)
+		return
+	}
 	thread := h.db.GetThread(threadid)
-	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path}
+	data := ThreadData{Posts: thread, ThreadURL: req.URL.Path, Private: isPrivate}
 	view := TemplateData{Data: &data, IsAdmin: isAdmin, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	if len(thread) > 0 {
 		data.Title = thread[0].ThreadTitle
@@ -363,7 +368,11 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 		mostRecentPost = sortby == "posts"
 	}
 	// show index listing
-	threads := h.db.ListThreads(mostRecentPost)
+	private := 0
+	if loggedIn {
+		private = 1
+	}
+	threads := h.db.ListThreads(mostRecentPost, private)
 	view := TemplateData{Data: IndexData{threads}, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
@@ -386,7 +395,7 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 	}
 	// TODO (2022-12-08): augment ListThreads to choose getting author of latest post or thread creator (currently latest
 	// post always)
-	threads := db.ListThreads(true)
+	threads := db.ListThreads(true, 0)
 	entries := make([]string, len(threads))
 	for i, t := range threads {
 		fulltime := t.Publish.Format(rfc822RSS)
@@ -710,14 +719,20 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 			h.renderGenericMessage(res, req, data)
 			return
 		}
-		h.renderView(res, "new-thread", TemplateData{HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
+		h.renderView(res, "new-thread", TemplateData{
+			HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
 		content := req.PostFormValue("content")
+
+		private := 0
+		if req.PostFormValue("isPrivate") == "1" {
+			private = 1
+		}
 		// TODO (2022-01-10): unstub topicid, once we have other topics :)
 		// the new thread was created: forward info to database
-		threadid, err := h.db.CreateThread(title, content, userid, 1)
+		threadid, err := h.db.CreateThread(title, content, userid, 1, private)
 		if err != nil {
 			data := GenericMessageData{
 				Title:   h.translator.Translate("NewThreadCreateError"),

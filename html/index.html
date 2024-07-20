@@ -4,7 +4,10 @@
     <p> There are currently no threads. </p>
     {{ end }}
     {{ range $index, $thread := .Data.Threads }}
-    <h2><a href="{{$thread.Slug}}">{{ $thread.Title }}</a></h2>
+    <h2>
+      <a href="{{$thread.Slug}}">{{ $thread.Title }}</a>
+      {{ if eq $thread.Private 1}} ⚿ {{ end }}
+    </h2>
     {{ end }}
 </main>
 {{ if .LoggedIn }}

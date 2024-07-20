@@ -103,6 +103,7 @@ var English = map[string]string{
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
 	"Content":             "Content",
+	"Private":             "Private",
 	"Create":              "Create",
 	"TextareaPlaceholder": "Tabula rasa",
 
@@ -130,6 +131,7 @@ var English = map[string]string{
 	"NewThreadCreateError":        "Error creating thread",
 	"NewThreadCreateErrorMessage": "There was a database error when creating the thread, apologies.",
 	"PostEdit":                    "Post preview",
+	"PostPrivate":                 "This is a private thread, only logged-in users can see it and read its posts",
 
 	"AriaPostMeta":          "Post meta",
 	"AriaDeletePost":        "Delete this post",
