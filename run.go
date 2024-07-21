@@ -46,9 +46,23 @@ func main() {
 	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 	flag.Parse()
 	if len(sessionKey) == 0 {
-		complain("please pass a random session auth key with --authkey")
-	} else if len(allowlistLocation) == 0 {
-		complain("please pass a file containing the verification code domain allowlist")
+		if !dev {
+			complain("please pass a random session auth key with --authkey")
+		}
+		sessionKey = "0"
+	}
+	if len(allowlistLocation) == 0 {
+		if !dev {
+			complain("please pass a file containing the verification code domain allowlist")
+		}
+		allowlistLocation = "temp-allowlist.txt"
+		created, err := util.CreateIfNotExist(allowlistLocation, "")
+		if err != nil {
+			complain(fmt.Sprintf("couldn't create %s: %s", allowlistLocation, err))
+		}
+		if created {
+			fmt.Println(fmt.Sprintf("Created %s", allowlistLocation))
+		}
 	}
 
 	err := os.MkdirAll(dataDir, 0750)
