@@ -80,3 +80,17 @@ To launch a local instance of the forum, run those commands (linux):
 - `go run run.go --authkey 0 --allowlist temp.txt --dev`
 
 It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](http://localhost:8277).
+
+### Reduce binary build size (*Very Optional ™*)
+
+Pass `-ldflags="-s -w"` when building your binary.
+
+```
+go build -ldflags="-s -w" .
+```
+
+Additionaly, run [upx](https://upx.github.io) on any generated binary:
+
+```
+upx --lzma cerca
+```
