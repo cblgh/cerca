@@ -25,7 +25,10 @@ func complain(msg string, args ...interface{}) {
 }
 
 func main() {
-	migrations := map[string]func(string) error{"2024-01-password-hash-migration": database.Migration20240116_PwhashChange}
+	migrations := map[string]func(string) error{
+		"2024-01-password-hash-migration":  database.Migration20240116_PwhashChange,
+		"2024-02-thread-private-migration": database.Migration20240720_ThreadPrivateChange,
+	}
 
 	var dbPath, migration string
 	var listMigrations bool

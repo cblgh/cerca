@@ -7,6 +7,10 @@
             <input required name="title" type="text" id="Title">
             <label for="content">{{ "Content" | translate }}:</label>
             <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'></textarea>
+            <div id="thread-private">
+              <label for="isPrivate">{{ "Private" | translate }}</label>
+              <input type="checkbox" id="isPrivate" name="isPrivate" value="1" />
+            </div>
             <button type="submit">{{ "Create" | translate }}</button>
         </div>
     </form>

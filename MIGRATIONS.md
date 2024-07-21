@@ -3,6 +3,20 @@
 This documents migrations for breaking database changes. These are intended to be as few as
 possible, but sometimes they are necessary.
 
+## [2024-07-20] Private threads
+
+Add a column to `database.Thread` to signal whether or not the thread is private.
+
+For more details, see [database/migrations.go](./database/migrations.go).
+
+Build and then run the migration tool in `cmd/migration-tool` accordingly:
+
+```
+cd cmd/migration-tool
+go build
+./migration-tool --database path-to-your-forum.db --migration 2024-02-thread-private-migration
+```
+
 ## [2024-01-16] Migrating password hash libraries
 
 To support 32 bit architectures, such as running Cerca on an older Raspberry Pi, the password
