@@ -81,15 +81,18 @@ To launch a local instance of the forum, run those commands (linux):
 
 It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](http://localhost:8277).
 
-### Reduce binary build size (*Very Optional ™*)
+### Building binaries with reduced size 
+This is optional, but if you want to minimize the size of any binary (whether it be the `cerca` executable 
+or any of the binaries in [`cmd/`](/cmd/) follow the instructions below. Less useful for active development, more 
+useful for sending binaries to other computers.
 
-Pass `-ldflags="-s -w"` when building your binary.
+Pass `-ldflags="-s -w"` when building your binary:
 
 ```
 go build -ldflags="-s -w" .
 ```
 
-Additionaly, run [upx](https://upx.github.io) on any generated binary:
+Additionally, run [upx](https://upx.github.io) on any generated binary:
 
 ```
 upx --lzma cerca
