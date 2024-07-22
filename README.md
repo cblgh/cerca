@@ -76,8 +76,7 @@ Install [golang](https://go.dev/).
 
 To launch a local instance of the forum, run those commands (linux):
 
-- `touch temp.txt`
-- `go run run.go --authkey 0 --allowlist temp.txt --dev`
+- `go run run.go --dev`
 
 It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](http://localhost:8277).
 
