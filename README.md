@@ -37,7 +37,7 @@ defaults:
 [general]	
 name = "" # whatever you want to name your forum; primarily used as display in tab titles
 conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
-language = "English" # Swedish, English. contributions for more translations welcome!
+language = "English" # Swedish, English and a few others. contributions for more translations welcome!
 
 [rss]
 feed_name = "" # defaults to [general]'s name if unset
