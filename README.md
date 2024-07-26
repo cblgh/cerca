@@ -37,7 +37,7 @@ defaults:
 [general]	
 name = "" # whatever you want to name your forum; primarily used as display in tab titles
 conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
-language = "English" # Swedish, English. contributions for more translations welcome!
+language = "English" # Swedish, English and a few others. contributions for more translations welcome!
 
 [rss]
 feed_name = "" # defaults to [general]'s name if unset
@@ -51,7 +51,7 @@ rules = "content/rules.md"
 verification_explanation = "content/verification-instructions.md"
 ```
 
-Content documents that are not found will be prepoulated using Cerca's [sample content
+Content documents that are not found will be prepopulated using Cerca's [sample content
 files](/defaults). The easiest thing to do is to run Cerca once and let it populate content
 files using the samples, and then edit the files in `content/*` after the fact, before running
 Cerca again to see your changes.
