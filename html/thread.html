@@ -13,7 +13,7 @@
             <span style="float: right;" aria-label='{{ "AriaDeletePost" | translate }}'>
                     <form style="display: inline-block;" method="POST" action="/post/delete/{{ $post.ID }}"
                         onsubmit="return confirm('{{"PromptDeleteQuestion" | translate }}');">
-                        <button style="background-color: transparent; border: 0; padding: 0;" type="submit"> {{ "Delete" | translate }}</button>
+                        <button style="color: darkred; text-decoration: underline; background-color: transparent; border: 0; padding: 0;" type="submit"> {{ "Delete" | translate }}</button>
                         <input type="hidden" name="thread" value="{{ $threadURL }}">
                     </form>
                 </span>
