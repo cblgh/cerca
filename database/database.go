@@ -190,7 +190,7 @@ func (d DB) Exec(stmt string, args ...interface{}) (sql.Result, error) {
 	return d.db.Exec(stmt, args...)
 }
 
-func (d DB) CreateThread(title, content string, authorid, topicid int, private int) (int, error) {
+func (d DB) CreateThread(title, content string, authorid, topicid int, isPrivate bool) (int, error) {
 	ed := util.Describe("create thread")
 	// create the new thread in a transaction spanning two statements
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
@@ -201,6 +201,10 @@ func (d DB) CreateThread(title, content string, authorid, topicid int, private i
   RETURNING id`
 	replyStmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?)`
 	var threadid int
+	private := 0
+	if isPrivate {
+		private = 1
+	}
 	err = tx.QueryRow(threadStmt, title, publish, topicid, authorid, private).Scan(&threadid)
 	if err = ed.Eout(err, "add thread %s (private: %d) by %d in topic %d", title, private, authorid, topicid); err != nil {
 		_ = tx.Rollback()
@@ -238,11 +242,15 @@ func (d DB) DeleteThread() {}
 func (d DB) MoveThread()   {}
 
 // TODO(2021-12-28): return error if non-existent thread
-func (d DB) GetThread(threadid int) []Post {
+func (d DB) GetThread(threadid int) ([]Post, error) {
 	// TODO: make edit work if no edit timestamp detected e.g.
 	// (sql: Scan error on column index 3, name "lastedit": unsupported Scan, storing driver.Value type <nil> into type
 	// *time.Time)
 
+	exists, err := d.CheckThreadExists(threadid)
+	if err != nil || !exists {
+		return []Post{}, errors.New(fmt.Sprintf("GetThread: threadid %d did not exist", threadid))
+	}
 	// join with:
 	//    users table to get user name
 	//    threads table to get thread title
@@ -270,7 +278,7 @@ func (d DB) GetThread(threadid int) []Post {
 		}
 		posts = append(posts, data)
 	}
-	return posts
+	return posts, nil
 }
 
 func (d DB) GetPost(postid int) (Post, error) {
@@ -291,7 +299,7 @@ type Thread struct {
 	Title   string
 	Author  string
 	Slug    string
-	Private int
+	Private bool
 	ID      int
 	Publish time.Time
 	PostID  int
@@ -300,7 +308,7 @@ type Thread struct {
 // get a list of threads
 // NOTE: this query is setting thread.Author not by thread creator, but latest poster. if this becomes a problem, revert
 // its use and employ Thread.PostID to perform another query for each thread to get the post author name (wrt server.go:GenerateRSS)
-func (d DB) ListThreads(sortByPost bool, private int) []Thread {
+func (d DB) ListThreads(sortByPost bool, includePrivate bool) []Thread {
 	query := `
   SELECT count(t.id), t.title, t.id, t.private, u.name, p.publishtime, p.id FROM threads t
   INNER JOIN users u on u.id = p.authorid
@@ -314,9 +322,9 @@ func (d DB) ListThreads(sortByPost bool, private int) []Thread {
 	if sortByPost {
 		orderBy = `ORDER BY max(p.id) DESC`
 	}
-	where := `WHERE t.private IN (0,1)`
-	if private == 0 {
-		where = `WHERE t.private = 0`
+	where := `WHERE t.private = 0`
+	if includePrivate {
+		where = `WHERE t.private IN (0,1)`
 	}
 	query = fmt.Sprintf(query, where, orderBy)
 
@@ -330,23 +338,31 @@ func (d DB) ListThreads(sortByPost bool, private int) []Thread {
 
 	var postCount int
 	var data Thread
+	var isPrivate int
 	var threads []Thread
 	for rows.Next() {
-		if err := rows.Scan(&postCount, &data.Title, &data.ID, &data.Private, &data.Author, &data.Publish, &data.PostID); err != nil {
+		if err := rows.Scan(&postCount, &data.Title, &data.ID, &isPrivate, &data.Author, &data.Publish, &data.PostID); err != nil {
 			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
 		}
+		data.Private = (isPrivate == 1)
 		data.Slug = util.GetThreadSlug(data.ID, data.Title, postCount)
 		threads = append(threads, data)
 	}
 	return threads
 }
 
-func (d DB) IsThreadPrivate(threadId int) int {
+func (d DB) IsThreadPrivate(threadid int) (bool, error) {
+	exists, err := d.CheckThreadExists(threadid)
+
+	if err != nil || !exists {
+		return true, errors.New(fmt.Sprintf("IsThreadPrivate: threadid %d did not exist", threadid))
+	}
+
 	var private int
 	stmt := `SELECT private FROM threads where id = ?`
-	err := d.db.QueryRow(stmt, threadId).Scan(&private)
-	util.Check(err, "querying if private thread %d", threadId)
-	return private
+	err = d.db.QueryRow(stmt, threadid).Scan(&private)
+	util.Check(err, "querying if private thread %d", threadid)
+	return private == 1, nil
 }
 
 func (d DB) AddPost(content string, threadid, authorid int) (postID int) {
@@ -453,6 +469,11 @@ func (d DB) CheckUserExists(userid int) (bool, error) {
 func (d DB) CheckUsernameExists(username string) (bool, error) {
 	stmt := `SELECT 1 FROM users WHERE name = ?`
 	return d.existsQuery(stmt, username)
+}
+
+func (d DB) CheckThreadExists(threadid int) (bool, error) {
+	stmt := `SELECT 1 FROM threads WHERE id = ?`
+	return d.existsQuery(stmt, threadid)
 }
 
 func (d DB) UpdateUserName(userid int, newname string) {

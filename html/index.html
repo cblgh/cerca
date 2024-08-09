@@ -6,7 +6,7 @@
     {{ range $index, $thread := .Data.Threads }}
     <h2>
       <a href="{{$thread.Slug}}">{{ $thread.Title }}</a>
-      {{ if eq $thread.Private 1}} ⚿ {{ end }}
+      {{ if $thread.Private }} <span title='{{ "Private" | translate }}'>⚿</span> {{ end }}
     </h2>
     {{ end }}
 </main>
