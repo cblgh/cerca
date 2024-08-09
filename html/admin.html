@@ -17,6 +17,7 @@
         {{ "AdminViewPastActions" | translate }} <a href="/moderations">{{ "ModerationLog" | translate }}</a>.
         </p>
     </section>
+
     {{ if .LoggedIn }}
     {{ $userID := .LoggedInID }}
     <section>
@@ -62,7 +63,8 @@
             <td> {{ $proposal.Action | tohtml }} </td>
             <td> {{ $proposal.Time | formatDateTime }} </td>
             <td><button type="submit" form="veto-{{$proposal.ID}}">{{ "AdminVeto" | translate }}</button></td>
-            <td><button {{ if not $proposal.TimePassed }} disabled title='{{ "AdminSelfConfirmationHover" | translate}}' {{ end }} type="submit" form="confirm-{{$proposal.ID}}">{{"AdminConfirm" | translate}}</button></td>
+            {{ $selfProposal := eq $userID $proposal.ProposerID }}
+            <td><button {{ if and $selfProposal (not $proposal.TimePassed) }} disabled title='{{ "AdminSelfConfirmationsHover" | translate}}' {{ end }} type="submit" form="confirm-{{$proposal.ID}}">{{"AdminConfirm" | translate}}</button></td>
         </tr>
         {{ end }}
     </table>

@@ -329,10 +329,11 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 		return
 	}
 
+	isSelfConfirm := proposerid == adminid
 	timeSelfConfirmOK := proposalDate.Add(constants.PROPOSAL_SELF_CONFIRMATION_WAIT)
 	// TODO (2024-01-07): render err message in admin view?
 	// self confirms are not allowed at this point in time, exit early without performing any changes
-	if decision == constants.PROPOSAL_CONFIRM && !time.Now().After(timeSelfConfirmOK) {
+	if isSelfConfirm && (decision == constants.PROPOSAL_CONFIRM && !time.Now().After(timeSelfConfirmOK)) {
 		err = tx.Commit()
 		ed.Check(err, "commit transaction")
 		finalErr = nil
