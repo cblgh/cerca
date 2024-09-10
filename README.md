@@ -57,7 +57,7 @@ forum_url = "" # should be forum index route https://example.com. used to genera
 logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
 about = "content/about.md"
 rules = "content/rules.md"
-verification_explanation = "content/verification-instructions.md"
+verification_instructions = "content/verification-instructions.md"
 ```
 
 Content documents that are not found will be prepopulated using Cerca's [sample content
