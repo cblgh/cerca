@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -176,7 +175,7 @@ func CreateIfNotExist(docpath, content string) (bool, error) {
 	_, err = os.Stat(docpath)
 	if err != nil {
 		// if the file doesn't exist, create it
-		if errors.Is(err, fs.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) {
 			err = os.WriteFile(docpath, []byte(content), 0777)
 			if err != nil {
 				return false, err
