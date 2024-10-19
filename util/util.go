@@ -20,6 +20,8 @@ import (
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/gomarkdown/markdown/ast"
+	"github.com/gomarkdown/markdown/html"
 	"github.com/komkom/toml"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/exp/utf8string"
@@ -92,13 +94,33 @@ func Contains(slice []string, s string) bool {
 var contentGuardian = bluemonday.UGCPolicy()
 var strictContentGuardian = bluemonday.StrictPolicy()
 
+func modifyAst(doc ast.Node) ast.Node {
+	ast.WalkFunc(doc, func(node ast.Node, entering bool) ast.WalkStatus {
+		if img, ok := node.(*ast.Image); ok && entering {
+			// use the alt text of the image to set the `title` attribute, to enable
+			// hover-over in a browser to show the image text
+			imgChildren := img.GetChildren()
+			if len(imgChildren) > 0 {
+				if altTextNode, ok := imgChildren[0].(*ast.Text); ok {
+					img.Title = altTextNode.Literal
+				}
+			}
+		}
+		return ast.GoToNext
+	})
+	return doc
+}
+
 // Turns Markdown input into HTML
 func Markup(md string) template.HTML {
 	mdBytes := []byte(string(md))
 	// fix newlines
 	mdBytes = markdown.NormalizeNewlines(mdBytes)
 	mdParser := parser.NewWithExtensions(parser.CommonExtensions ^ parser.MathJax)
-	maybeUnsafeHTML := markdown.ToHTML(mdBytes, mdParser, nil)
+	astDoc := mdParser.Parse(mdBytes)
+	modifyAst(astDoc)
+	renderer := html.NewRenderer(html.RendererOptions{Flags: html.CommonFlags})
+	maybeUnsafeHTML := markdown.Render(astDoc, renderer)
 	// guard against malicious code being embedded
 	html := contentGuardian.SanitizeBytes(maybeUnsafeHTML)
 	// lazy load images
