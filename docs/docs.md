@@ -16,4 +16,4 @@ The feed is intentionally low volume.
 
 A feed item is generated per-thread. Only the latest poster is included in each feed item. When a new post is made in a thread, the feed item is updated "in place", in other words, the existing feed item is replaced without adding a new feed item.
 
-No post content is included in the item. It is intended as a "kind of" reminder to revisit the forum and to join in.
+No post content is included in the item. Instead, the feed is intended as low-tech notification mechanism, a reminder to revisit the forum and to join in on discussions that catch your eye.
