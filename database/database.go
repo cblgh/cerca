@@ -4,6 +4,7 @@ import (
 	"cerca/crypto"
 	"context"
 	"database/sql"
+	"regexp"
 	"errors"
 	"fmt"
 	"log"
@@ -301,8 +302,18 @@ type Thread struct {
 	Slug    string
 	Private bool
 	ID      int
+	Show		bool // whether to show the thread in the thread index or not
 	Publish time.Time
 	PostID  int
+}
+
+var categoryPattern = regexp.MustCompile(`\[(.*?)\]`)
+func (t Thread) GetCategory () string {
+	matches := categoryPattern.FindStringSubmatch(t.Title)
+	if matches == nil { 
+		return "no category"
+	}
+	return matches[1]
 }
 
 // get a list of threads

@@ -7,6 +7,7 @@ require (
 	github.com/cblgh/plain v0.0.0-20220516113423-253f690e4083
 	github.com/gomarkdown/markdown v0.0.0-20211212230626-5af6ad2f47df
 	github.com/gorilla/sessions v1.2.1
+	github.com/jinzhu/inflection v1.0.0
 	github.com/komkom/toml v0.1.2
 	github.com/matthewhartstonge/argon2 v1.0.0
 	github.com/mattn/go-sqlite3 v1.14.19
