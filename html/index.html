@@ -3,15 +3,18 @@
     {{ if len .Data.Threads | eq 0 }} 
     <p> There are currently no threads. </p>
     {{ end }}
-    <form type="GET" action="/?show">
-    {{ $categoryMap := index .Data.URLParamsCategories }}
-    {{ range $index, $category := .Data.Categories}}
-        {{ $categoryUrlParamSet := index $categoryMap $category }}
-        <input type="checkbox" id="filter-{{$category}}" {{ if $categoryUrlParamSet }} checked {{ end }} value="{{ $category }}" name="show"/>
-        <label style="display: inline-block;" for="filter-{{$category}}">{{ $category }}</label>
+    {{ if len .Data.Threads | gt 0 }} 
+        {{ $URLParams := .URLParams }}
+        <form type="GET" action="/">
+            {{ $categoryMap := index .Data.URLParamsCategories }}
+            {{ range $index, $category := .Data.Categories}}
+                {{ $categoryUrlParamSet := index $categoryMap $category }}
+                <input type="checkbox" id="filter-{{$category}}" {{ if $categoryUrlParamSet }} checked {{ end }} value="{{ $category }}" name="show"/>
+                <label style="display: inline-block;" for="filter-{{$category}}">{{ $category }}</label>
+            {{ end }}
+        <button type="submit">filter</button>
+        </form>
     {{ end }}
-    <button type="submit">filter</button>
-    </form>
     {{ range $index, $thread := .Data.Threads }}
         {{ if $thread.Show }}
         <h2>

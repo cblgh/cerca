@@ -28,7 +28,9 @@
                 margin: 2rem 0;
                 border-bottom-width: 0;
             }
-
+	    input[type="checkbox"], label {
+		cursor: pointer;
+	    }
             label {
                 display: block;
             }
@@ -197,8 +199,19 @@
                     <details>
                         <summary>{{ "Sort" | translate }}</summary>
                         <ul>
-                            <li> <a href="/?sort=posts">{{ "SortRecentPosts" | translate }}</a></li>
-                            <li> <a href="/">{{ "SortRecentThreads" | translate }}</a></li>
+                            <!-- convert to form + <input hidden name=sort value="posts" "threads"> -->
+                            <li> 
+                                <form type="GET" action="/"/>
+                                <input type="hidden" name="sort" value="posts"/>
+                                <button type="submit">{{ "SortRecentPosts" | translate }}
+                                </form>
+                            </li>
+                            <li> 
+                                <form type="GET" action="/"/>
+                                <input type="hidden" name="sort" value="threads"/>
+                                <button type="submit">{{ "SortRecentThreads" | translate }}
+                                </form>
+                            </li>
                         </ul>
                     </details>
                 </li>

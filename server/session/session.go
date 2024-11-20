@@ -109,6 +109,15 @@ func (s *Session) Get(req *http.Request) (int, error) {
 	return val.(int), err
 }
 
+/* TODO (2024-11-20): revamp structure of this file to something less repetitive and using enum-like things instead */
+func (s *Session) GetURLParams(req *http.Request) (string, error) {
+	val, err := getValueFromSession(req, s.Store, "URLParams")
+	if val == nil || err != nil {
+		return "", err
+	}
+	return val.(string), err
+}
+
 func (s *Session) Save(req *http.Request, res http.ResponseWriter, userid int) error {
 	session, _ := s.Store.Get(req, cookieName)
 	session.Values["userid"] = userid
@@ -118,5 +127,12 @@ func (s *Session) Save(req *http.Request, res http.ResponseWriter, userid int) e
 func (s *Session) SaveVerificationCode(req *http.Request, res http.ResponseWriter, code string) error {
 	session, _ := s.ShortLivedStore.Get(req, cookieName)
 	session.Values["verificationCode"] = code
+	return session.Save(req, res)
+}
+
+func (s *Session) SaveURLParams(req *http.Request, res http.ResponseWriter, params string) error {
+	session, _ := s.Store.Get(req, params)
+	fmt.Println("session", session)
+	session.Values["URLParams"] = params
 	return session.Save(req, res)
 }
