@@ -29,7 +29,6 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/cblgh/plain/rss"
-	"github.com/jinzhu/inflection"
 )
 
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
@@ -58,7 +57,7 @@ type ChangePasswordData struct {
 type IndexData struct {
 	Threads []database.Thread
 	Categories []string
-	URLParamsCategories map[string]bool
+	VisibleCategoriesMap map[string]bool
 }
 
 type GenericMessageData struct {
@@ -427,7 +426,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	// based on the stored session settings, only display the selected categories
 	categoriesMap := make(map[string]bool)
 	for i, t := range threads {
-		category := inflection.Singular(strings.ToLower(t.GetCategory()))
+		category := strings.ToLower(t.GetCategory())
 		threads[i].Show = true
 		categoriesMap[category] = true
 		if sessionParams.Has("show") && !util.Contains(sessionParams["show"], category) {
@@ -444,7 +443,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	sort.Strings(categories)
 
-	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, URLParamsCategories: categoriesMap }, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap }, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
