@@ -853,8 +853,11 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	}
 	view := TemplateData{Data: post, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	params := req.URL.Query()
+	posts, err := h.db.GetThread(post.ThreadID)
 	if _, exists := params["op"]; exists {
-		view.IsOP = true
+		if len(posts) > 0 && posts[0].ID == post.ID {
+			view.IsOP = true
+		}
 	}
 	h.renderView(res, "edit-post", view)
 }
