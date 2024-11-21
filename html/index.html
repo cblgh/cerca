@@ -6,15 +6,20 @@
     <details>
         <summary> filter threads (showing {{ len .Data.VisibleCategoriesMap }} of {{ len .Data.Categories
         }} categories)</summary>
-        <form type="GET" action="/">
+        <form id="reset-categories" type="GET" action="/"></form>
+        <form id="filter-form" type="GET" action="/" style="display: grid; grid-template-columns: repeat(4, minmax(5rem, 9rem));">
             {{ $categoryMap := index .Data.VisibleCategoriesMap }}
             {{ range $index, $category := .Data.Categories}}
                 {{ $showCategory := index $categoryMap $category }}
-                <input type="checkbox" id="filter-{{$category}}" {{ if $showCategory }} checked {{ end }} value="{{ $category }}" name="show"/>
-                <label style="display: inline-block;" for="filter-{{$category}}">{{ $category }}</label>
+                <span>
+                    <input type="hidden" form="reset-categories" value="{{ $category }}" name="show"/>
+                    <input type="checkbox" id="filter-{{$category}}" {{ if $showCategory }} checked {{ end }} value="{{ $category }}" name="show"/>
+                    <label style="display: inline-block;" for="filter-{{$category}}">{{ $category }}</label>
+                </span>
             {{ end }}
-        <button type="submit">filter</button>
         </form>
+        <button form="filter-form" type="submit">filter</button>
+        <button form="reset-categories" type="submit">show all</button>
     </details>
     {{ end }}
     {{ range $index, $thread := .Data.Threads }}

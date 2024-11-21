@@ -391,6 +391,8 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 
 	params := req.URL.Query()
+
+
 	// if the request contained the url params for the sort order, save those to our session settings
 	if _, exists := params["sort"]; exists {
 		sessionParams.Set("sort", params["sort"][0])
@@ -423,13 +425,15 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost, includePrivateThreads)
 
+	var showAllCategories bool
+	_, showAllCategories = params["reset"]
 	// based on the stored session settings, only display the selected categories
 	categoriesMap := make(map[string]bool)
 	for i, t := range threads {
 		category := strings.ToLower(t.GetCategory())
 		threads[i].Show = true
 		categoriesMap[category] = true
-		if sessionParams.Has("show") && !util.Contains(sessionParams["show"], category) {
+		if !showAllCategories && sessionParams.Has("show") && !util.Contains(sessionParams["show"], category) {
 			threads[i].Show = false
 			categoriesMap[category] = false
 		}
