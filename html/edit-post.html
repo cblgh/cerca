@@ -1,21 +1,21 @@
 {{ template "head" . }}
 <main>
-    <h1>{{ "PostEdit" | translate }}</h1>
-	<article>
-    {{ if eq .IsOP true }}
-        {{.Data.ThreadTitle | markup }}
-    {{ end }}
-    {{.Data.Content | markup }}
-	</article>
+    <h1> {{ if .IsOP }} Thread preview {{ else }} {{ "PostEdit" | translate }} {{ end }}</h1>
+    <article style="margin: 0;">
+        {{ if .IsOP }}
+            <h2> {{.Data.ThreadTitle }} </h2>
+        {{ end }}
+        {{.Data.Content | markup }}
+    </article>
     <form method="POST">
         <div class="post-container" >
-            {{ if eq .IsOP true }}
+            {{ if .IsOP }}
                 <label for="title">{{ "Title" | translate }}:</label>
                 <input required name="title" type="text" id="title" value="{{ .Data.ThreadTitle }}">
             <label for="content">{{ "Content" | translate }}:</label>
             {{ end }}
             <label class="visually-hidden" for="content">{{ "Content" | translate }}:</label>
-			<textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{.Data.Content}}</textarea>
+            <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{.Data.Content}}</textarea>
             <button type="submit">{{ "Save" | translate }}</button>
         </div>
         <div style="margin-top: 1rem;">
