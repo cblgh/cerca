@@ -37,6 +37,7 @@ type TemplateData struct {
 	QuickNav   bool
 	LoggedIn   bool
 	IsAdmin    bool
+	IsOP       bool
 	HasRSS     bool
 	LoggedInID int
 	ForumName  string
@@ -842,10 +843,19 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	}
 	if req.Method == "POST" {
 		content := req.PostFormValue("content")
-		h.db.EditPost(content, postid)
+		title := req.PostFormValue("title")
+		if title == "" {
+			title = post.ThreadTitle
+		}
+		h.db.EditPost(content, title, postid, post.ThreadID)
 		post.Content = content
+		post.ThreadTitle = title
 	}
 	view := TemplateData{Data: post, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
+	params := req.URL.Query()
+	if _, exists := params["op"]; exists {
+		view.IsOP = true
+	}
 	h.renderView(res, "edit-post", view)
 }
 
