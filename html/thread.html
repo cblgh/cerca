@@ -17,7 +17,11 @@
                         <input type="hidden" name="thread" value="{{ $threadURL }}">
                     </form>
                 </span>
-            <span style="float: right; margin-right:0.5rem"><a href="/post/edit/{{ $post.ID }}">edit</a></span>
+            {{ if eq $index 0 }}
+                <span style="float: right; margin-right:0.5rem"><a href="/post/edit/{{ $post.ID }}?op=1">edit thread</a></span>
+            {{ else }}
+                <span style="float: right; margin-right:0.5rem"><a href="/post/edit/{{ $post.ID }}">edit</a></span>
+            {{ end }}
             {{ end }}
             <span class="visually-hidden">{{ "Author" | translate }}:</span>
             <span><b>{{ $post.Author }}</b>
