@@ -1,16 +1,24 @@
-# RSS
+# FAQ
 
-## Where is my feed?
+## Can a private thread be made public?
+
+The simple answer is: **no**. There is no way in the interface of reverting the private status of the thread for any kind of user; this is intentional. We want to preserve the expectations of the posters of that thread.
+
+The too-detailed answer is that the person/people with access to the underlying database can technically flip the bit that has the thread as private thereby making it public. 
+
+## RSS
+
+### Where is my feed?
 
 In the menu, on the top right, you'll see a `rss` menu item.
 
 It's also available as `/rss.xml` on the end of your Cerca URL.
 
-## Are private threads included in the feed?
+### Are private threads included in the feed?
 
 Not yet. See [`#70`](https://github.com/cblgh/cerca/issues/70) for more.
 
-## How is the feed generated?
+### How is the feed generated?
 
 The feed is intentionally low volume.
 
