@@ -438,8 +438,13 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	// populate a sorted array based on the set of index categories, 
 	// to be used to create and display filter checkboxes
 	var categories []string
-	for k, _ := range categoriesMap {
+	for k, v := range categoriesMap {
 		categories = append(categories, k)
+		// remove the categories that are hidden. this way we can the length of the final map as a counter for how many
+		// categories are shown vs the total number
+		if !v {
+			delete(categoriesMap, k)
+		}
 	}
 	sort.Strings(categories)
 
