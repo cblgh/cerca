@@ -3,8 +3,7 @@
     {{ if len .Data.Threads | eq 0 }} 
     <p> There are currently no threads. </p>
     {{ end }}
-    {{ if len .Data.Threads | gt 0 }} 
-        {{ $URLParams := .URLParams }}
+    {{ if len .Data.Threads | ne 0 }} 
         <form type="GET" action="/">
             {{ $categoryMap := index .Data.URLParamsCategories }}
             {{ range $index, $category := .Data.Categories}}

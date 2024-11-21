@@ -79,6 +79,20 @@
             th, td { text-align:left; padding: 2px 7px; border: 1px solid; }
             th { font-weight: bold; }
 
+            form {
+                padding: 0;
+                margin: 0;
+            }
+            /* neutralize styling of sort options */
+            li > form > button {
+		background: unset;
+		border: unset;
+		padding: unset;
+		margin: unset;
+		color: darkred;
+	       text-decoration: underline;
+	    }
+
             .post-container {
                 max-width: 30rem;
                 margin-top: 1rem;
