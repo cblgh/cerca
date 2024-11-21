@@ -4,6 +4,8 @@
     <p> There are currently no threads. </p>
     {{ end }}
     {{ if len .Data.Threads | ne 0 }} 
+        <details>
+        <summary> filter threads by categories </summary>
         <form type="GET" action="/">
             {{ $categoryMap := index .Data.VisibleCategoriesMap }}
             {{ range $index, $category := .Data.Categories}}
@@ -13,6 +15,7 @@
             {{ end }}
         <button type="submit">filter</button>
         </form>
+        </details>
     {{ end }}
     {{ range $index, $thread := .Data.Threads }}
         {{ if $thread.Show }}
