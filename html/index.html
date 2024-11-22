@@ -7,7 +7,7 @@
         <summary> filter threads (showing {{ len .Data.VisibleCategoriesMap }} of {{ len .Data.Categories
         }} categories)</summary>
         <form id="reset-categories" type="GET" action="/"></form>
-        <form id="filter-form" type="GET" action="/" style="display: grid; grid-template-columns: repeat(4, minmax(5rem, 9rem));">
+        <form id="filter-form" type="GET" action="/" style="display: grid; grid-template-columns: repeat(2, max-content); grid-column-gap: 0.5rem;">
             {{ $categoryMap := index .Data.VisibleCategoriesMap }}
             {{ range $index, $category := .Data.Categories}}
                 {{ $showCategory := index $categoryMap $category }}
