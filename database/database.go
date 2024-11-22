@@ -384,11 +384,16 @@ func (d DB) AddPost(content string, threadid, authorid int) (postID int) {
 	return
 }
 
-func (d DB) EditPost(content string, postid int) {
+func (d DB) EditPost(content, title string, postid, threadid int) {
 	stmt := `UPDATE posts set content = ?, lastedit = ? WHERE id = ?`
 	edit := time.Now()
 	_, err := d.Exec(stmt, content, edit, postid)
 	util.Check(err, "edit post %d", postid)
+
+	stmt = `UPDATE threads set title = ? WHERE id = ?`
+	edit = time.Now()
+	_, err = d.Exec(stmt, title, threadid)
+	util.Check(err, "edit post title %d", postid)
 }
 
 func (d DB) DeletePost(postid int) error {
