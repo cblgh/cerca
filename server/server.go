@@ -241,6 +241,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 		"admin",
 		"admins-list",
 		"admin-add-user",
+		"admin-invites",
 		"moderation-log",
 		"password-reset",
 		"change-password",
@@ -1023,6 +1024,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/demote-admin", handler.AdminDemoteAdmin)
 	s.ServeMux.HandleFunc("/add-user", handler.AdminManualAddUserRoute)
+	s.ServeMux.HandleFunc("/invites", handler.AdminInvitesRoute)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
 	s.ServeMux.HandleFunc("/proposal-veto", handler.VetoProposal)
 	s.ServeMux.HandleFunc("/proposal-confirm", handler.ConfirmProposal)

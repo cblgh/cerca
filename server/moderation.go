@@ -257,6 +257,61 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	}
 }
 
+func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
+	// ed := util.Describe("admin invites route")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+	fmt.Println(adminUserId)
+
+	if !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+
+	type Invites struct {
+		ErrorMessage string
+	}
+
+	var data Invites
+	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+
+	if req.Method == "GET" {
+		h.renderView(res, "admin-invites", view)
+		return
+	}
+
+// 	if req.Method == "POST" && isAdmin {
+// 		username := req.PostFormValue("username")
+//
+// 		// do a lil quick checky check to see if we already have that username registered,
+// 		// and if we do re-render the page with an error
+// 		existed, err := h.db.CheckUsernameExists(username)
+// 		ed.Check(err, "check username exists")
+//
+// 		if existed {
+// 			data.ErrorMessage = fmt.Sprintf("Username (%s) is already registered", username)
+// 			h.renderView(res, "admin-add-user", view)
+// 			return
+// 		}
+//
+// 		// set up basic credentials
+// 		newPassword := crypto.GeneratePassword()
+// 		passwordHash, err := crypto.HashPassword(newPassword)
+// 		ed.Check(err, "hash password")
+// 		targetUserId, err := h.db.CreateUser(username, passwordHash)
+// 		ed.Check(err, "create new user %s", username)
+//
+// 		err = h.db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_ADMIN_ADD_USER)
+// 		if err != nil {
+// 			fmt.Println(ed.Eout(err, "error adding moderation log"))
+// 		}
+//
+// 		title := h.translator.Translate("AdminAddNewUser")
+// 		message := fmt.Sprintf(h.translator.Translate("AdminPasswordSuccessInstructions"), template.HTMLEscapeString(username), newPassword)
+// 		h.displaySuccess(res, req, title, message, "/add-user")
+// 	}
+}
+
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
