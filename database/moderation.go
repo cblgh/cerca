@@ -61,6 +61,22 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 		return
 	}
 
+	/* TODO (2024-11-22): consider playing around with a "table-driven" refactor of the transaction here, as in example below:
+	* args - #1: descriptive error, #2 sql statement, #3 values to execute statement with
+	{
+		{"prepare posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []int{deletedUserID, userid}}
+	}
+	then for _, row := range table {
+		row.preparedStmt = tx.Prepare(row[1]) .... rollBack  .... ed.Eout(err, row[0])
+	}
+
+	...
+
+	and then later for _, row := range table {
+		err = tx.Execute(row.preparedStmt, row[2]...)
+	}
+	*/
+
 	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
 	defer postsStmt.Close()
 	if rollbackOnErr(ed.Eout(err, "prepare posts stmt")) {
