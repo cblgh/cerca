@@ -10,11 +10,18 @@
          <style>
             /* reset */
             *,*::after,*::before{box-sizing:border-box}blockquote,body,dd,dl,figure,h1,h2,h3,h4,p{margin:0}ul[role='list'],ol[role='list']{list-style:none}html:focus-within{scroll-behavior:smooth}body{min-height:100vh;text-rendering:optimizeSpeed;line-height:1.5}a:not([class]){text-decoration-skip-ink:auto}img,picture{max-width:100%;display:block}button,input,select,textarea{font:inherit}@media (prefers-reduced-motion: reduce){html:focus-within{scroll-behavior:auto}*,*::after,*::before{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important}}
+            details, form {
+                padding: 0;
+                margin: 0;
+            }
             /* end reset */
             br { margin-bottom: unset; }
             html {
                 max-width: 50rem;
                 font-family: sans-serif;
+            }
+            span {
+                margin: 0;
             }
             header {
                 display: flex;
@@ -28,7 +35,9 @@
                 margin: 2rem 0;
                 border-bottom-width: 0;
             }
-
+	    input[type="checkbox"], label {
+		cursor: pointer;
+	    }
             label {
                 display: block;
             }
@@ -76,6 +85,17 @@
             table { border:2px solid; }
             th, td { text-align:left; padding: 2px 7px; border: 1px solid; }
             th { font-weight: bold; }
+
+            /* neutralize styling of sort options */
+            li > form > button {
+		background: unset;
+		border: unset;
+		padding: unset;
+		margin: unset;
+		color: darkred;
+	       text-decoration: underline;
+	    }
+
 
             .post-container {
                 max-width: 30rem;
@@ -197,8 +217,18 @@
                     <details>
                         <summary>{{ "Sort" | translate }}</summary>
                         <ul>
-                            <li> <a href="/?sort=posts">{{ "SortRecentPosts" | translate }}</a></li>
-                            <li> <a href="/">{{ "SortRecentThreads" | translate }}</a></li>
+                            <li> 
+                                <form type="GET" action="/"/>
+                                <input type="hidden" name="sort" value="posts"/>
+                                <button type="submit">{{ "SortRecentPosts" | translate }}
+                                </form>
+                            </li>
+                            <li> 
+                                <form type="GET" action="/"/>
+                                <input type="hidden" name="sort" value="threads"/>
+                                <button type="submit">{{ "SortRecentThreads" | translate }}
+                                </form>
+                            </li>
                         </ul>
                     </details>
                 </li>

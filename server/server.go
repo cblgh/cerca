@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"sort"
 
 	"cerca/crypto"
 	"cerca/database"
@@ -55,6 +56,8 @@ type ChangePasswordData struct {
 
 type IndexData struct {
 	Threads []database.Thread
+	Categories []string
+	VisibleCategoriesMap map[string]bool
 }
 
 type GenericMessageData struct {
@@ -366,24 +369,90 @@ func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, s
 }
 
 func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("IndexRoute")
+	var err error
 	// handle 404
 	if req.URL.Path != "/" {
 		h.ErrorRoute(res, req, http.StatusNotFound)
 		return
 	}
 	loggedIn, _ := h.IsLoggedIn(req)
-	var mostRecentPost bool
 	isAdmin, _ := h.IsAdmin(req)
 
-	params := req.URL.Query()
-	if q, exists := params["sort"]; exists {
-		sortby := q[0]
-		mostRecentPost = sortby == "posts"
+	// we store "session settings" for the index page by using the url.Values map.
+	// first: get any stored settings
+	paramsString, _ := h.session.GetIndexSettings(req)
+	var sessionParams url.Values
+	if paramsString != "" {
+		sessionParams, err = url.ParseQuery(paramsString)
+		ed.Check(err, "parse stored url params")
+	} else {
+		sessionParams = url.Values{}
 	}
+
+	params := req.URL.Query()
+
+
+	// if the request contained the url params for the sort order, save those to our session settings
+	if _, exists := params["sort"]; exists {
+		sessionParams.Set("sort", params["sort"][0])
+	}
+
+	// if the request contained the url params for categories to display, 
+	// use the new values to replace the previous ones in our session settings
+	if len(params["show"]) > 0 {
+		// clear the old values
+		sessionParams.Del("show")
+		for _, categoryParam := range params["show"] {
+			// set the new
+			sessionParams.Add("show", categoryParam)
+		}
+	}
+
+	// TODO (2024-11-20): session.saveURLParams + use params to set sort, use params to set categories
+	paramsString = sessionParams.Encode()
+	if len(sessionParams) > 0 {
+		err = h.session.SaveIndexSettings(req, res, paramsString)
+		ed.Check(err, "save new url params to session store")
+	}
+
+	// retrieve the sort order from the session-stored settings
+	sortby := sessionParams.Get("sort")
+	mostRecentPost := sortby == "posts"
+
 	includePrivateThreads := loggedIn
+
 	// show index listing
 	threads := h.db.ListThreads(mostRecentPost, includePrivateThreads)
-	view := TemplateData{Data: IndexData{threads}, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+
+	var showAllCategories bool
+	_, showAllCategories = params["reset"]
+	// based on the stored session settings, only display the selected categories
+	categoriesMap := make(map[string]bool)
+	for i, t := range threads {
+		category := strings.ToLower(t.GetCategory())
+		threads[i].Show = true
+		categoriesMap[category] = true
+		if !showAllCategories && sessionParams.Has("show") && !util.Contains(sessionParams["show"], category) {
+			threads[i].Show = false
+			categoriesMap[category] = false
+		}
+	}
+
+	// populate a sorted array based on the set of index categories, 
+	// to be used to create and display filter checkboxes
+	var categories []string
+	for k, v := range categoriesMap {
+		categories = append(categories, k)
+		// remove the categories that are hidden. this way we can the length of the final map as a counter for how many
+		// categories are shown vs the total number
+		if !v {
+			delete(categoriesMap, k)
+		}
+	}
+	sort.Strings(categories)
+
+	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap }, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
