@@ -527,3 +527,119 @@ func (d DB) GetAdmins() []User {
 	}
 	return admins
 }
+
+type InviteBatch struct {
+	ActingUsername  string
+	UnclaimedInvites []string	
+	BatchLabel string
+	CreationTime  time.Time
+}
+
+// TODO (2024-11-22): consider d1's request of invites that are repeat-redeemable until deleted by an admin
+func (d DB) ClaimInvite (invite string) (finalErr error) {
+  ed := util.Describe("claim invite")
+  var err error
+  var tx *sql.Tx
+  tx, err = d.db.BeginTx(context.Background(), &sql.TxOptions{})
+
+  rollbackOnErr := func(incomingErr error) bool {
+    if incomingErr != nil {
+      _ = tx.Rollback()
+      log.Println(incomingErr, "rolling back")
+      finalErr = incomingErr
+      return true
+    }
+    return false
+  }
+
+  type BatchQuery struct {
+    stmt, desc string
+    preparedStmt *sql.Stmt
+    value string
+  }
+
+  ops := []BatchQuery{
+    BatchQuery{desc: "check if invite to redeem exists", stmt:"SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
+    BatchQuery{desc: "delete invite from table", stmt:"DELETE FROM invites WHERE invite = ?"},
+  }
+
+  for _, operation := range ops {
+    operation.preparedStmt, err = tx.Prepare(operation.stmt)
+    defer operation.preparedStmt.Close()
+    if rollbackOnErr(ed.Eout(err, operation.desc)) {
+      return
+    }
+  }
+  for _, operation := range ops {
+    _, err := operation.preparedStmt.Exec(invite)
+    if rollbackOnErr(ed.Eout(err, "exec " + operation.desc)) {
+      return
+    }
+  }
+  err = tx.Commit()
+  ed.Check(err, "commit transaction")
+  finalErr = nil
+  return 
+}
+const maxBatchAmount = 100
+const maxUnclaimedAmount = 500
+
+func CreateInvites (adminid int, amount int, label string) error {
+  ed := util.Describe("create invites")
+  isAdmin, err := d.IsUserAdmin(userid)
+  if err != nil {
+    return ed.Eout(err, "IsUserAdmin")
+  }
+
+  if !isAdmin {
+		return errors.New(fmt.Sprintf("userid %d was not an admin, they can't create an invite", userid))
+  }
+
+  // check that amount is within reasonable range
+  if amount > maxBatchAmount {
+		return errors.New(fmt.Sprintf("batch amount should not exceed %d but was %d; not creating invites ", maxBachAmount, amount))
+  }
+  // TODO (2024-11-22): check that already existing unclaimed invites is within a reasonable range
+  stmt := "SELECT COUNT(*) FROM invites"
+
+  var unclaimed int
+	err = d.db.QueryRow(stmt).Scan(&unclaimed)
+	ed.Check(err, "querying for number of unclaimed invites", threadid)
+  if unclaimed > maxUnclaimedAmount {
+		return errors.New(fmt.Sprintf("number of unclaimed invites amount should not exceed %d but was %d; not creating invites ", maxUnclamedAmount, unclaimed))
+  }
+  // all cleared!
+  invites := make([]string, 0, amount)
+  for _ = range amount {
+    invites = append(invites, util.GetUUIDv4())
+  }
+  // adjust the amount that will be created if we are near the unclaimed amount threshold
+  if (amount + unclaimedAmount) > maxUnclaimedAmount {
+    amount = maxUnclaimedAmount - unclaimedAmount
+  }
+
+  if amount <= 0 {
+		return errors.New(fmt.Sprintf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclamedAmount))
+  }
+
+  creationTime := time.Now()
+  // create a batch
+  stmt = "INSERT INTO invites (adminid, invite, label, date) VALUES (?, ?, ?, ?)"
+}
+
+func DestroyInvites (invites []string, adminid int) (bool, error) {
+	// checkIfAdmin(adminid)
+	// // create batch
+	// for _, invite := range invites {
+	//     // note: it's okay if one of the statements fails, maybe someone lucked out and redeemd it in the middle of the
+	//     loop - whatever
+	//     DELETE FROM invites WHERE invite=?
+	// }
+	return true, nil
+}
+
+func GetInvitesByLabel(label string) []string {
+		var invites []string
+    // SELECT * FROM invites where label = ?
+    return invites
+		}

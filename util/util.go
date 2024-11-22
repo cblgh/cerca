@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/gomarkdown/markdown/ast"
@@ -270,4 +271,10 @@ func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func GetUUIDv4 () string {
+	identifier, err := uuid.NewRandom()
+	Check(err, "generated invites using uuid v4")
+	return identifier.String()
 }
