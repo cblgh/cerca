@@ -7,24 +7,7 @@ import (
 	"os"
 )
 
-func inform(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Printf("%s\n", fmt.Sprintf(msg, args...))
-	} else {
-		fmt.Printf("%s\n", msg)
-	}
-}
-
-func complain(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		inform(msg, args)
-	} else {
-		inform(msg)
-	}
-	os.Exit(0)
-}
-
-func main() {
+func migrate() {
 	migrations := map[string]func(string) error{
 		"2024-01-password-hash-migration":  database.Migration20240116_PwhashChange,
 		"2024-02-thread-private-migration": database.Migration20240720_ThreadPrivateChange,
@@ -32,15 +15,32 @@ func main() {
 
 	var dbPath, migration string
 	var listMigrations bool
-	flag.BoolVar(&listMigrations, "list", false, "list possible migrations")
-	flag.StringVar(&migration, "migration", "", "name of the migration you want to perform on the database")
-	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
-	flag.Parse()
 
-	usage := `usage
-	migration-tool --list 
-	migration-tool --migration <name of migration>
-  `
+	migrateCmd := flag.NewFlagSet("migrate", flag.ExitOnError)
+	migrateCmd.BoolVar(&listMigrations, "list", false, "list possible migrations")
+	migrateCmd.StringVar(&migration, "migration", "", "name of the migration you want to perform on the database")
+	migrateCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+
+	help := `NAME:
+  cerca migrate - manage database migrations
+
+USAGE:
+  cerca migrate [command] [options]
+
+GLOBAL OPTIONS:
+  -help
+        show help (default: false)
+
+OPTIONS:
+`
+
+	usage := func() {
+		fmt.Fprintf(os.Stderr, help)
+		migrateCmd.PrintDefaults()
+	}
+	migrateCmd.Usage = usage
+
+	migrateCmd.Parse(os.Args[2:])
 
 	if listMigrations {
 		inform("Possible migrations:")
@@ -51,7 +51,7 @@ func main() {
 	}
 
 	if migration == "" {
-		complain(usage)
+		complain(help)
 	} else if _, ok := migrations[migration]; !ok {
 		complain(fmt.Sprintf("chosen migration »%s» does not match one of the available migrations. see migrations with flag --list", migration))
 	}

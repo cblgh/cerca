@@ -40,39 +40,39 @@ func createUser(username, password string, db *database.DB) UserInfo {
 	return UserInfo{ID: userID, Username: username, Password: password}
 }
 
-func inform(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Printf("%s\n", fmt.Sprintf(msg, args...))
-	} else {
-		fmt.Printf("%s\n", msg)
-	}
-}
-
-func complain(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		inform(msg, args)
-	} else {
-		inform(msg)
-	}
-	os.Exit(0)
-}
-
-func main() {
+func user() {
 	var username string
 	var forumDomain string
 	var dbPath string
-	flag.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
-	flag.StringVar(&username, "username", "", "username whose credentials should be reset")
-	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
-	flag.Parse()
 
-	usage := `usage
-	admin-add-user --url https://forum.merveilles.town --database ./data/forum.db --username <username to create account for> 
-	admin-add-user --help for more information
-  `
+	userCmd := flag.NewFlagSet("user", flag.ExitOnError)
+	userCmd.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
+	userCmd.StringVar(&username, "username", "", "username who should be created")
+	userCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+
+	help := `NAME:
+  cerca user - create new user
+
+USAGE:
+  cerca user [command] [options]
+
+GLOBAL OPTIONS:
+  -help
+        show help (default: false)
+
+OPTIONS:
+`
+
+	usage := func() {
+		fmt.Fprintf(os.Stderr, help)
+		userCmd.PrintDefaults()
+	}
+	userCmd.Usage = usage
+
+	userCmd.Parse(os.Args[2:])
 
 	if username == "" {
-		complain(usage)
+		complain(help)
 	}
 
 	// check if database exists! we dont wanna create a new db in this case ':)

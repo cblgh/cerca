@@ -8,40 +8,36 @@ import (
 	"os"
 )
 
-func inform(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Printf("admin-reset: %s\n", fmt.Sprintf(msg, args...))
-	} else {
-		fmt.Printf("admin-reset: %s\n", msg)
-	}
-}
-
-func complain(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		inform(msg, args)
-	} else {
-		inform(msg)
-	}
-	os.Exit(0)
-}
-
-func main() {
+func reset() {
 	var username string
 	var dbPath string
-	flag.StringVar(&username, "username", "", "username whose credentials should be reset")
-	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
-	flag.Parse()
 
-	usage := `usage
-  admin-reset --database ./data/forum.db --username <username to reset>
-  admin-reset --help for more information
+	resetCmd := flag.NewFlagSet("reset", flag.ExitOnError)
+	resetCmd.StringVar(&username, "username", "", "username whose credentials should be reset")
+	resetCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-  # example
-  ./admin-reset --database ../../testdata/forum.db --username bambas 
-  `
+	help := `NAME:
+  cerca reset - reset user password
+
+USAGE:
+  cerca reset [command] [options]
+
+GLOBAL OPTIONS:
+  -help
+        show help (default: false)
+
+OPTIONS:
+`
+	usage := func() {
+		fmt.Fprintf(os.Stderr, help)
+		resetCmd.PrintDefaults()
+	}
+	resetCmd.Usage = usage
+
+	resetCmd.Parse(os.Args[2:])
 
 	if username == "" {
-		complain(usage)
+		complain(help)
 	}
 
 	// check if database exists! we dont wanna create a new db in this case ':)
