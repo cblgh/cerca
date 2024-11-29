@@ -535,6 +535,15 @@ type InviteBatch struct {
 	CreationTime  time.Time
 }
 
+// by admin+creationTime
+/*
+* get all invites -> returns []InviteBatch 
+* map[username+string(creationTime]InviteBatch
+* iterate over the map
+*		-> collect creation time
+*   -> sort by time, newest first?
+*/
+
 // TODO (2024-11-22): consider d1's request of invites that are repeat-redeemable until deleted by an admin
 func (d DB) ClaimInvite (invite string) (finalErr error) {
   ed := util.Describe("claim invite")
@@ -581,6 +590,7 @@ func (d DB) ClaimInvite (invite string) (finalErr error) {
   finalErr = nil
   return 
 }
+
 const maxBatchAmount = 100
 const maxUnclaimedAmount = 500
 
@@ -639,7 +649,12 @@ func DestroyInvites (invites []string, adminid int) (bool, error) {
 }
 
 func GetInvitesByLabel(label string) []string {
-		var invites []string
-    // SELECT * FROM invites where label = ?
-    return invites
-		}
+	var invites []string
+	// SELECT * FROM invites where label = ?
+	return invites
+}
+
+func GetAllInvites() []InviteBatch {
+	var batches []InviteBatch
+	query := "SELECT u.username i. FROM invites i INNER JOIN users u on i.adminid = u.id"
+}
