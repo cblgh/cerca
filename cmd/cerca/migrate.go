@@ -21,25 +21,11 @@ func migrate() {
 	migrateCmd.StringVar(&migration, "migration", "", "name of the migration you want to perform on the database")
 	migrateCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := `NAME:
-  cerca migrate - manage database migrations
-
-USAGE:
-  cerca migrate [command] [options]
-
-GLOBAL OPTIONS:
-  -help
-        show help (default: false)
-
-OPTIONS:
-`
-
-	usage := func() {
-		fmt.Fprintf(os.Stderr, help)
-		migrateCmd.PrintDefaults()
-	}
-	migrateCmd.Usage = usage
-
+	help := createHelpString([]string{
+		"cerca -migration \"2024-02-thread-private-migration\"",
+		"cerca migrate -list",
+	}, false)
+	migrateCmd.Usage = func() { usage(help, migrateCmd) }
 	migrateCmd.Parse(os.Args[2:])
 
 	if listMigrations {

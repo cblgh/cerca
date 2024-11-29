@@ -18,25 +18,10 @@ func admin() {
 	adminCmd.StringVar(&username, "username", "", "username who should be made admin")
 	adminCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := `NAME:
-  cerca admin - promote user to admin
-
-USAGE:
-  cerca admin [command] [options]
-
-GLOBAL OPTIONS:
-  -help
-        show help (default: false)
-
-OPTIONS:
-`
-
-	usage := func() {
-		fmt.Fprintf(os.Stderr, help)
-		adminCmd.PrintDefaults()
-	}
-	adminCmd.Usage = usage
-
+	help := createHelpString([]string{
+		"cerca admin -username myCoolUsername",
+	}, false)
+	adminCmd.Usage = func() { usage(help, adminCmd) }
 	adminCmd.Parse(os.Args[2:])
 
 	adminRoute := fmt.Sprintf("%s/admin", forumDomain)

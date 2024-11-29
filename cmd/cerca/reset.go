@@ -4,7 +4,6 @@ import (
 	"cerca/constants"
 	"cerca/database"
 	"flag"
-	"fmt"
 	"os"
 )
 
@@ -16,24 +15,10 @@ func reset() {
 	resetCmd.StringVar(&username, "username", "", "username whose credentials should be reset")
 	resetCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := `NAME:
-  cerca reset - reset user password
-
-USAGE:
-  cerca reset [command] [options]
-
-GLOBAL OPTIONS:
-  -help
-        show help (default: false)
-
-OPTIONS:
-`
-	usage := func() {
-		fmt.Fprintf(os.Stderr, help)
-		resetCmd.PrintDefaults()
-	}
-	resetCmd.Usage = usage
-
+	help := createHelpString([]string{
+		"cerca reset -username myCoolUsername",
+	}, false)
+	resetCmd.Usage = func() { usage(help, resetCmd) }
 	resetCmd.Parse(os.Args[2:])
 
 	if username == "" {

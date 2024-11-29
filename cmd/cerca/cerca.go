@@ -11,6 +11,36 @@ import (
 	"cerca/util"
 )
 
+func createHelpString(usageExamples []string, isMainCmd bool) string {
+	helpString := fmt.Sprintf("USAGE:\n    %s\n", strings.Join(usageExamples, "\n    "))
+
+	if isMainCmd {
+		helpString += "\nCOMMANDS:" + `
+    admin     promote user to admin
+    migrate   manage database migrations
+    user      create new user
+    reset     reset user password` + "\n"
+	}
+
+	helpString += "\nGLOBAL OPTIONS:" + `
+    -help
+        show help
+
+OPTIONS:
+`
+
+	return helpString
+}
+
+func usage(help string, fset *flag.FlagSet) {
+	fmt.Fprintf(os.Stderr, help)
+	if fset != nil {
+		fset.PrintDefaults()
+		return
+	}
+	flag.PrintDefaults()
+}
+
 func readAllowlist(location string) []string {
 	ed := util.Describe("read allowlist")
 	data, err := os.ReadFile(location)
@@ -58,30 +88,11 @@ func cerca() {
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 
-	help := `NAME:
-  cerca - lean forum software
-
-USAGE:
-  cerca [command] [options]
-
-COMMANDS:
-  admin     promote user to admin
-  migrate   manage database migrations
-  user      create new user
-  reset     reset user password
-
-GLOBAL OPTIONS:
-  -help
-        show help (default: false)
-
-OPTIONS:
-`
-	usage := func() {
-		fmt.Fprintf(os.Stderr, help)
-		flag.PrintDefaults()
-	}
-	flag.Usage = usage
-
+	help := createHelpString([]string{
+		"cerca -allowlist allow.txt -authkey \"CHANGEME\"",
+		"cerca -dev",
+	}, true)
+	flag.Usage = func() { usage(help, nil) }
 	flag.Parse()
 
 	if len(sessionKey) == 0 {

@@ -50,25 +50,10 @@ func user() {
 	userCmd.StringVar(&username, "username", "", "username who should be created")
 	userCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := `NAME:
-  cerca user - create new user
-
-USAGE:
-  cerca user [command] [options]
-
-GLOBAL OPTIONS:
-  -help
-        show help (default: false)
-
-OPTIONS:
-`
-
-	usage := func() {
-		fmt.Fprintf(os.Stderr, help)
-		userCmd.PrintDefaults()
-	}
-	userCmd.Usage = usage
-
+	help := createHelpString([]string{
+		"cerca user -username myCoolUsername",
+	}, false)
+	userCmd.Usage = func() { usage(help, userCmd) }
 	userCmd.Parse(os.Args[2:])
 
 	if username == "" {
