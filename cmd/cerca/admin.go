@@ -8,41 +8,26 @@ import (
 	"os"
 )
 
-func inform(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Printf("%s\n", fmt.Sprintf(msg, args...))
-	} else {
-		fmt.Printf("%s\n", msg)
-	}
-}
-
-func complain(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		inform(msg, args)
-	} else {
-		inform(msg)
-	}
-	os.Exit(0)
-}
-
-func main() {
+func admin() {
 	var username string
 	var forumDomain string
 	var dbPath string
-	flag.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
-	flag.StringVar(&username, "username", "", "username who should be made admin")
-	flag.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
-	flag.Parse()
 
-	usage := `usage
-	add-admin --username <username to make admin> --url <rool url to forum> --database ./data/forum.db
-	add-admin --help for more information
-  `
+	adminCmd := flag.NewFlagSet("admin", flag.ExitOnError)
+	adminCmd.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
+	adminCmd.StringVar(&username, "username", "", "username who should be made admin")
+	adminCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+
+	help := createHelpString([]string{
+		"cerca admin -username myCoolUsername",
+	}, false)
+	adminCmd.Usage = func() { usage(help, adminCmd) }
+	adminCmd.Parse(os.Args[2:])
 
 	adminRoute := fmt.Sprintf("%s/admin", forumDomain)
 
 	if username == "" {
-		complain(usage)
+		complain(help)
 	}
 
 	// check if database exists! we dont wanna create a new db in this case ':)

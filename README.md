@@ -24,6 +24,36 @@ It was written for the purpose of powering the nascent [Merveilles community for
 * **Low maintenance**: Cerca is architected to minimize maintenance and hosting costs by carefully choosing which features it supports, how they work, and which features are intentionally omitted
 * **RSS**: Receive updates when threads are created or new posts are made by subscribing to the forum RSS feed
 
+## Usage
+
+```
+USAGE:
+    cerca -allowlist allow.txt -authkey "CHANGEME"
+    cerca -dev
+
+COMMANDS:
+    admin     promote user to admin
+    migrate   manage database migrations
+    user      create new user
+    reset     reset user password
+
+GLOBAL OPTIONS:
+    -help
+        show help
+
+OPTIONS:
+  -allowlist string
+        domains which can be used to read verification codes from during registration
+  -authkey string
+        session cookies authentication key
+  -config string
+        config and settings file containing cerca's customizations (default "cerca.toml")
+  -data string
+        directory where cerca will dump its database (default "./data")
+  -dev
+        trigger development mode
+```
+
 ## Config
 Cerca supports community customization.
 
