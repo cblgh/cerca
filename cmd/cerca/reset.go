@@ -11,15 +11,21 @@ func reset() {
 	var username string
 	var dbPath string
 
-	resetCmd := flag.NewFlagSet("reset", flag.ExitOnError)
-	resetCmd.StringVar(&username, "username", "", "username whose credentials should be reset")
-	resetCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	resetFlags := flag.NewFlagSet("resetpw", flag.ExitOnError)
+	resetFlags.StringVar(&username, "username", "", "username whose credentials should be reset")
+	resetFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := createHelpString([]string{
-		"cerca reset -username myCoolUsername",
-	}, false)
-	resetCmd.Usage = func() { usage(help, resetCmd) }
-	resetCmd.Parse(os.Args[2:])
+	help := createHelpString("resetpw", []string{
+		`cerca resetpw -username "<existing username>"`,
+	})
+	resetFlags.Usage = func() { usage(help, resetFlags) }
+	resetFlags.Parse(os.Args[2:])
+
+	// if run without flags, print the help info
+	if resetFlags.NFlag() == 0 {
+		resetFlags.Usage()
+		return
+	}
 
 	if username == "" {
 		complain(help)

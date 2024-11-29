@@ -13,16 +13,22 @@ func admin() {
 	var forumDomain string
 	var dbPath string
 
-	adminCmd := flag.NewFlagSet("admin", flag.ExitOnError)
-	adminCmd.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
-	adminCmd.StringVar(&username, "username", "", "username who should be made admin")
-	adminCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	adminFlags := flag.NewFlagSet("makeadmin", flag.ExitOnError)
+	adminFlags.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
+	adminFlags.StringVar(&username, "username", "", "username who should be made admin")
+	adminFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := createHelpString([]string{
-		"cerca admin -username myCoolUsername",
-	}, false)
-	adminCmd.Usage = func() { usage(help, adminCmd) }
-	adminCmd.Parse(os.Args[2:])
+	help := createHelpString("makeadmin", []string{
+		`cerca makeadmin -username "<existing username>"`,
+	})
+	adminFlags.Usage = func() { usage(help, adminFlags) }
+	adminFlags.Parse(os.Args[2:])
+
+	// if run without flags, print the help info
+	if adminFlags.NFlag() == 0 {
+		adminFlags.Usage()
+		return
+	}
 
 	adminRoute := fmt.Sprintf("%s/admin", forumDomain)
 
