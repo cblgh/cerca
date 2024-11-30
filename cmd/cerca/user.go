@@ -45,16 +45,22 @@ func user() {
 	var forumDomain string
 	var dbPath string
 
-	userCmd := flag.NewFlagSet("user", flag.ExitOnError)
-	userCmd.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
-	userCmd.StringVar(&username, "username", "", "username who should be created")
-	userCmd.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	userFlags := flag.NewFlagSet("adduser", flag.ExitOnError)
+	userFlags.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
+	userFlags.StringVar(&username, "username", "", "username who should be created")
+	userFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
 
-	help := createHelpString([]string{
-		"cerca user -username myCoolUsername",
-	}, false)
-	userCmd.Usage = func() { usage(help, userCmd) }
-	userCmd.Parse(os.Args[2:])
+	help := createHelpString("adduser", []string{
+		`cerca adduser -username "<new username>"`,
+	})
+	userFlags.Usage = func() { usage(help, userFlags) }
+	userFlags.Parse(os.Args[2:])
+
+	// if run without flags, print the help info
+	if userFlags.NFlag() == 0 {
+		userFlags.Usage()
+		return
+	}
 
 	if username == "" {
 		complain(help)

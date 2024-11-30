@@ -27,19 +27,19 @@ It was written for the purpose of powering the nascent [Merveilles community for
 ## Usage
 
 ```
+cerca --help
+
 USAGE:
-    cerca -allowlist allow.txt -authkey "CHANGEME"
-    cerca -dev
+  run the forum
+
+  cerca -allowlist allow.txt -authkey "CHANGEME"
+  cerca -dev
 
 COMMANDS:
-    admin     promote user to admin
-    migrate   manage database migrations
-    user      create new user
-    reset     reset user password
-
-GLOBAL OPTIONS:
-    -help
-        show help
+  adduser    create a new user
+  makeadmin  make an existing user an admin
+  migrate    manage database migrations
+  resetpw    reset a user's password
 
 OPTIONS:
   -allowlist string
@@ -52,6 +52,12 @@ OPTIONS:
         directory where cerca will dump its database (default "./data")
   -dev
         trigger development mode
+```
+
+To execute the other commands, run them as:
+
+```
+cerca adduser --username "<username>"
 ```
 
 ## Config
@@ -115,19 +121,24 @@ Install [golang](https://go.dev/).
 
 To launch a local instance of the forum, run those commands (linux):
 
-- `go run run.go --dev`
+- `go run ./cmd/cerca --dev`
 
 It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](http://localhost:8277).
 
-### Building binaries with reduced size 
-This is optional, but if you want to minimize the size of any binary (whether it be the `cerca` executable 
-or any of the binaries in [`cmd/`](/cmd/) follow the instructions below. Less useful for active development, more 
-useful for sending binaries to other computers.
+### Building a binary
+
+```
+go build ./cmd/cerca
+```
+
+### Building with reduced size 
+This is optional, but if you want to minimize the size of the binary follow the instructions
+below. Less useful for active development, more useful for sending binaries to other computers.
 
 Pass `-ldflags="-s -w"` when building your binary:
 
 ```
-go build -ldflags="-s -w" .
+go build -ldflags="-s -w" ./cmd/cerca
 ```
 
 Additionally, run [upx](https://upx.github.io) on any generated binary:

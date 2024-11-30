@@ -11,24 +11,28 @@ import (
 	"cerca/util"
 )
 
-func createHelpString(usageExamples []string, isMainCmd bool) string {
-	helpString := fmt.Sprintf("USAGE:\n    %s\n", strings.Join(usageExamples, "\n    "))
+var commandExplanations = map[string]string{
+	"run": "run the forum",
+	"adduser": "create a new user",
+	"makeadmin": "make an existing user an admin",
+	"migrate": "manage database migrations",
+	"resetpw": "reset a user's password",
+}
+func createHelpString(commandName string, usageExamples []string) string {
+	helpString := fmt.Sprintf("USAGE:\n  %s\n\n  %s\n", 
+	commandExplanations[commandName], 
+	strings.Join(usageExamples, "\n  "))
 
-	if isMainCmd {
-		helpString += "\nCOMMANDS:" + `
-    admin     promote user to admin
-    migrate   manage database migrations
-    user      create new user
-    reset     reset user password` + "\n"
+	if commandName == "run" {
+		helpString += "\nCOMMANDS:\n" 
+		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw"}
+		for _, key := range cmds {
+			// pad first string with spaces to the right instead, set its expected width = 11
+			helpString += fmt.Sprintf("  %-11s%s\n", key, commandExplanations[key])
+		}
 	}
 
-	helpString += "\nGLOBAL OPTIONS:" + `
-    -help
-        show help
-
-OPTIONS:
-`
-
+	helpString += "\nOPTIONS:\n"
 	return helpString
 }
 
@@ -74,7 +78,7 @@ func complain(msg string, args ...interface{}) {
 	os.Exit(0)
 }
 
-func cerca() {
+func run() {
 	// TODO (2022-01-10): somehow continually update veri sites by scraping merveilles webring sites || webring domain
 	var allowlistLocation string
 	var sessionKey string
@@ -88,12 +92,17 @@ func cerca() {
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 
-	help := createHelpString([]string{
+	help := createHelpString("run", []string{
 		"cerca -allowlist allow.txt -authkey \"CHANGEME\"",
 		"cerca -dev",
-	}, true)
+	})
 	flag.Usage = func() { usage(help, nil) }
 	flag.Parse()
+
+	if flag.NFlag() == 0 {
+		flag.Usage()
+		return
+	}
 
 	if len(sessionKey) == 0 {
 		if !dev {
@@ -126,16 +135,24 @@ func cerca() {
 }
 
 func main() {
-	switch os.Args[1] {
+	command := "run"
+	if len(os.Args) > 1 && (os.Args[1][0] != '-') {
+		command = os.Args[1]
+	}
+
+	switch command {
+	case "adduser":
+		user()
+	case "makeadmin":
+		admin()
 	case "migrate":
 		migrate()
-	case "admin":
-		admin()
-	case "user":
-		user()
-	case "reset":
+	case "resetpw":
 		reset()
+	case "run":
+		run()
 	default:
-		cerca()
+		fmt.Printf("ERR: no such subcommand '%s'\n", command)
+		run()
 	}
 }
