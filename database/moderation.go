@@ -709,7 +709,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 	ed.Check(err, "create query")
 	
 	// keep track of invite batches by creating a key based on username + creation time
-	batches := make(map[string]InviteBatch)
+	batches := make(map[string]*InviteBatch)
 	var keys []string
 	var invite, username, label string
 	var t time.Time
@@ -724,7 +724,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 			batch.UnclaimedInvites = append(batch.UnclaimedInvites, invite)
 		} else {
 			keys = append(keys, key)
-			batches[key] = InviteBatch{ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
+			batches[key] = &InviteBatch{ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
 		}
 	}
 
@@ -732,7 +732,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 	ret := make([]InviteBatch, 0, len(keys))
 	sort.Strings(keys)
 	for _, key := range keys {
-		ret = append(ret, batches[key])
+		ret = append(ret, *batches[key])
 	}
 	return ret
 }
