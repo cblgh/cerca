@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"strconv"
+	"sort"
 
 	"cerca/constants"
 	"cerca/util"
@@ -531,8 +533,8 @@ func (d DB) GetAdmins() []User {
 type InviteBatch struct {
 	ActingUsername  string
 	UnclaimedInvites []string	
-	BatchLabel string
-	CreationTime  time.Time
+	Label string
+	Time time.Time
 }
 
 // by admin+creationTime
@@ -697,8 +699,40 @@ func (d DB) GetInvitesByLabel(label string) []string {
 	return invites
 }
 
-/* TODO (2024-11-30): continue from here :) */
-// func GetAllInvites() []InviteBatch {
-// 	var batches []InviteBatch
-// 	query := "SELECT u.username, i.invite, i.time, i.label FROM invites i INNER JOIN users u on i.adminid = u.id"
-// }
+/* TODO (2024-12-01): next up - start to write these database routines to parts that called from the server route
+* handlers :) */
+
+func (d DB) GetAllInvites() []InviteBatch {
+	ed := util.Describe("get all invites")
+
+	rows, err := d.db.Query("SELECT u.username, i.invite, i.time, i.label FROM invites i INNER JOIN users u ON i.adminid = u.id")
+	ed.Check(err, "create query")
+	
+	// keep track of invite batches by creating a key based on username + creation time
+	batches := make(map[string]InviteBatch)
+	var keys []string
+	var invite, username, label string
+	var t time.Time
+
+	for rows.Next() {
+		err := rows.Scan(&username, &invite, &t, &label)
+		ed.Check(err, "scan row")
+		// starting the key with the unix epoch as a string allows us to sort the map's keys by time just by comparing strings with sort.Strings()
+		unixTimestamp := strconv.FormatInt(t.Unix(), 10)
+		key := unixTimestamp + username
+		if batch, exists := batches[key]; exists {
+			batch.UnclaimedInvites = append(batch.UnclaimedInvites, invite)
+		} else {
+			keys = append(keys, key)
+			batches[key] = InviteBatch{ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
+		}
+	}
+
+	// convert from map to a []InviteBatch sorted by time using ts-prefixed map keys
+	ret := make([]InviteBatch, 0, len(keys))
+	sort.Strings(keys)
+	for _, key := range keys {
+		ret = append(ret, batches[key])
+	}
+	return ret
+}
