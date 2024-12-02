@@ -257,60 +257,8 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	}
 }
 
-func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
-	// ed := util.Describe("admin invites route")
-	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, adminUserId := h.IsAdmin(req)
-	fmt.Println(adminUserId)
+/* TODO (2024-12-02): make it possible for an admin to reset another admin's password; maybe using quorum? */
 
-	if !isAdmin {
-		IndexRedirect(res, req)
-		return
-	}
-
-	type Invites struct {
-		ErrorMessage string
-	}
-
-	var data Invites
-	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
-
-	if req.Method == "GET" {
-		h.renderView(res, "admin-invites", view)
-		return
-	}
-
-// 	if req.Method == "POST" && isAdmin {
-// 		username := req.PostFormValue("username")
-//
-// 		// do a lil quick checky check to see if we already have that username registered,
-// 		// and if we do re-render the page with an error
-// 		existed, err := h.db.CheckUsernameExists(username)
-// 		ed.Check(err, "check username exists")
-//
-// 		if existed {
-// 			data.ErrorMessage = fmt.Sprintf("Username (%s) is already registered", username)
-// 			h.renderView(res, "admin-add-user", view)
-// 			return
-// 		}
-//
-// 		// set up basic credentials
-// 		newPassword := crypto.GeneratePassword()
-// 		passwordHash, err := crypto.HashPassword(newPassword)
-// 		ed.Check(err, "hash password")
-// 		targetUserId, err := h.db.CreateUser(username, passwordHash)
-// 		ed.Check(err, "create new user %s", username)
-//
-// 		err = h.db.AddModerationLog(adminUserId, targetUserId, constants.MODLOG_ADMIN_ADD_USER)
-// 		if err != nil {
-// 			fmt.Println(ed.Eout(err, "error adding moderation log"))
-// 		}
-//
-// 		title := h.translator.Translate("AdminAddNewUser")
-// 		message := fmt.Sprintf(h.translator.Translate("AdminPasswordSuccessInstructions"), template.HTMLEscapeString(username), newPassword)
-// 		h.displaySuccess(res, req, title, message, "/add-user")
-// 	}
-}
 
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("admin reset password")
@@ -501,6 +449,80 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
+}
+
+/* routes to handle POSTs from
+* AdminInvitesCreateBatch
+* AdminInvitesDeleteBatch
+* InvitesClaimInvite
+*/
+func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
+	// ed := util.Describe("admin invites route")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+
+	if !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+
+	batches := h.db.GetAllInvites()
+	fmt.Println(batches)
+
+	type Invites struct {
+		ErrorMessage string
+		CreateRoute string
+		DeleteRoute string
+		Batches []database.InviteBatch
+	}
+	
+	var data Invites
+	data.CreateRoute = INVITES_CREATE_ROUTE
+	data.DeleteRoute = INVITES_DELETE_ROUTE
+	data.Batches = batches
+
+	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+
+	if req.Method == "GET" {
+		h.renderView(res, "admin-invites", view)
+		return
+	} else {
+		fmt.Println(INVITES_ROUTE, "received request of type other than GET")
+		IndexRedirect(res, req)
+	}
+}
+
+func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("server: admin generate invites")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+	amount, err := strconv.Atoi(req.PostFormValue("amount"))
+	util.Check(err, "parse amount as int")
+	var label string
+	label = req.PostFormValue("label")
+	err = h.db.CreateInvites(adminUserId, amount, label)
+	if err != nil {
+		fmt.Printf("%v\n", ed.Eout(err, "create invites"))
+		return
+	}
+	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
+}
+
+func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *http.Request) {
+	// ed := util.Describe("server: admin delete invites")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+	batchId := req.PostFormValue("batchid")
+	h.db.DeleteInvitesBatch(batchId)
+	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
 }
 
 // view of /admin for non-admin users (contains less information)

@@ -124,7 +124,19 @@ func createTables(db *sql.DB) {
 		FOREIGN KEY (recipientid) REFERENCES users(id)
 	);
 		`,
-		`
+	`
+	CREATE TABLE IF NOT EXISTS invites (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		batchid TEXT NOT NULL, -- uuid v4
+		invite TEXT NOT NULL,
+		label TEXT,
+		adminid INTEGER NOT NULL,
+		time DATE NOT NULL,
+
+		FOREIGN KEY(adminid) REFERENCES users(id)
+	);
+	`,	
+	`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,

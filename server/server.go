@@ -977,6 +977,10 @@ func (u *CercaForum) directory() string {
 	return u.Directory
 }
 
+const INVITES_ROUTE = "/invites"
+const INVITES_CREATE_ROUTE = "/invites/create"
+const INVITES_DELETE_ROUTE = "/invites/delete"
+
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
@@ -1024,7 +1028,9 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	s.ServeMux.HandleFunc("/admin", handler.AdminRoute)
 	s.ServeMux.HandleFunc("/demote-admin", handler.AdminDemoteAdmin)
 	s.ServeMux.HandleFunc("/add-user", handler.AdminManualAddUserRoute)
-	s.ServeMux.HandleFunc("/invites", handler.AdminInvitesRoute)
+	s.ServeMux.HandleFunc(INVITES_ROUTE, handler.AdminInvitesRoute)
+	s.ServeMux.HandleFunc(INVITES_CREATE_ROUTE, handler.AdminInvitesCreateBatch)
+	s.ServeMux.HandleFunc(INVITES_DELETE_ROUTE, handler.AdminInvitesDeleteBatch)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
 	s.ServeMux.HandleFunc("/proposal-veto", handler.VetoProposal)
 	s.ServeMux.HandleFunc("/proposal-confirm", handler.ConfirmProposal)

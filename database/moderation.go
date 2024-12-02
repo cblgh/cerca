@@ -531,6 +531,7 @@ func (d DB) GetAdmins() []User {
 }
 
 type InviteBatch struct {
+	BatchId string
 	ActingUsername  string
 	UnclaimedInvites []string	
 	Label string
@@ -607,6 +608,7 @@ func (d DB) ClaimInvite (invite string) (bool, error) {
 
 // CREATE TABLE IF NOT EXISTS invites (
 // id INTEGER PRIMARY KEY AUTOINCREMENT,
+// batchid TEXT NOT NULL, -- this is a uuid v4
 // invite TEXT NOT NULL,
 // label TEXT,
 // adminid INTEGER NOT NULL,
@@ -657,11 +659,15 @@ func (d DB) CreateInvites (adminid int, amount int, label string) error {
 		return fmt.Errorf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclaimedAmount)
   }
 
+	// this id identifies all invites from this batch
+	batchid := util.GetUUIDv4()
   creationTime := time.Now()
-	stmt = "INSERT INTO invites (adminid, invite, label, time) VALUES (?, ?, ?, ?)"
+	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time) VALUES (?, ?, ?, ?, ?)")
+	util.Check(err, "prepare invite insert stmt")
+	defer preparedStmt.Close()
 	for _, invite := range invites {
 		// create a batch
-		_, err := d.Exec(stmt, adminid, invite, label, creationTime)
+		_, err := preparedStmt.Exec(batchid, adminid, invite, label, creationTime)
 		ed.Check(err, "inserting invite into database")
 	}
 	return nil
@@ -680,23 +686,15 @@ func (d DB) DestroyInvites (invites []string) {
 	}
 }
 
-func (d DB) GetInvitesByLabel(label string) []string {
-	ed := util.Describe("get invites by label")
-	var invites []string
+func (d DB) DeleteInvitesBatch(batchid string) {
+	ed := util.Describe("delete invites by batchid")
 
-	stmt, err := d.db.Prepare("SELECT * FROM invites where label = ?")
+	stmt, err := d.db.Prepare("DELETE FROM invites where batchid = ?")
 	ed.Check(err, "prep stmt")
 	defer stmt.Close()
 
-	rows, err := stmt.Query(label)
-	ed.Check(err, "query rows")
-	var invite string
-	for rows.Next() {
-		err := rows.Scan(&invite)
-		ed.Check(err, "scan row")
-		invites = append(invites, invite)
-	}
-	return invites
+	_, err = stmt.Exec(batchid)
+	util.Check(err, "execute delete")
 }
 
 /* TODO (2024-12-01): next up - start to write these database routines to parts that called from the server route
@@ -705,17 +703,17 @@ func (d DB) GetInvitesByLabel(label string) []string {
 func (d DB) GetAllInvites() []InviteBatch {
 	ed := util.Describe("get all invites")
 
-	rows, err := d.db.Query("SELECT u.username, i.invite, i.time, i.label FROM invites i INNER JOIN users u ON i.adminid = u.id")
+	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label FROM invites i INNER JOIN users u ON i.adminid = u.id")
 	ed.Check(err, "create query")
 	
 	// keep track of invite batches by creating a key based on username + creation time
 	batches := make(map[string]*InviteBatch)
 	var keys []string
-	var invite, username, label string
+	var batchid, invite, username, label string
 	var t time.Time
 
 	for rows.Next() {
-		err := rows.Scan(&username, &invite, &t, &label)
+		err := rows.Scan(&batchid, &username, &invite, &t, &label)
 		ed.Check(err, "scan row")
 		// starting the key with the unix epoch as a string allows us to sort the map's keys by time just by comparing strings with sort.Strings()
 		unixTimestamp := strconv.FormatInt(t.Unix(), 10)
@@ -724,7 +722,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 			batch.UnclaimedInvites = append(batch.UnclaimedInvites, invite)
 		} else {
 			keys = append(keys, key)
-			batches[key] = &InviteBatch{ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
+			batches[key] = &InviteBatch{BatchId: batchid, ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
 		}
 	}
 
