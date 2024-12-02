@@ -15,7 +15,7 @@
             <label for="content">{{ "Content" | translate }}:</label>
             {{ end }}
             <label class="visually-hidden" for="content">{{ "Content" | translate }}:</label>
-            <textarea required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{.Data.Content}}</textarea>
+            <textarea autofocus required name="content" id="content" placeholder='{{ "TextareaPlaceholder" | translate }}'>{{.Data.Content}}</textarea>
             <button type="submit">{{ "Save" | translate }}</button>
         </div>
         <div style="margin-top: 1rem;">
