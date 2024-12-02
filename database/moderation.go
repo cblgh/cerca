@@ -445,14 +445,14 @@ func (d DB) AddAdmin(userid int) error {
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
-		return errors.New(fmt.Sprintf("add admin: userid %d did not exist", userid))
+		return fmt.Errorf("add admin: userid %d did not exist", userid)
 	}
 	if err != nil {
 		return ed.Eout(err, "CheckUserExists had an error")
 	}
 	isAdminAlready, err := d.IsUserAdmin(userid)
 	if isAdminAlready {
-		return errors.New(fmt.Sprintf("userid %d was already an admin", userid))
+		return fmt.Errorf("userid %d was already an admin", userid)
 	}
 	if err != nil {
 		// some kind of error, let's bubble it up
@@ -472,14 +472,14 @@ func (d DB) DemoteAdmin(userid int) error {
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
-		return errors.New(fmt.Sprintf("demote admin: userid %d did not exist", userid))
+		return fmt.Errorf("demote admin: userid %d did not exist", userid)
 	}
 	if err != nil {
 		return ed.Eout(err, "CheckUserExists had an error")
 	}
 	isAdmin, err := d.IsUserAdmin(userid)
 	if !isAdmin {
-		return errors.New(fmt.Sprintf("demote admin: userid %d was not an admin", userid))
+		return fmt.Errorf("demote admin: userid %d was not an admin", userid)
 	}
 	if err != nil {
 		// some kind of error, let's bubble it up
@@ -625,12 +625,12 @@ func (d DB) CreateInvites (adminid int, amount int, label string) error {
   }
 
   if !isAdmin {
-		return errors.New(fmt.Sprintf("userid %d was not an admin, they can't create an invite", adminid))
+		return fmt.Errorf("userid %d was not an admin, they can't create an invite", adminid)
   }
 
   // check that amount is within reasonable range
   if amount > maxBatchAmount {
-		return errors.New(fmt.Sprintf("batch amount should not exceed %d but was %d; not creating invites ", maxBatchAmount, amount))
+		return fmt.Errorf("batch amount should not exceed %d but was %d; not creating invites ", maxBatchAmount, amount)
   }
 
   // check that already existing unclaimed invites is within a reasonable range
@@ -640,7 +640,7 @@ func (d DB) CreateInvites (adminid int, amount int, label string) error {
 	ed.Check(err, "querying for number of unclaimed invites")
   if unclaimed > maxUnclaimedAmount {
 		msgstr := "number of unclaimed invites amount should not exceed %d but was %d; ceasing invite creation"
-		return errors.New(fmt.Sprintf(msgstr, maxUnclaimedAmount, unclaimed))
+		return fmt.Errorf(msgstr, maxUnclaimedAmount, unclaimed)
   }
 
   // all cleared!
@@ -654,7 +654,7 @@ func (d DB) CreateInvites (adminid int, amount int, label string) error {
   }
 
   if amount <= 0 {
-		return errors.New(fmt.Sprintf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclaimedAmount))
+		return fmt.Errorf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclaimedAmount)
   }
 
   creationTime := time.Now()
