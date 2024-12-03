@@ -136,16 +136,6 @@ func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
 }
 
-func VerificationPrefix(name string) string {
-	pattern := regexp.MustCompile("A|E|O|U|I|Y")
-	upper := strings.ToUpper(name)
-	replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
-	if len(replaced) < 3 {
-		replaced += "XYZ"
-	}
-	return replaced[0:3]
-}
-
 func GetThreadSlug(threadid int, title string, threadLen int) string {
 	return fmt.Sprintf("/thread/%d/%s-%d/", threadid, SanitizeURL(title), threadLen)
 }

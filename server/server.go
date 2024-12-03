@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -27,7 +26,6 @@ import (
 	"cerca/types"
 	"cerca/util"
 
-	"github.com/carlmjohnson/requests"
 	"github.com/cblgh/plain/rss"
 )
 
@@ -70,10 +68,10 @@ type GenericMessageData struct {
 }
 
 type RegisterData struct {
-	VerificationCode         string
+	InviteCode							string
 	ErrorMessage             string
 	Rules                    template.HTML
-	VerificationInstructions template.HTML
+	InviteInstructions template.HTML
 	ConductLink              string
 }
 
@@ -96,7 +94,6 @@ type EditPostData struct {
 type RequestHandler struct {
 	db         *database.DB
 	session    *session.Session
-	allowlist  []string // allowlist of domains valid for forum registration
 	files      map[string][]byte
 	config     types.Config
 	translator i18n.Translator
@@ -543,21 +540,6 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// downloads the content at the verification link and compares it to the verification code. returns true if the verification link content contains the verification code somewhere
-func hasVerificationCode(link, verification string) bool {
-	var linkBody string
-	err := requests.
-		URL(link).
-		ToString(&linkBody).
-		Fetch(context.Background())
-	if err != nil {
-		fmt.Println(util.Eout(err, "HasVerificationCode"))
-		return false
-	}
-
-	return strings.Contains(strings.TrimSpace(linkBody), strings.TrimSpace(verification))
-}
-
 func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.Request) {
 	// TODO (2022-10-24): add translations for change password view
 	title := h.translator.Translate("ChangePassword")
@@ -668,66 +650,37 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	}
 
 	rules := util.Markup(string(h.files["rules"]))
-	verification := util.Markup(string(h.files["verification-instructions"]))
+	registration := util.Markup(string(h.files["registration-instructions"]))
 	conduct := h.config.Community.ConductLink
-	var verificationCode string
+
+	// how this works: an invite code is provided by the user. this is provided either by clicking a register link that has a prefilled query parameter:
+	// ?invite="asdasd" or by specifying an invite code manually
+	var inviteCode string
+
+	params := req.URL.Query()
+	if _, exists := params["invite"]; exists {
+		inviteCode = params["invite"][0]
+	}
+
 	renderErr := func(errFmt string, args ...interface{}) {
 		errMessage := fmt.Sprintf(errFmt, args...)
 		fmt.Println(errMessage)
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, errMessage, rules, verification, conduct}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{inviteCode, errMessage, rules, registration, conduct}})
 	}
 
 	var err error
 	switch req.Method {
 	case "GET":
-		// try to get the verification code from the session (useful in case someone refreshed the page)
-		verificationCode, err = h.session.GetVerificationCode(req)
-		// we had an error getting the verification code, generate a code and set it on the session
-		if err != nil {
-			prefix := util.VerificationPrefix(h.config.Community.Name)
-			verificationCode = fmt.Sprintf("%s%06d\n", prefix, crypto.GenerateVerificationCode())
-			err = h.session.SaveVerificationCode(req, res, verificationCode)
-			if err != nil {
-				renderErr("Had troubles setting the verification code on session")
-				return
-			}
-		}
-		h.renderView(res, "register", TemplateData{Data: RegisterData{verificationCode, "", rules, verification, conduct}})
+		h.renderView(res, "register", TemplateData{Data: RegisterData{inviteCode, "", rules, registration, conduct}})
 	case "POST":
-		verificationCode, err = h.session.GetVerificationCode(req)
-		if err != nil {
-			renderErr("There was no verification record for this browser session; missing data to compare against verification link content")
-			return
-		}
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
-		var verificationLink string
-		// skip verification code during dev registering
-		if !developing {
-			// read verification code from form
-			verificationLink = req.PostFormValue("verificationlink")
-			// fmt.Printf("user: %s, verilink: %s\n", username, verificationLink)
-			u, err := url.Parse(verificationLink)
-			if err != nil {
-				renderErr("Had troubles parsing the verification link, are you sure it was a proper url?")
-				return
-			}
-			// check verification link domain against allowlist
-			if !util.Contains(h.allowlist, u.Host) {
-				fmt.Println(h.allowlist, u.Host, util.Contains(h.allowlist, u.Host))
-				renderErr("Verification link's host (%s) is not in the allowlist", u.Host)
-				return
-			}
+		// // skip invite code during dev registering
+		// if !developing {
+			// read submitted invite code from form
+			inviteCode = req.PostFormValue("invite")
+		// }
 
-			// parse out verification code from verification link and compare against verification code in session
-			has := hasVerificationCode(verificationLink, verificationCode)
-			if !has {
-				if !developing {
-					renderErr("Verification code from link (%s) does not match", verificationLink)
-					return
-				}
-			}
-		}
 		// make sure username is not registered already
 		var exists bool
 		if exists, err = h.db.CheckUsernameExists(username); err != nil {
@@ -737,12 +690,26 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			renderErr("Username %s appears to already exist, please pick another name", username)
 			return
 		}
+
 		var hash string
 		if hash, err = crypto.HashPassword(password); err != nil {
 			fmt.Println(ed.Eout(err, "hash password"))
 			renderErr("Database had a problem when hashing password")
 			return
 		}
+
+		// claim invite - this exhausts the invite, removing it from the database, and makes it unusable by anyone else. in
+		// the future, there may be an inexhaustible and reusable invite code that can be reused until an admin deletes it.
+		inviteRedeemed, inviteBatchId, err := h.db.ClaimInvite(inviteCode)
+		if err != nil {
+			renderErr("Error in db when claiming invite code")
+			return
+		}
+		if !inviteRedeemed {
+			renderErr("The invite was not valid and could not be used to create an account.")
+			return
+		}
+
 		var userID int
 		if userID, err = h.db.CreateUser(username, hash); err != nil {
 			renderErr("Error in db when creating user")
@@ -751,7 +718,9 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 		// log the new user in
 		h.session.Save(req, res, userID)
 		// log where the registration is coming from, in the case of indirect invites && for curiosity
-		err = h.db.AddRegistration(userID, verificationLink)
+
+		// save which invite batchid was used to register, so we can at least trace which invite code is bringing people in
+		err = h.db.AddRegistration(userID, inviteBatchId)
 		if err = ed.Eout(err, "add registration"); err != nil {
 			dump(err)
 		}
@@ -932,7 +901,7 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf types.Config) {
+func Serve(sessionKey string, isdev bool, dir string, conf types.Config) {
 	port := ":8272"
 
 	if isdev {
@@ -940,7 +909,7 @@ func Serve(allowlist []string, sessionKey string, isdev bool, dir string, conf t
 		port = ":8277"
 	}
 
-	forum, err := NewServer(allowlist, sessionKey, dir, conf)
+	forum, err := NewServer(sessionKey, dir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -984,7 +953,7 @@ const INVITES_DELETE_ROUTE = "/invites/delete"
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(allowlist []string, sessionKey, dir string, config types.Config) (*CercaForum, error) {
+func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
@@ -1000,7 +969,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	triples := []triple{
 		{"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
 		{"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
-		{"verification-instructions", config.Documents.VerificationExplanationPath, defaults.DEFAULT_VERIFICATION},
+		{"registration-instructions", config.Documents.RegistrationExplanationPath, defaults.DEFAULT_REGISTRATION},
 		{"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
 	}
 
@@ -1018,7 +987,7 @@ func NewServer(allowlist []string, sessionKey, dir string, config types.Config) 
 	translator := i18n.Init(config.Community.Language)
 	templates := template.Must(generateTemplates(config, translator))
 	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), allowlist, files, config, translator, templates, feed}
+	handler := RequestHandler{&db, session.New(sessionKey, developing), files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes

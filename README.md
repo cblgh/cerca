@@ -32,8 +32,8 @@ cerca --help
 USAGE:
   run the forum
 
-  cerca -allowlist allow.txt -authkey "CHANGEME"
-  cerca -dev
+    cerca -authkey "CHANGEME"
+    cerca -dev
 
 COMMANDS:
   adduser    create a new user
@@ -42,8 +42,6 @@ COMMANDS:
   resetpw    reset a user's password
 
 OPTIONS:
-  -allowlist string
-        domains which can be used to read verification codes from during registration
   -authkey string
         session cookies authentication key
   -config string
@@ -64,7 +62,7 @@ cerca adduser --username "<username>"
 Cerca supports community customization.
 
 * Write a custom [about text](/defaults/sample-about.md) describing the community inhabiting the forum
-* Define your own [registration rules](/defaults/sample-rules.md), [how to verify one's account](/defaults/sample-verification-instructions.md), and link to an existing code of conduct
+* Define your own [registration rules](/defaults/sample-rules.md), [instructions on getting an invite code to register](/defaults/sample-registration-instructions.md), and link to an existing code of conduct
 * Set your own [custom logo](/defaults/sample-logo.html) (whether svg, png or emoji)
 * Create your own theme by writing plain, frameworkless [css](/html/assets/theme.css)
 
@@ -93,7 +91,7 @@ forum_url = "" # should be forum index route https://example.com. used to genera
 logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
 about = "content/about.md"
 rules = "content/rules.md"
-verification_instructions = "content/verification-instructions.md"
+registration_instructions = "content/registration-instructions.md"
 ```
 
 Content documents that are not found will be prepopulated using Cerca's [sample content

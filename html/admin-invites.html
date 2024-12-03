@@ -1,0 +1,60 @@
+{{ template "head" . }}
+<main>
+    <h1>Invites</h1>
+    <p>Generate an invite and give to people for whom you want to enable account registration.</p>
+    <p>You can <b>generate many invites at once</b>. If you want to enable invites
+from other non-admin members of the forum, generate a batch and dump them in a
+private thread.</p>
+    <p>With <b>labeled invites</b>, you can separate different batches. Maybe one batch is to
+be redeemed by a friend group, while another will be printed on slips of
+paper and given out at meetups.</p>
+
+    <section>
+	<h2>Create invites</h2>
+	<form method="POST" action="{{ .Data.CreateRoute }}">
+	    <!-- <label for="amount">Amount of invites:</label> -->
+	    <input title="Amount of invites to create" type="number" value="1" min="1" max="100" id="amount" name="amount">
+	    <input maxlength="70" title="The invites you generate will be labeled with this label, and displayed using it below. It does not otherwise affect the invite." type="text" placeholder="e.g. server friends" id="label" name="label">
+	    <button type="submit">Create</button>
+	</form>
+    </section>
+
+    <section>
+	<h2>Unclaimed invites</h2>
+        {{ if len .Data.Batches | eq 0}}
+        <p>There are currently no unclaimed invite batches that are issused.</p>
+        {{ end }}
+        {{ $deleteRoute := .Data.DeleteRoute }}
+        {{ range $index, $batch := .Data.Batches }}
+        <h3>{{ if len $batch.Label | eq 0 }} Unlabeled batch {{ else }} <i>"{{ $batch.Label }}"</i> {{ end }} created {{ $batch.Time | formatDate }} by {{ $batch.ActingUsername }}</h3>
+            <form method="POST" action="{{ $deleteRoute }}" id="{{ $batch.BatchId }}">
+                <input type="hidden" name="batchid" value="{{ $batch.BatchId }}">
+            </form>
+            <p>Delete remaining invites in this batch <button type="submit" form="{{$batch.BatchId}}">Delete</button></p>
+            <details>
+                <summary>Invites as code block</summary>
+                <pre style="user-select: all;">
+{{ range $index, $invite := $batch.UnclaimedInvites }}<code>{{ $invite }}</code>
+{{ end }}</pre>
+            </details>
+
+            <details>
+            <summary> Invites as pre-filled registration links</summary>
+            <ul>
+                {{ range $index, $invite := $batch.UnclaimedInvites }}
+                <li><a href="/">forum.com/register?invite={{ $invite }}</a></li>
+                {{ end }}
+            </ul>
+            </details>
+        {{ end }}
+
+    </section>
+
+    {{ if .Data.ErrorMessage }}
+    <div>
+        <p><b> {{ .Data.ErrorMessage }} </b></p>
+    </div>
+    {{ end }}
+
+</main>
+{{ template "footer" . }}

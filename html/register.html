@@ -2,11 +2,10 @@
 <main>
     <h1> {{ "Register" | translate | capitalize }}</h1>
     {{ .Data.Rules }} <!-- registrationregistration  rules will be inserted here from the rules document being read from the config -->
-    <p>{{ "RegisterVerificationCode" | translate }} <b>{{ .Data.VerificationCode }}</b></p>
     <details>
-        <summary> {{ "RegisterVerificationInstructionsTitle" | translate }}</summary>
-        <!-- add your communities verification instructions by editing the verification-instructions document, see the config for where to find it!-->
-        {{ .Data.VerificationInstructions }}
+        <summary> {{ "RegisterInviteInstructionsTitle" | translate }}</summary>
+        <!-- add your communities registration instructions by editing the registration-instructions document, see the config for where to find it!-->
+        {{ .Data.InviteInstructions }}
     </details>
 
     <form method="post">
@@ -15,9 +14,8 @@
         <label for="password">{{ "Password" | translate | capitalize }}:</label>
         <input type="password" minlength="9" required id="password" name="password" aria-describedby="password-help" style="margin-bottom:0;">
         <div style="margin-bottom:1rem;"><small id="password-help">{{ "PasswordMin" | translate }}.</small></div>
-        <label for="verificationlink">{{ "RegisterVerificationLink" | translate }}: </label>
-        <input type="text" required id="verification link" name="verificationlink">
-        <input type="hidden" name="verificationcode" value="{{.Data.VerificationCode}}">
+        <label for="invite">Invite code: </label>
+        <input type="text" required id="invite" value="{{ .Data.InviteCode }}" name="invite">
         {{ if ne .Data.ConductLink "" }}
         <div>
             <div>

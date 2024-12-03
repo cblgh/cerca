@@ -548,8 +548,11 @@ type InviteBatch struct {
 */
 
 // TODO (2024-11-22): consider d1's request of invites that are repeat-redeemable until deleted by an admin
-// returns a bool signaling whether the invite was successfully claimed or not
-func (d DB) ClaimInvite (invite string) (bool, error) {
+// returns: 
+// * a bool signaling whether the invite was successfully claimed or not
+// * a string representing the batchid associated with this invite
+// * an error, nil if everything went according to expectations (either claimed invite, or invite code was not valid)
+func (d DB) ClaimInvite (invite string) (bool, string, error) {
   ed := util.Describe("claim invite")
   var err error
   var tx *sql.Tx
@@ -571,14 +574,15 @@ func (d DB) ClaimInvite (invite string) (bool, error) {
 
   ops := []BatchQuery{
     BatchQuery{desc: "check if invite to redeem exists", stmt:"SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
+    BatchQuery{desc: "get invite code's batchid", stmt:"SELECT batchid FROM invites WHERE invite = ?"},
     BatchQuery{desc: "delete invite from table", stmt:"DELETE FROM invites WHERE invite = ?"},
   }
 
-  for _, operation := range ops {
-    operation.preparedStmt, err = tx.Prepare(operation.stmt)
-    defer operation.preparedStmt.Close()
+  for i, operation := range ops {
+    ops[i].preparedStmt, err = tx.Prepare(operation.stmt)
+    defer ops[i].preparedStmt.Close()
 		if e := rollbackOnErr(ed.Eout(err, operation.desc)); e != nil {
-      return false, e
+      return false, "", e
     }
   }
 
@@ -587,22 +591,32 @@ func (d DB) ClaimInvite (invite string) (bool, error) {
 	var exists int
 	err = row.Scan(&exists)
 	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[0].desc)); e != nil {
-		return false, e
-	}
-	// existence check failed
-	if exists == 0 {
-		return false, nil
+		return false, "", e
 	}
 
-	// then: delete the invite code being claimed
-	_, err = ops[1].preparedStmt.Exec(invite)
+	// existence check failed. end transaction by rolling back (nothing meaningful was changed)
+	if exists == 0 {
+		_ = tx.Rollback()
+		return false, "", nil
+	}
+
+	// then: get the associated batchid, so we can associate it with the registration
+	row = ops[1].preparedStmt.QueryRow(invite)
+	var batchid string // uuid v4
+	err = row.Scan(&batchid)
 	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[1].desc)); e != nil {
-		return false, e
+		return false, "", e
+	}
+
+	// then, finally: delete the invite code being claimed
+	_, err = ops[2].preparedStmt.Exec(invite)
+	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[2].desc)); e != nil {
+		return false, "", e
 	}
 
   err = tx.Commit()
   ed.Check(err, "commit transaction")
-  return true, nil
+  return true, batchid, nil
 }
 
 

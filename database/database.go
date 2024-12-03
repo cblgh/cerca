@@ -526,15 +526,15 @@ func (d DB) GetSystemUserid() int {
 	return systemUserid
 }
 
-func (d DB) AddRegistration(userid int, verificationLink string) error {
+func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 	ed := util.Describe("add registration")
 	stmt := `INSERT INTO registrations (userid, host, link, time) VALUES (?, ?, ?, ?)`
 	t := time.Now()
-	u, err := url.Parse(verificationLink)
+	u, err := url.Parse(registrationOrigin)
 	if err = ed.Eout(err, "parse url"); err != nil {
 		return err
 	}
-	_, err = d.Exec(stmt, userid, u.Host, verificationLink, t)
+	_, err = d.Exec(stmt, userid, u.Host, registrationOrigin, t)
 	if err = ed.Eout(err, "add registration"); err != nil {
 		return err
 	}
