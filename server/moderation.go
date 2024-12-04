@@ -113,7 +113,7 @@ func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, ta
 		}
 	}
 	if modlogErr != nil {
-		fmt.Println(ed.Eout(err, "error adding moderation log"))
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
 	}
 	if err != nil {
 		return err
@@ -362,6 +362,10 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogProposalMakeAdmin"
 		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
 			translationString = "modlogProposalRemoveUser"
+		case constants.MODLOG_CREATE_INVITE_BATCH:
+			translationString = "modlogCreateInvites"
+		case constants.MODLOG_DELETE_INVITE_BATCH:
+			translationString = "modlogDeleteInvites"
 		}
 
 		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
@@ -467,12 +471,12 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 	}
 
 	batches := h.db.GetAllInvites()
-	fmt.Println(batches)
 
 	type Invites struct {
 		ErrorMessage string
 		CreateRoute string
 		DeleteRoute string
+		ForumRootURL string
 		Batches []database.InviteBatch
 	}
 	
@@ -480,6 +484,10 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 	data.CreateRoute = INVITES_CREATE_ROUTE
 	data.DeleteRoute = INVITES_DELETE_ROUTE
 	data.Batches = batches
+	// reuse the root url to better display registration links on the invites panel
+	if h.config.RSS.URL != "" {
+		data.ForumRootURL = h.config.RSS.URL
+	}
 
 	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
 
@@ -509,19 +517,29 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 		fmt.Printf("%v\n", ed.Eout(err, "create invites"))
 		return
 	}
+
+	modlogErr := h.db.AddModerationLog(adminUserId, -1, constants.MODLOG_CREATE_INVITE_BATCH)
+	if modlogErr != nil {
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
+	}
+
 	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
 }
 
 func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *http.Request) {
-	// ed := util.Describe("server: admin delete invites")
+	ed := util.Describe("server: admin delete invites")
 	loggedIn, _ := h.IsLoggedIn(req)
-	isAdmin, _ := h.IsAdmin(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
 		IndexRedirect(res, req)
 		return
 	}
 	batchId := req.PostFormValue("batchid")
 	h.db.DeleteInvitesBatch(batchId)
+	modlogErr := h.db.AddModerationLog(adminUserId, -1, constants.MODLOG_DELETE_INVITE_BATCH)
+	if modlogErr != nil {
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
+	}
 	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
 }
 

@@ -27,6 +27,8 @@ var English = map[string]string{
 	"SortRecentPosts":   "recent posts",
 	"SortRecentThreads": "most recent threads",
 
+	"modlogCreateInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> created a batch of invites`,
+	"modlogDeleteInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> deleted a batch of invites`,
 	"modlogResetPassword":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
 	"modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
 	"modlogRemoveUser":         `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,

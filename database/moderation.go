@@ -742,7 +742,8 @@ func (d DB) GetAllInvites() []InviteBatch {
 
 	// convert from map to a []InviteBatch sorted by time using ts-prefixed map keys
 	ret := make([]InviteBatch, 0, len(keys))
-	sort.Strings(keys)
+	// we want newest first
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 	for _, key := range keys {
 		ret = append(ret, *batches[key])
 	}

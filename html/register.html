@@ -1,10 +1,10 @@
 {{ template "head" . }}
 <main>
     <h1> {{ "Register" | translate | capitalize }}</h1>
-    {{ .Data.Rules }} <!-- registrationregistration  rules will be inserted here from the rules document being read from the config -->
+    {{ .Data.Rules }} <!-- registration rules will be inserted here from the rules document being read from the config -->
     <details>
         <summary> {{ "RegisterInviteInstructionsTitle" | translate }}</summary>
-        <!-- add your communities registration instructions by editing the registration-instructions document, see the config for where to find it!-->
+        <!-- add your community's registration instructions by editing the registration-instructions document, see the config for where to find it!-->
         {{ .Data.InviteInstructions }}
     </details>
 

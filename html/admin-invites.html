@@ -2,19 +2,19 @@
 <main>
     <h1>Invites</h1>
     <p>Generate an invite and give to people for whom you want to enable account registration.</p>
-    <p>You can <b>generate many invites at once</b>. If you want to enable invites
-from other non-admin members of the forum, generate a batch and dump them in a
-private thread.</p>
-    <p>With <b>labeled invites</b>, you can separate different batches. Maybe one batch is to
-be redeemed by a friend group, while another will be printed on slips of
-paper and given out at meetups.</p>
+    <p>You can <b>generate many invites at once</b>. If non-admin members are to be enabled to invite new users, then
+    generate a batch of invite codes and post them in a private thread.</p>
+    <p>With <b>labeled invites</b>, you can separate different batches. Maybe one batch is for a friend group, 
+    while another will be printed on slips of paper and given out at meetups.</p>
 
     <section>
 	<h2>Create invites</h2>
+        <p>Create a new batch of invite codes. The maximum amount of invites that can be created at once is 100, and 500
+        invites is the upper limit a single batch of invites can contain.</p>
 	<form method="POST" action="{{ .Data.CreateRoute }}">
-	    <!-- <label for="amount">Amount of invites:</label> -->
+	    <label class="visually-hidden" for="amount">Amount of invites:</label>
 	    <input title="Amount of invites to create" type="number" value="1" min="1" max="100" id="amount" name="amount">
-	    <input maxlength="70" title="The invites you generate will be labeled with this label, and displayed using it below. It does not otherwise affect the invite." type="text" placeholder="e.g. server friends" id="label" name="label">
+	    <input maxlength="70" title="The invites you generate will be labeled using this text, and the label displayed below. It does not otherwise affect the invite." type="text" placeholder="e.g. server friends" id="label" name="label">
 	    <button type="submit">Create</button>
 	</form>
     </section>
@@ -23,8 +23,11 @@ paper and given out at meetups.</p>
 	<h2>Unclaimed invites</h2>
         {{ if len .Data.Batches | eq 0}}
         <p>There are currently no unclaimed invite batches that are issused.</p>
+        {{ else }} 
+        <p>Listed below are batches of invite codes that have yet to be claimed. If all invites from a batch have been used, the batch will no longer be displayed.</p>
         {{ end }}
         {{ $deleteRoute := .Data.DeleteRoute }}
+        {{ $forumRoot := .Data.ForumRootURL }}
         {{ range $index, $batch := .Data.Batches }}
         <h3>{{ if len $batch.Label | eq 0 }} Unlabeled batch {{ else }} <i>"{{ $batch.Label }}"</i> {{ end }} created {{ $batch.Time | formatDate }} by {{ $batch.ActingUsername }}</h3>
             <form method="POST" action="{{ $deleteRoute }}" id="{{ $batch.BatchId }}">
@@ -42,7 +45,7 @@ paper and given out at meetups.</p>
             <summary> Invites as pre-filled registration links</summary>
             <ul>
                 {{ range $index, $invite := $batch.UnclaimedInvites }}
-                <li><a href="/">forum.com/register?invite={{ $invite }}</a></li>
+                <li><a href="/register?invite={{ $invite }}">{{ if len $forumRoot | ne 0}}{{$forumRoot}}{{end}}/register?invite={{ $invite }}</a></li>
                 {{ end }}
             </ul>
             </details>
