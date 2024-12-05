@@ -132,6 +132,7 @@ func createTables(db *sql.DB) {
 		label TEXT,
 		adminid INTEGER NOT NULL,
 		time DATE NOT NULL,
+		reusable BOOL NOT NULL,
 
 		FOREIGN KEY(adminid) REFERENCES users(id)
 	);

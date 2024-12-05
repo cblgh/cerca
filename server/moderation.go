@@ -512,7 +512,8 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 	util.Check(err, "parse amount as int")
 	var label string
 	label = req.PostFormValue("label")
-	err = h.db.CreateInvites(adminUserId, amount, label)
+	reusable := (req.PostFormValue("reusable") == "true")
+	err = h.db.CreateInvites(adminUserId, amount, label, reusable)
 	if err != nil {
 		fmt.Printf("%v\n", ed.Eout(err, "create invites"))
 		return
@@ -523,7 +524,8 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
 	}
 
-	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
+	// refresh and show the create invite section
+	http.Redirect(res, req, fmt.Sprintf("%s%s", INVITES_ROUTE, "#create-invites"), http.StatusFound)
 }
 
 func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *http.Request) {
@@ -540,7 +542,8 @@ func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *h
 	if modlogErr != nil {
 		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
 	}
-	http.Redirect(res, req, INVITES_ROUTE, http.StatusFound)
+	// refresh and show the create invite section
+	http.Redirect(res, req, fmt.Sprintf("%s%s", INVITES_ROUTE, "#create-invites"), http.StatusFound)
 }
 
 // view of /admin for non-admin users (contains less information)

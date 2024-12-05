@@ -536,6 +536,7 @@ type InviteBatch struct {
 	UnclaimedInvites []string	
 	Label string
 	Time time.Time
+	Reusable bool
 }
 
 // by admin+creationTime
@@ -574,7 +575,7 @@ func (d DB) ClaimInvite (invite string) (bool, string, error) {
 
   ops := []BatchQuery{
     BatchQuery{desc: "check if invite to redeem exists", stmt:"SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
-    BatchQuery{desc: "get invite code's batchid", stmt:"SELECT batchid FROM invites WHERE invite = ?"},
+    BatchQuery{desc: "get invite code's batchid and whether marked reusable", stmt:"SELECT batchid, reusable FROM invites WHERE invite = ?"},
     BatchQuery{desc: "delete invite from table", stmt:"DELETE FROM invites WHERE invite = ?"},
   }
 
@@ -603,15 +604,18 @@ func (d DB) ClaimInvite (invite string) (bool, string, error) {
 	// then: get the associated batchid, so we can associate it with the registration
 	row = ops[1].preparedStmt.QueryRow(invite)
 	var batchid string // uuid v4
-	err = row.Scan(&batchid)
+	var reusable bool
+	err = row.Scan(&batchid, &reusable)
 	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[1].desc)); e != nil {
 		return false, "", e
 	}
 
-	// then, finally: delete the invite code being claimed
-	_, err = ops[2].preparedStmt.Exec(invite)
-	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[2].desc)); e != nil {
-		return false, "", e
+	if !reusable {
+		// then, finally: delete the invite code being claimed
+		_, err = ops[2].preparedStmt.Exec(invite)
+		if e := rollbackOnErr(ed.Eout(err, "exec " + ops[2].desc)); e != nil {
+			return false, "", e
+		}
 	}
 
   err = tx.Commit()
@@ -633,7 +637,7 @@ func (d DB) ClaimInvite (invite string) (bool, string, error) {
 const maxBatchAmount = 100
 const maxUnclaimedAmount = 500
 
-func (d DB) CreateInvites (adminid int, amount int, label string) error {
+func (d DB) CreateInvites (adminid int, amount int, label string, reusable bool) error {
   ed := util.Describe("create invites")
   isAdmin, err := d.IsUserAdmin(adminid)
   if err != nil {
@@ -676,12 +680,12 @@ func (d DB) CreateInvites (adminid int, amount int, label string) error {
 	// this id identifies all invites from this batch
 	batchid := util.GetUUIDv4()
   creationTime := time.Now()
-	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time) VALUES (?, ?, ?, ?, ?)")
+	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time, reusable) VALUES (?, ?, ?, ?, ?, ?)")
 	util.Check(err, "prepare invite insert stmt")
 	defer preparedStmt.Close()
 	for _, invite := range invites {
 		// create a batch
-		_, err := preparedStmt.Exec(batchid, adminid, invite, label, creationTime)
+		_, err := preparedStmt.Exec(batchid, adminid, invite, label, creationTime, reusable)
 		ed.Check(err, "inserting invite into database")
 	}
 	return nil
@@ -717,7 +721,7 @@ func (d DB) DeleteInvitesBatch(batchid string) {
 func (d DB) GetAllInvites() []InviteBatch {
 	ed := util.Describe("get all invites")
 
-	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label FROM invites i INNER JOIN users u ON i.adminid = u.id")
+	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label, i.reusable FROM invites i INNER JOIN users u ON i.adminid = u.id")
 	ed.Check(err, "create query")
 	
 	// keep track of invite batches by creating a key based on username + creation time
@@ -725,9 +729,10 @@ func (d DB) GetAllInvites() []InviteBatch {
 	var keys []string
 	var batchid, invite, username, label string
 	var t time.Time
+	var reusable bool
 
 	for rows.Next() {
-		err := rows.Scan(&batchid, &username, &invite, &t, &label)
+		err := rows.Scan(&batchid, &username, &invite, &t, &label, &reusable)
 		ed.Check(err, "scan row")
 		// starting the key with the unix epoch as a string allows us to sort the map's keys by time just by comparing strings with sort.Strings()
 		unixTimestamp := strconv.FormatInt(t.Unix(), 10)
@@ -736,7 +741,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 			batch.UnclaimedInvites = append(batch.UnclaimedInvites, invite)
 		} else {
 			keys = append(keys, key)
-			batches[key] = &InviteBatch{BatchId: batchid, ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t}
+			batches[key] = &InviteBatch{BatchId: batchid, ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t, Reusable: reusable}
 		}
 	}
 
