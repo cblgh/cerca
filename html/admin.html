@@ -3,10 +3,13 @@
     <h1>{{ .Title }}</h1>
     <section>
         <form method="GET" id="add-user" action="/add-user"></form>
-        <p>
+        <form method="GET" id="visit-invites" action="/invites"></form>
         <form method="POST" id="demote-self" action="/demote-admin">
             <input type="hidden" name="userid" value="{{ .LoggedInID }}">
         </form>
+        <p>
+        Do you want to view or create invites? <button form="visit-invites" type="submit">View invites</button>.
+        </p>
         <p>
         {{ "AdminAddNewUserQuestion" | translate }} <button form="add-user" type="submit"> {{ "AdminAddNewUser" | translate }}</button>.
         </p>

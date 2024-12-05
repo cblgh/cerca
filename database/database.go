@@ -124,7 +124,20 @@ func createTables(db *sql.DB) {
 		FOREIGN KEY (recipientid) REFERENCES users(id)
 	);
 		`,
-		`
+	`
+	CREATE TABLE IF NOT EXISTS invites (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		batchid TEXT NOT NULL, -- uuid v4
+		invite TEXT NOT NULL,
+		label TEXT,
+		adminid INTEGER NOT NULL,
+		time DATE NOT NULL,
+		reusable BOOL NOT NULL,
+
+		FOREIGN KEY(adminid) REFERENCES users(id)
+	);
+	`,	
+	`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -514,15 +527,15 @@ func (d DB) GetSystemUserid() int {
 	return systemUserid
 }
 
-func (d DB) AddRegistration(userid int, verificationLink string) error {
+func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 	ed := util.Describe("add registration")
 	stmt := `INSERT INTO registrations (userid, host, link, time) VALUES (?, ?, ?, ?)`
 	t := time.Now()
-	u, err := url.Parse(verificationLink)
+	u, err := url.Parse(registrationOrigin)
 	if err = ed.Eout(err, "parse url"); err != nil {
 		return err
 	}
-	_, err = d.Exec(stmt, userid, u.Host, verificationLink, t)
+	_, err = d.Exec(stmt, userid, u.Host, registrationOrigin, t)
 	if err = ed.Eout(err, "add registration"); err != nil {
 		return err
 	}
