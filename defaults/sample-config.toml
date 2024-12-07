@@ -13,3 +13,8 @@ logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/
 about = "content/about.md"
 rules = "content/rules.md"
 registration_instructions = "content/registration-instructions.md"
+
+[features]
+# this toggles whether admin-created invites can be set as reusable or not. a reusable invite is an invite code
+# that can be claimed multiple times, and keep being claimed until an admin deletes the batch it is part of
+reusable_invites = false

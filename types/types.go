@@ -23,6 +23,10 @@ type Config struct {
 		RegisterRulesPath           string `json:"rules"`
 		RegistrationExplanationPath string `json:"registration_instructions"`
 	} `json:"documents"`
+
+	Features struct {
+		ReusableInvites                    bool `json:"reusable_invites"`
+	} `json:"features"`
 }
 
 // Ensure that, at the very least, default paths exist for each expected document path. Does not overwrite previously set values.

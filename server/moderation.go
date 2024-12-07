@@ -478,12 +478,14 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 		DeleteRoute string
 		ForumRootURL string
 		Batches []database.InviteBatch
+		ReusableInvitesEnabled bool
 	}
 	
 	var data Invites
 	data.CreateRoute = INVITES_CREATE_ROUTE
 	data.DeleteRoute = INVITES_DELETE_ROUTE
 	data.Batches = batches
+	data.ReusableInvitesEnabled = h.config.Features.ReusableInvites
 	// reuse the root url to better display registration links on the invites panel
 	if h.config.RSS.URL != "" {
 		data.ForumRootURL = h.config.RSS.URL
@@ -513,6 +515,10 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 	var label string
 	label = req.PostFormValue("label")
 	reusable := (req.PostFormValue("reusable") == "true")
+	// ignore what the reusable field says if the feature is not enabled
+	if !h.config.Features.ReusableInvites {
+		reusable = false
+	}
 	err = h.db.CreateInvites(adminUserId, amount, label, reusable)
 	if err != nil {
 		fmt.Printf("%v\n", ed.Eout(err, "create invites"))

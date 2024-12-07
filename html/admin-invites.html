@@ -20,10 +20,12 @@
 	    <input title="Amount of invites to create" type="number" value="1" min="1" max="100" id="amount" name="amount">
 	    <input maxlength="70" title="The invites you generate will be labeled using this text, and the label displayed below. It does not otherwise affect the invite." type="text" placeholder="e.g. server friends" id="label" name="label">
 	    <button type="submit">Create</button>
+            {{ if .Data.ReusableInvitesEnabled }} 
             <div>
             <input type="checkbox" id="multiuse-checkbox" name="reusable" value="true">
             <label style="display: inline-block;" for="multiuse-checkbox">Make invite batch reusable (until deleted by an admin)</label>
             </div>
+            {{ end }}
 	</form>
     </section>
 
