@@ -438,6 +438,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 type User struct {
 	Name string
 	ID   int
+	RegistrationOrigin string 
 }
 
 func (d DB) AddAdmin(userid int) error {
@@ -754,3 +755,30 @@ func (d DB) GetAllInvites() []InviteBatch {
 	}
 	return ret
 }
+
+type RegisteredInvite struct {
+	Label string
+	BatchID string
+	Count int
+}
+
+func (d DB) CountRegistrationsByInviteBatch () []RegisteredInvite {
+	ed := util.Describe("database/moderation.go: count registrations by invite batch")
+	stmt := `SELECT i.label, i.batchid, COUNT(*) 
+	FROM registrations r INNER JOIN invites i 
+	ON r.link == i.batchid 
+	GROUP BY i.batchid 
+	ORDER BY COUNT(*) DESC 
+	;`
+	rows, err := d.db.Query(stmt)
+	ed.Check(err, "query stmt")
+	var registrations []RegisteredInvite
+	for rows.Next() {
+		var info RegisteredInvite
+		err = rows.Scan(&info.Label, &info.BatchID, &info.Count)
+		ed.Check(err, "failed to scan returned result")
+		registrations = append(registrations, info)
+	}
+	return registrations
+}
+

@@ -72,7 +72,25 @@
         {{ end }}
     </table>
     {{ end }}
-
+    <section>
+        <h2>Registered invites</h2>
+        <p>Tallied invites based on the invite batch. Useful to see how invites are being claimed for different
+        batches.</p>
+        <table>
+            <tr>
+                <th>Label</th>
+                <th>Uses</th>
+                <th>ID</th>
+            </tr>
+            {{ range $index, $reggedInvite := .Data.Registrations }}
+            <tr>
+                <td>{{ if len $reggedInvite.Label | eq 0 }} Unlabeled batch {{ else }} {{ $reggedInvite.Label }} {{ end }}</td>
+                <td style="text-align: center">{{ $reggedInvite.Count }}</td>
+                <td><details><summary style="margin: 0;">Batch ID</summary>{{ $reggedInvite.BatchID }}</details></td>
+            </tr>
+            {{ end }}
+        </table>
+    </section>
     <section>
         <h2> {{ "AdminUsers" | translate }} </h2>
         {{ if len .Data.Users | eq 0 }} 
@@ -92,6 +110,7 @@
                             <option value="make-admin">{{ "AdminMakeAdmin" | translate }}</option>
                         </select>
                     </td>
+                    <td><details><summary style="margin: 0;">invite/register info</summary>{{ $user.RegistrationOrigin }}</details></td>
                     <td>
                         <button type="submit">{{ "Submit" | translate }}</button>
                     </td>

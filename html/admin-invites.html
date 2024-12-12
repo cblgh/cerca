@@ -43,6 +43,7 @@
             <form method="POST" action="{{ $deleteRoute }}" id="{{ $batch.BatchId }}">
                 <input type="hidden" name="batchid" value="{{ $batch.BatchId }}">
             </form>
+            <p style="margin: 0;">ID for this batch: <code>{{ $batch.BatchId }}</code></p>
             <p>Delete remaining invites in this batch <button type="submit" form="{{$batch.BatchId}}">Delete</button></p>
             <details>
                 <summary>Invites as code block</summary>
