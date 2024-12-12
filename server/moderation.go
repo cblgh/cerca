@@ -18,6 +18,7 @@ type AdminData struct {
 	Admins    []database.User
 	Users     []database.User
 	Proposals []PendingProposal
+	Registrations []database.RegisteredInvite
 	IsAdmin   bool
 }
 
@@ -426,6 +427,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		}
 		admins := h.db.GetAdmins()
 		normalUsers := h.db.GetUsers(false) // do not include admins
+		registrations := h.db.CountRegistrationsByInviteBatch()
 		proposedActions := h.db.GetProposedActions()
 		// massage pending proposals into something we can use in the rendered view
 		pendingProposals := make([]PendingProposal, len(proposedActions))
@@ -449,17 +451,12 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
-		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
+		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals, Registrations: registrations }
 		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
 }
 
-/* routes to handle POSTs from
-* AdminInvitesCreateBatch
-* AdminInvitesDeleteBatch
-* InvitesClaimInvite
-*/
 func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
 	// ed := util.Describe("admin invites route")
 	loggedIn, _ := h.IsLoggedIn(req)
