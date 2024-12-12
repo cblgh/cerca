@@ -540,20 +540,6 @@ type InviteBatch struct {
 	Reusable bool
 }
 
-// by admin+creationTime
-/*
-* get all invites -> returns []InviteBatch 
-* map[username+string(creationTime]InviteBatch
-* iterate over the map
-*		-> collect creation time
-*   -> sort by time, newest first?
-*/
-
-// TODO (2024-11-22): consider d1's request of invites that are repeat-redeemable until deleted by an admin
-// returns: 
-// * a bool signaling whether the invite was successfully claimed or not
-// * a string representing the batchid associated with this invite
-// * an error, nil if everything went according to expectations (either claimed invite, or invite code was not valid)
 func (d DB) ClaimInvite (invite string) (bool, string, error) {
   ed := util.Describe("claim invite")
   var err error
@@ -625,16 +611,6 @@ func (d DB) ClaimInvite (invite string) (bool, string, error) {
 }
 
 
-// CREATE TABLE IF NOT EXISTS invites (
-// id INTEGER PRIMARY KEY AUTOINCREMENT,
-// batchid TEXT NOT NULL, -- this is a uuid v4
-// invite TEXT NOT NULL,
-// label TEXT,
-// adminid INTEGER NOT NULL,
-// time DATE NOT NULL,
-//
-// FOREIGN KEY(adminid) REFERENCES users(id)
-// );
 const maxBatchAmount = 100
 const maxUnclaimedAmount = 500
 
@@ -715,9 +691,6 @@ func (d DB) DeleteInvitesBatch(batchid string) {
 	_, err = stmt.Exec(batchid)
 	util.Check(err, "execute delete")
 }
-
-/* TODO (2024-12-01): next up - start to write these database routines to parts that called from the server route
-* handlers :) */
 
 func (d DB) GetAllInvites() []InviteBatch {
 	ed := util.Describe("get all invites")
