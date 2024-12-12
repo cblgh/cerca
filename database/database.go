@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"time"
 
@@ -124,7 +123,20 @@ func createTables(db *sql.DB) {
 		FOREIGN KEY (recipientid) REFERENCES users(id)
 	);
 		`,
-		`
+	`
+	CREATE TABLE IF NOT EXISTS invites (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		batchid TEXT NOT NULL, -- uuid v4
+		invite TEXT NOT NULL,
+		label TEXT,
+		adminid INTEGER NOT NULL,
+		time DATE NOT NULL,
+		reusable BOOL NOT NULL,
+
+		FOREIGN KEY(adminid) REFERENCES users(id)
+	);
+	`,	
+	`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -514,15 +526,11 @@ func (d DB) GetSystemUserid() int {
 	return systemUserid
 }
 
-func (d DB) AddRegistration(userid int, verificationLink string) error {
+func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 	ed := util.Describe("add registration")
-	stmt := `INSERT INTO registrations (userid, host, link, time) VALUES (?, ?, ?, ?)`
+	stmt := `INSERT INTO registrations (userid, link, time) VALUES (?, ?, ?)`
 	t := time.Now()
-	u, err := url.Parse(verificationLink)
-	if err = ed.Eout(err, "parse url"); err != nil {
-		return err
-	}
-	_, err = d.Exec(stmt, userid, u.Host, verificationLink, t)
+	_, err := d.Exec(stmt, userid, registrationOrigin, t)
 	if err = ed.Eout(err, "add registration"); err != nil {
 		return err
 	}
@@ -533,10 +541,10 @@ func (d DB) AddRegistration(userid int, verificationLink string) error {
 
 func (d DB) GetUsers(includeAdmin bool) []User {
 	ed := util.Describe("get users")
-	query := `SELECT u.name, u.id
-  FROM users u 
+	query := `SELECT u.name, u.id, r.link
+  FROM users u INNER JOIN registrations r on u.id = r.userid
 	%s
-  ORDER BY u.name
+  ORDER BY u.id
   `
 
 	if includeAdmin {
@@ -556,7 +564,7 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 	var user User
 	var users []User
 	for rows.Next() {
-		if err := rows.Scan(&user.Name, &user.ID); err != nil {
+		if err := rows.Scan(&user.Name, &user.ID, &user.RegistrationOrigin); err != nil {
 			ed.Check(err, "scanning loop")
 		}
 		users = append(users, user)

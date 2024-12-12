@@ -21,7 +21,7 @@ type Config struct {
 		LogoPath                    string `json:"logo"`
 		AboutPath                   string `json:"about"`
 		RegisterRulesPath           string `json:"rules"`
-		VerificationExplanationPath string `json:"verification_instructions"`
+		RegistrationExplanationPath string `json:"registration_instructions"`
 	} `json:"documents"`
 }
 
@@ -33,8 +33,8 @@ func (c *Config) EnsureDefaultPaths() {
 	if c.Documents.RegisterRulesPath == "" {
 		c.Documents.RegisterRulesPath = filepath.Join("content", "rules.md")
 	}
-	if c.Documents.VerificationExplanationPath == "" {
-		c.Documents.VerificationExplanationPath = filepath.Join("content", "verification-instructions.md")
+	if c.Documents.RegistrationExplanationPath == "" {
+		c.Documents.RegistrationExplanationPath = filepath.Join("content", "registration-instructions.md")
 	}
 	if c.Documents.LogoPath == "" {
 		c.Documents.LogoPath = filepath.Join("content", "logo.html")
@@ -53,5 +53,5 @@ language = "English"
 logo = "./logo.svg"
 about = "./about.md"
 rules = "./rules.md"
-verification_instructions = "./verification-instructions.md"
+registration_instructions = "./registration-instructions.md"
 */

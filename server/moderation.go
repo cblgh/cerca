@@ -18,6 +18,7 @@ type AdminData struct {
 	Admins    []database.User
 	Users     []database.User
 	Proposals []PendingProposal
+	Registrations []database.RegisteredInvite
 	IsAdmin   bool
 }
 
@@ -113,7 +114,7 @@ func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, ta
 		}
 	}
 	if modlogErr != nil {
-		fmt.Println(ed.Eout(err, "error adding moderation log"))
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
 	}
 	if err != nil {
 		return err
@@ -257,6 +258,9 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	}
 }
 
+/* TODO (2024-12-02): make it possible for an admin to reset another admin's password; maybe using quorum? */
+
+
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
@@ -359,6 +363,10 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			translationString = "modlogProposalMakeAdmin"
 		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
 			translationString = "modlogProposalRemoveUser"
+		case constants.MODLOG_CREATE_INVITE_BATCH:
+			translationString = "modlogCreateInvites"
+		case constants.MODLOG_DELETE_INVITE_BATCH:
+			translationString = "modlogDeleteInvites"
 		}
 
 		actionString := h.translator.TranslateWithData(translationString, i18n.TranslationData{Data: tdata})
@@ -419,6 +427,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		}
 		admins := h.db.GetAdmins()
 		normalUsers := h.db.GetUsers(false) // do not include admins
+		registrations := h.db.CountRegistrationsByInviteBatch()
 		proposedActions := h.db.GetProposedActions()
 		// massage pending proposals into something we can use in the rendered view
 		pendingProposals := make([]PendingProposal, len(proposedActions))
@@ -442,10 +451,96 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
-		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals}
+		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals, Registrations: registrations }
 		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
+}
+
+func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
+	// ed := util.Describe("admin invites route")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, _ := h.IsAdmin(req)
+
+	if !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+
+	batches := h.db.GetAllInvites()
+
+	type Invites struct {
+		ErrorMessage string
+		CreateRoute string
+		DeleteRoute string
+		ForumRootURL string
+		Batches []database.InviteBatch
+	}
+	
+	var data Invites
+	data.CreateRoute = INVITES_CREATE_ROUTE
+	data.DeleteRoute = INVITES_DELETE_ROUTE
+	data.Batches = batches
+	// reuse the root url to better display registration links on the invites panel
+	if h.config.RSS.URL != "" {
+		data.ForumRootURL = h.config.RSS.URL
+	}
+
+	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+
+	if req.Method == "GET" {
+		h.renderView(res, "admin-invites", view)
+		return
+	} else {
+		fmt.Println(INVITES_ROUTE, "received request of type other than GET")
+		IndexRedirect(res, req)
+	}
+}
+
+func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("server: admin generate invites")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+	amount, err := strconv.Atoi(req.PostFormValue("amount"))
+	util.Check(err, "parse amount as int")
+	var label string
+	label = req.PostFormValue("label")
+	reusable := (req.PostFormValue("reusable") == "true")
+	err = h.db.CreateInvites(adminUserId, amount, label, reusable)
+	if err != nil {
+		fmt.Printf("%v\n", ed.Eout(err, "create invites"))
+		return
+	}
+
+	modlogErr := h.db.AddModerationLog(adminUserId, -1, constants.MODLOG_CREATE_INVITE_BATCH)
+	if modlogErr != nil {
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
+	}
+
+	// refresh and show the create invite section
+	http.Redirect(res, req, fmt.Sprintf("%s%s", INVITES_ROUTE, "#create-invites"), http.StatusFound)
+}
+
+func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *http.Request) {
+	ed := util.Describe("server: admin delete invites")
+	loggedIn, _ := h.IsLoggedIn(req)
+	isAdmin, adminUserId := h.IsAdmin(req)
+	if req.Method == "GET" || !loggedIn || !isAdmin {
+		IndexRedirect(res, req)
+		return
+	}
+	batchId := req.PostFormValue("batchid")
+	h.db.DeleteInvitesBatch(batchId)
+	modlogErr := h.db.AddModerationLog(adminUserId, -1, constants.MODLOG_DELETE_INVITE_BATCH)
+	if modlogErr != nil {
+		fmt.Println(ed.Eout(modlogErr, "error adding moderation log"))
+	}
+	// refresh and show the create invite section
+	http.Redirect(res, req, fmt.Sprintf("%s%s", INVITES_ROUTE, "#create-invites"), http.StatusFound)
 }
 
 // view of /admin for non-admin users (contains less information)

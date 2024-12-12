@@ -1,0 +1,72 @@
+{{ template "head" . }}
+<main>
+    <h1>Invites</h1>
+    <p>Generate an invite and give to people for whom you want to enable account registration.</p>
+    <p>You can <b>generate many invites at once</b>. If non-admin members are to be enabled to invite new users, then
+    generate a batch of invite codes and post them in a private thread.</p>
+    <p>By <b>labeling invites</b>, you can separate different batches. Maybe one batch is for a friend group, 
+    while another will be printed on slips of paper and given out at meetups.</p>
+    <p><b>Reusable invites</b> allows a single invite code to be used multiple times without expiring. To
+    stop the invite from being usable, <b>the invite must be deleted</b> below. Reusable invites provide a
+    smoother experience for onboarding preexisting community members by posting a reusable invite to a community
+    space compared to the continual management of invite code batches. However, reusable invites are a possible way for
+    unauthorized users to gain entry, such as spam accounts, so spread them carefully.</p>
+
+    <section id="create-invites">
+	<h2>Create invites</h2>
+        <p>Create a new batch of invite codes. The maximum amount of invites that can be created at once is 100.</p>
+	<form method="POST" action="{{ .Data.CreateRoute }}">
+	    <label class="visually-hidden" for="amount">Amount of invites:</label>
+	    <input title="Amount of invites to create" type="number" value="1" min="1" max="100" id="amount" name="amount">
+	    <input maxlength="70" title="The invites you generate will be labeled using this text, and the label displayed below. It does not otherwise affect the invite." type="text" placeholder="e.g. server friends" id="label" name="label">
+	    <button type="submit">Create</button>
+            <div>
+            <input type="checkbox" id="multiuse-checkbox" name="reusable" value="true">
+            <label style="display: inline-block;" for="multiuse-checkbox">Make invite batch reusable (until deleted by an admin)</label>
+            </div>
+	</form>
+    </section>
+
+    <section>
+	<h2>Unclaimed invites</h2>
+        {{ if len .Data.Batches | eq 0}}
+        <p>There are currently no unclaimed invite batches that are issused.</p>
+        {{ else }} 
+        <p>Listed below are batches of invite codes that have yet to be claimed. If all invites from a batch have been used, the batch will no longer be displayed.</p>
+        {{ end }}
+        {{ $deleteRoute := .Data.DeleteRoute }}
+        {{ $forumRoot := .Data.ForumRootURL }}
+        {{ range $index, $batch := .Data.Batches }}
+        <h3>{{ if $batch.Reusable }}[Reusable] {{ end }}{{ if len $batch.Label | eq 0 }} Unlabeled batch {{ else }} <i>"{{ $batch.Label }}"</i> {{ end }} created {{ $batch.Time | formatDate }} by {{ $batch.ActingUsername }}</h3>
+            <form method="POST" action="{{ $deleteRoute }}" id="{{ $batch.BatchId }}">
+                <input type="hidden" name="batchid" value="{{ $batch.BatchId }}">
+            </form>
+            <p style="margin: 0;">ID for this batch: <code>{{ $batch.BatchId }}</code></p>
+            <p>Delete remaining invites in this batch <button type="submit" form="{{$batch.BatchId}}">Delete</button></p>
+            <details>
+                <summary>Invites as code block</summary>
+                <pre style="user-select: all;">
+{{ range $index, $invite := $batch.UnclaimedInvites }}<code>{{ $invite }}</code>
+{{ end }}</pre>
+            </details>
+
+            <details>
+            <summary> Invites as pre-filled registration links</summary>
+            <ul>
+                {{ range $index, $invite := $batch.UnclaimedInvites }}
+                <li><a href="/register?invite={{ $invite }}">{{ if len $forumRoot | ne 0}}{{$forumRoot}}{{end}}/register?invite={{ $invite }}</a></li>
+                {{ end }}
+            </ul>
+            </details>
+        {{ end }}
+
+    </section>
+
+    {{ if .Data.ErrorMessage }}
+    <div>
+        <p><b> {{ .Data.ErrorMessage }} </b></p>
+    </div>
+    {{ end }}
+
+</main>
+{{ template "footer" . }}

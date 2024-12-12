@@ -13,6 +13,8 @@ const (
 	MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN
 	MODLOG_ADMIN_PROPOSE_MAKE_ADMIN
 	MODLOG_ADMIN_PROPOSE_REMOVE_USER
+	MODLOG_CREATE_INVITE_BATCH
+	MODLOG_DELETE_INVITE_BATCH
 	/* NOTE: when adding new values, only add them after already existing values! otherwise the existing variables will
 	* receive new values which affects the stored values in table moderation_log */
 )
