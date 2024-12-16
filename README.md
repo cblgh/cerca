@@ -20,6 +20,7 @@ It was written for the purpose of powering the nascent [Merveilles community for
 * **Customizable**: Many of Cerca's facets are customizable and the structure is intentionally simple to enable DIY modification
 * **Private**: Threads are public viewable by default but new threads may be set as private, restricting views to logged-in users only
 * **Easy admin**: A simple admin panel lets you add users, reset passwords, and remove old accounts. Impactful actions require two admins to perform, or a week of time to pass without a veto from any admin
+* **Invites**: Fully-featured system for creating invites both one-time and reusable invites. Admins can monitor invite redemption by batch as well as issue and delete batches of invites. Accessible using the same simple type of web interface that services the rest of the forum's administration tasks.
 * **Transparency**: Actions taken by admins are viewable by any logged-in user in the form of a moderation log
 * **Low maintenance**: Cerca is architected to minimize maintenance and hosting costs by carefully choosing which features it supports, how they work, and which features are intentionally omitted
 * **RSS**: Receive updates when threads are created or new posts are made by subscribing to the forum RSS feed
@@ -32,8 +33,8 @@ cerca --help
 USAGE:
   run the forum
 
-  cerca -allowlist allow.txt -authkey "CHANGEME"
-  cerca -dev
+    cerca -authkey "CHANGEME"
+    cerca -dev
 
 COMMANDS:
   adduser    create a new user
@@ -42,8 +43,6 @@ COMMANDS:
   resetpw    reset a user's password
 
 OPTIONS:
-  -allowlist string
-        domains which can be used to read verification codes from during registration
   -authkey string
         session cookies authentication key
   -config string
@@ -64,7 +63,7 @@ cerca adduser --username "<username>"
 Cerca supports community customization.
 
 * Write a custom [about text](/defaults/sample-about.md) describing the community inhabiting the forum
-* Define your own [registration rules](/defaults/sample-rules.md), [how to verify one's account](/defaults/sample-verification-instructions.md), and link to an existing code of conduct
+* Define your own [registration rules](/defaults/sample-rules.md), [instructions on getting an invite code to register](/defaults/sample-registration-instructions.md), and link to an existing code of conduct
 * Set your own [custom logo](/defaults/sample-logo.html) (whether svg, png or emoji)
 * Create your own theme by writing plain, frameworkless [css](/html/assets/theme.css)
 
@@ -93,7 +92,7 @@ forum_url = "" # should be forum index route https://example.com. used to genera
 logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
 about = "content/about.md"
 rules = "content/rules.md"
-verification_instructions = "content/verification-instructions.md"
+registration_instructions = "content/registration-instructions.md"
 ```
 
 Content documents that are not found will be prepopulated using Cerca's [sample content

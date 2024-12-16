@@ -39,7 +39,6 @@ const cookieName = "cerca"
 
 const INDEX_SETTINGS = "IndexSettings"
 const USER_ID = "userid"
-const VERIFICATION_CODE = "verificationCode"
 
 type Session struct {
 	Store           *sessions.CookieStore
@@ -97,14 +96,6 @@ func getValueFromSession(req *http.Request, store *sessions.CookieStore, key str
 	return value, nil
 }
 
-func (s *Session) GetVerificationCode(req *http.Request) (string, error) {
-	val, err := getValueFromSession(req, s.ShortLivedStore, VERIFICATION_CODE)
-	if val == nil || err != nil {
-		return "", err
-	}
-	return val.(string), err
-}
-
 func (s *Session) Get(req *http.Request) (int, error) {
 	val, err := getValueFromSession(req, s.Store, USER_ID)
 	if val == nil || err != nil {
@@ -135,10 +126,6 @@ func (s *Session) genericSave(req *http.Request, res http.ResponseWriter, shortL
 
 func (s *Session) Save(req *http.Request, res http.ResponseWriter, userid int) error {
 	return s.genericSave(req, res, false, USER_ID, userid)
-}
-
-func (s *Session) SaveVerificationCode(req *http.Request, res http.ResponseWriter, code string) error {
-	return s.genericSave(req, res, true, VERIFICATION_CODE, code)
 }
 
 func (s *Session) SaveIndexSettings(req *http.Request, res http.ResponseWriter, params string) error {

@@ -2,11 +2,9 @@ package crypto
 
 import (
 	"cerca/util"
-	crand "crypto/rand"
-	"encoding/binary"
+	"crypto/rand"
 	"github.com/matthewhartstonge/argon2"
 	"math/big"
-	rand "math/rand"
 	"strings"
 )
 
@@ -41,32 +39,10 @@ func GeneratePassword() string {
 
 	for i := 0; i < pwlength; i++ {
 		max := big.NewInt(maxChar)
-		bigN, err := crand.Int(crand.Reader, max)
+		bigN, err := rand.Int(rand.Reader, max)
 		util.Check(err, "randomly generate int")
 		n := bigN.Int64()
 		password.WriteString(string(characterSet[n]))
 	}
 	return password.String()
-}
-
-func GenerateVerificationCode() int {
-	var src cryptoSource
-	rnd := rand.New(src)
-	return rnd.Intn(999999)
-}
-
-type cryptoSource struct{}
-
-func (s cryptoSource) Seed(seed int64) {}
-
-func (s cryptoSource) Int63() int64 {
-	return int64(s.Uint64() & ^uint64(1<<63))
-}
-
-func (s cryptoSource) Uint64() (v uint64) {
-	err := binary.Read(crand.Reader, binary.BigEndian, &v)
-	if err != nil {
-		util.Check(err, "generate random verification code")
-	}
-	return v
 }

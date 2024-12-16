@@ -27,6 +27,8 @@ var English = map[string]string{
 	"SortRecentPosts":   "recent posts",
 	"SortRecentThreads": "most recent threads",
 
+	"modlogCreateInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> created a batch of invites`,
+	"modlogDeleteInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> deleted a batch of invites`,
 	"modlogResetPassword":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset a user's password`,
 	"modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> reset <b> {{ .Data.RecipientUsername}}</b>'s password`,
 	"modlogRemoveUser":         `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> removed a user's account`,
@@ -151,9 +153,7 @@ var English = map[string]string{
 
 	"RegisterHTMLMessage": `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
 
-	"RegisterVerificationCode":              "Your verification code is",
-	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":              "Verification link",
+	"RegisterInviteInstructionsTitle": "How to get an invite code",
 	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
 	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
@@ -240,9 +240,7 @@ var Swedish = map[string]string{
 
 	"RegisterHTMLMessage": `Du har nu ett konto! Välkommen. Besök <a href="/">trådindexet</a> för att läsa och svara på trådar, eller för att starta en ny.`,
 
-	"RegisterVerificationCode":              "Din verifikationskod är",
-	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":              "Verificationsnyckel",
+	"RegisterInviteInstructionsTitle": "Instruktioner för invitationskod",
 	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
 	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
@@ -331,9 +329,7 @@ var EspanolMexicano = map[string]string{
 
 	"RegisterHTMLMessage": `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
 
-	"RegisterVerificationCode":              "Your verification code is",
-	"RegisterVerificationInstructionsTitle": "Verification instructions",
-	"RegisterVerificationLink":              "Verification link",
+	"RegisterInviteInstructionsTitle":			 "How to get an invite code",
 	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
 	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 

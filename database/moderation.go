@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"strconv"
+	"sort"
 
 	"cerca/constants"
 	"cerca/util"
@@ -60,6 +62,22 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 	if rollbackOnErr(ed.Eout(err, "prepare threads stmt")) {
 		return
 	}
+
+	/* TODO (2024-11-22): consider playing around with a "table-driven" refactor of the transaction here, as in example below:
+	* args - #1: descriptive error, #2 sql statement, #3 values to execute statement with
+	{
+		{"prepare posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []int{deletedUserID, userid}}
+	}
+	then for _, row := range table {
+		row.preparedStmt = tx.Prepare(row[1]) .... rollBack  .... ed.Eout(err, row[0])
+	}
+
+	...
+
+	and then later for _, row := range table {
+		err = tx.Execute(row.preparedStmt, row[2]...)
+	}
+	*/
 
 	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
 	defer postsStmt.Close()
@@ -420,6 +438,7 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 type User struct {
 	Name string
 	ID   int
+	RegistrationOrigin string 
 }
 
 func (d DB) AddAdmin(userid int) error {
@@ -427,14 +446,14 @@ func (d DB) AddAdmin(userid int) error {
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
-		return errors.New(fmt.Sprintf("add admin: userid %d did not exist", userid))
+		return fmt.Errorf("add admin: userid %d did not exist", userid)
 	}
 	if err != nil {
 		return ed.Eout(err, "CheckUserExists had an error")
 	}
 	isAdminAlready, err := d.IsUserAdmin(userid)
 	if isAdminAlready {
-		return errors.New(fmt.Sprintf("userid %d was already an admin", userid))
+		return fmt.Errorf("userid %d was already an admin", userid)
 	}
 	if err != nil {
 		// some kind of error, let's bubble it up
@@ -454,14 +473,14 @@ func (d DB) DemoteAdmin(userid int) error {
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
-		return errors.New(fmt.Sprintf("demote admin: userid %d did not exist", userid))
+		return fmt.Errorf("demote admin: userid %d did not exist", userid)
 	}
 	if err != nil {
 		return ed.Eout(err, "CheckUserExists had an error")
 	}
 	isAdmin, err := d.IsUserAdmin(userid)
 	if !isAdmin {
-		return errors.New(fmt.Sprintf("demote admin: userid %d was not an admin", userid))
+		return fmt.Errorf("demote admin: userid %d was not an admin", userid)
 	}
 	if err != nil {
 		// some kind of error, let's bubble it up
@@ -511,3 +530,228 @@ func (d DB) GetAdmins() []User {
 	}
 	return admins
 }
+
+type InviteBatch struct {
+	BatchId string
+	ActingUsername  string
+	UnclaimedInvites []string	
+	Label string
+	Time time.Time
+	Reusable bool
+}
+
+func (d DB) ClaimInvite (invite string) (bool, string, error) {
+  ed := util.Describe("claim invite")
+  var err error
+  var tx *sql.Tx
+  tx, err = d.db.BeginTx(context.Background(), &sql.TxOptions{})
+
+  rollbackOnErr := func(incomingErr error) error {
+    if incomingErr != nil {
+      _ = tx.Rollback()
+      log.Println(incomingErr, "rolling back")
+      return incomingErr
+    }
+		return nil
+  }
+
+  type BatchQuery struct {
+    stmt, desc string
+    preparedStmt *sql.Stmt
+  }
+
+  ops := []BatchQuery{
+    BatchQuery{desc: "check if invite to redeem exists", stmt:"SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
+    BatchQuery{desc: "get invite code's batchid and whether marked reusable", stmt:"SELECT batchid, reusable FROM invites WHERE invite = ?"},
+    BatchQuery{desc: "delete invite from table", stmt:"DELETE FROM invites WHERE invite = ?"},
+  }
+
+  for i, operation := range ops {
+    ops[i].preparedStmt, err = tx.Prepare(operation.stmt)
+    defer ops[i].preparedStmt.Close()
+		if e := rollbackOnErr(ed.Eout(err, operation.desc)); e != nil {
+      return false, "", e
+    }
+  }
+
+	// first: check if the invite still exists; uses QueryRow to get back results
+	row := ops[0].preparedStmt.QueryRow(invite)
+	var exists int
+	err = row.Scan(&exists)
+	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[0].desc)); e != nil {
+		return false, "", e
+	}
+
+	// existence check failed. end transaction by rolling back (nothing meaningful was changed)
+	if exists == 0 {
+		_ = tx.Rollback()
+		return false, "", nil
+	}
+
+	// then: get the associated batchid, so we can associate it with the registration
+	row = ops[1].preparedStmt.QueryRow(invite)
+	var batchid string // uuid v4
+	var reusable bool
+	err = row.Scan(&batchid, &reusable)
+	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[1].desc)); e != nil {
+		return false, "", e
+	}
+
+	if !reusable {
+		// then, finally: delete the invite code being claimed
+		_, err = ops[2].preparedStmt.Exec(invite)
+		if e := rollbackOnErr(ed.Eout(err, "exec " + ops[2].desc)); e != nil {
+			return false, "", e
+		}
+	}
+
+  err = tx.Commit()
+  ed.Check(err, "commit transaction")
+  return true, batchid, nil
+}
+
+
+const maxBatchAmount = 100
+const maxUnclaimedAmount = 500
+
+func (d DB) CreateInvites (adminid int, amount int, label string, reusable bool) error {
+  ed := util.Describe("create invites")
+  isAdmin, err := d.IsUserAdmin(adminid)
+  if err != nil {
+    return ed.Eout(err, "IsUserAdmin")
+  }
+
+  if !isAdmin {
+		return fmt.Errorf("userid %d was not an admin, they can't create an invite", adminid)
+  }
+
+  // check that amount is within reasonable range
+  if amount > maxBatchAmount {
+		return fmt.Errorf("batch amount should not exceed %d but was %d; not creating invites ", maxBatchAmount, amount)
+  }
+
+  // check that already existing unclaimed invites is within a reasonable range
+  stmt := "SELECT COUNT(*) FROM invites"
+  var unclaimed int
+	err = d.db.QueryRow(stmt).Scan(&unclaimed)
+	ed.Check(err, "querying for number of unclaimed invites")
+  if unclaimed > maxUnclaimedAmount {
+		msgstr := "number of unclaimed invites amount should not exceed %d but was %d; ceasing invite creation"
+		return fmt.Errorf(msgstr, maxUnclaimedAmount, unclaimed)
+  }
+
+  // all cleared!
+  invites := make([]string, 0, amount)
+	for i := 0; i < amount; i++ {
+    invites = append(invites, util.GetUUIDv4())
+  }
+  // adjust the amount that will be created if we are near the unclaimed amount threshold
+  if (amount + unclaimed) > maxUnclaimedAmount {
+    amount = maxUnclaimedAmount - unclaimed
+  }
+
+  if amount <= 0 {
+		return fmt.Errorf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclaimedAmount)
+  }
+
+	// this id identifies all invites from this batch
+	batchid := util.GetUUIDv4()
+  creationTime := time.Now()
+	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time, reusable) VALUES (?, ?, ?, ?, ?, ?)")
+	util.Check(err, "prepare invite insert stmt")
+	defer preparedStmt.Close()
+	for _, invite := range invites {
+		// create a batch
+		_, err := preparedStmt.Exec(batchid, adminid, invite, label, creationTime, reusable)
+		ed.Check(err, "inserting invite into database")
+	}
+	return nil
+}
+
+func (d DB) DestroyInvites (invites []string) {
+	ed := util.Describe("destroy invites")
+	stmt := "DELETE FROM invites WHERE invite = ?"
+	for _, invite := range invites {
+		_, err := d.Exec(stmt, invite)
+		// note: it's okay if one of the statements fails, maybe someone lucked out and redeemed it in the middle of the
+		// loop - whatever
+		if err != nil {
+			log.Println(ed.Eout(err, "err during exec"))
+		}
+	}
+}
+
+func (d DB) DeleteInvitesBatch(batchid string) {
+	ed := util.Describe("delete invites by batchid")
+
+	stmt, err := d.db.Prepare("DELETE FROM invites where batchid = ?")
+	ed.Check(err, "prep stmt")
+	defer stmt.Close()
+
+	_, err = stmt.Exec(batchid)
+	util.Check(err, "execute delete")
+}
+
+func (d DB) GetAllInvites() []InviteBatch {
+	ed := util.Describe("get all invites")
+
+	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label, i.reusable FROM invites i INNER JOIN users u ON i.adminid = u.id")
+	ed.Check(err, "create query")
+	
+	// keep track of invite batches by creating a key based on username + creation time
+	batches := make(map[string]*InviteBatch)
+	var keys []string
+	var batchid, invite, username, label string
+	var t time.Time
+	var reusable bool
+
+	for rows.Next() {
+		err := rows.Scan(&batchid, &username, &invite, &t, &label, &reusable)
+		ed.Check(err, "scan row")
+		// starting the key with the unix epoch as a string allows us to sort the map's keys by time just by comparing strings with sort.Strings()
+		unixTimestamp := strconv.FormatInt(t.Unix(), 10)
+		key := unixTimestamp + username
+		if batch, exists := batches[key]; exists {
+			batch.UnclaimedInvites = append(batch.UnclaimedInvites, invite)
+		} else {
+			keys = append(keys, key)
+			batches[key] = &InviteBatch{BatchId: batchid, ActingUsername: username, UnclaimedInvites: []string{invite}, Label: label, Time: t, Reusable: reusable}
+		}
+	}
+
+	// convert from map to a []InviteBatch sorted by time using ts-prefixed map keys
+	ret := make([]InviteBatch, 0, len(keys))
+	// we want newest first
+	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+	for _, key := range keys {
+		ret = append(ret, *batches[key])
+	}
+	return ret
+}
+
+type RegisteredInvite struct {
+	Label string
+	BatchID string
+	Count int
+}
+
+func (d DB) CountRegistrationsByInviteBatch () []RegisteredInvite {
+	ed := util.Describe("database/moderation.go: count registrations by invite batch")
+	stmt := `SELECT i.label, i.batchid, COUNT(*) 
+	FROM registrations r INNER JOIN invites i 
+	ON r.link == i.batchid 
+	GROUP BY i.batchid 
+	ORDER BY COUNT(*) DESC 
+	;`
+	rows, err := d.db.Query(stmt)
+	ed.Check(err, "query stmt")
+	var registrations []RegisteredInvite
+	for rows.Next() {
+		var info RegisteredInvite
+		err = rows.Scan(&info.Label, &info.BatchID, &info.Count)
+		ed.Check(err, "failed to scan returned result")
+		registrations = append(registrations, info)
+	}
+	return registrations
+}
+

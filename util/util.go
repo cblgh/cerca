@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/gomarkdown/markdown/ast"
@@ -133,16 +134,6 @@ func Markup(md string) template.HTML {
 
 func SanitizeStringStrict(s string) string {
 	return strictContentGuardian.Sanitize(s)
-}
-
-func VerificationPrefix(name string) string {
-	pattern := regexp.MustCompile("A|E|O|U|I|Y")
-	upper := strings.ToUpper(name)
-	replaced := string(pattern.ReplaceAll([]byte(upper), []byte("")))
-	if len(replaced) < 3 {
-		replaced += "XYZ"
-	}
-	return replaced[0:3]
 }
 
 func GetThreadSlug(threadid int, title string, threadLen int) string {
@@ -270,4 +261,10 @@ func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func GetUUIDv4 () string {
+	identifier, err := uuid.NewRandom()
+	Check(err, "generated invites using uuid v4")
+	return identifier.String()
 }
