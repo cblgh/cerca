@@ -675,11 +675,8 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
-		// // skip invite code during dev registering
-		// if !developing {
-			// read submitted invite code from form
-			inviteCode = req.PostFormValue("invite")
-		// }
+		// read submitted invite code from form
+		inviteCode = req.PostFormValue("invite")
 
 		// make sure username is not registered already
 		var exists bool

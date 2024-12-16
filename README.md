@@ -20,6 +20,7 @@ It was written for the purpose of powering the nascent [Merveilles community for
 * **Customizable**: Many of Cerca's facets are customizable and the structure is intentionally simple to enable DIY modification
 * **Private**: Threads are public viewable by default but new threads may be set as private, restricting views to logged-in users only
 * **Easy admin**: A simple admin panel lets you add users, reset passwords, and remove old accounts. Impactful actions require two admins to perform, or a week of time to pass without a veto from any admin
+* **Invites**: Fully-featured system for creating invites both one-time and reusable invites. Admins can monitor invite redemption by batch as well as issue and delete batches of invites. Accessible using the same simple type of web interface that services the rest of the forum's administration tasks.
 * **Transparency**: Actions taken by admins are viewable by any logged-in user in the form of a moderation log
 * **Low maintenance**: Cerca is architected to minimize maintenance and hosting costs by carefully choosing which features it supports, how they work, and which features are intentionally omitted
 * **RSS**: Receive updates when threads are created or new posts are made by subscribing to the forum RSS feed
