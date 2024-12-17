@@ -18,8 +18,8 @@
                 </span>
             {{ end }}
         </form>
-        <button form="filter-form" type="submit">filter</button>
         <button form="reset-categories" type="submit">show all</button>
+        <button form="filter-form" type="submit">filter</button>
     </details>
     {{ end }}
     {{ range $index, $thread := .Data.Threads }}

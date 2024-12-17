@@ -775,6 +775,25 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 		title := req.PostFormValue("title")
 		content := req.PostFormValue("content")
 		isPrivate := req.PostFormValue("isPrivate") == "1"
+		if title == "" || content == "" {
+			var missing []string
+			if title == ""  {
+				missing = append(missing, "title")
+			}
+			if content == ""  {
+				missing = append(missing, "content")
+			}
+			msg := fmt.Sprintf("the thread you created was missing: [%s]", strings.Join(missing, ","))
+			data := GenericMessageData{
+				Title:       "Cannot create thread",
+				Message:     msg,
+				Link:        "/thread/new",
+				LinkMessage: "If this is an error, contact an admin. If you tried to create this thread without using the form, please",
+				LinkText:    "use the form",
+			}
+			h.renderGenericMessage(res, req, data)
+			return
+		}
 
 		// TODO (2022-01-10): unstub topicid, once we have other topics :)
 		// the new thread was created: forward info to database
