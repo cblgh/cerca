@@ -1,5 +1,5 @@
 # Cerca
-_a forum software_
+_lean forum software_
 
 Meaning:
 * to search, quest, run _(it)_
