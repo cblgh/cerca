@@ -113,7 +113,6 @@ func (s *Session) GetIndexSettings(req *http.Request) (string, error) {
 	return val.(string), err
 }
 
-
 func (s *Session) genericSave(req *http.Request, res http.ResponseWriter, shortLived bool, key string, val interface{}) error {
 	store := s.Store
 	if shortLived {

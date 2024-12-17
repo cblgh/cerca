@@ -11,10 +11,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
-	"sort"
 
 	"cerca/crypto"
 	"cerca/database"
@@ -32,16 +32,16 @@ import (
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
 type TemplateData struct {
-	Data       interface{}
+	Data        interface{}
 	SortByPosts bool
-	QuickNav   bool
-	LoggedIn   bool
-	IsAdmin    bool
-	IsOP       bool
-	HasRSS     bool
-	LoggedInID int
-	ForumName  string
-	Title      string
+	QuickNav    bool
+	LoggedIn    bool
+	IsAdmin     bool
+	IsOP        bool
+	HasRSS      bool
+	LoggedInID  int
+	ForumName   string
+	Title       string
 }
 
 type PasswordResetData struct {
@@ -55,8 +55,8 @@ type ChangePasswordData struct {
 }
 
 type IndexData struct {
-	Threads []database.Thread
-	Categories []string
+	Threads              []database.Thread
+	Categories           []string
 	VisibleCategoriesMap map[string]bool
 }
 
@@ -69,11 +69,11 @@ type GenericMessageData struct {
 }
 
 type RegisterData struct {
-	InviteCode							string
-	ErrorMessage             string
-	Rules                    template.HTML
+	InviteCode         string
+	ErrorMessage       string
+	Rules              template.HTML
 	InviteInstructions template.HTML
-	ConductLink              string
+	ConductLink        string
 }
 
 type LoginData struct {
@@ -392,13 +392,12 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 
 	params := req.URL.Query()
 
-
 	// if the request contained the url params for the sort order, save those to our session settings
 	if _, exists := params["sort"]; exists {
 		sessionParams.Set("sort", params["sort"][0])
 	}
 
-	// if the request contained the url params for categories to display, 
+	// if the request contained the url params for categories to display,
 	// use the new values to replace the previous ones in our session settings
 	if len(params["show"]) > 0 {
 		// clear the old values
@@ -439,7 +438,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// populate a sorted array based on the set of index categories, 
+	// populate a sorted array based on the set of index categories,
 	// to be used to create and display filter checkboxes
 	var categories []string
 	for k, v := range categoriesMap {
@@ -452,7 +451,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	sort.Strings(categories)
 
-	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap }, SortByPosts: mostRecentPost, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap}, SortByPosts: mostRecentPost, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
@@ -778,10 +777,10 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 		isPrivate := req.PostFormValue("isPrivate") == "1"
 		if title == "" || content == "" {
 			var missing []string
-			if title == ""  {
+			if title == "" {
 				missing = append(missing, "title")
 			}
-			if content == ""  {
+			if content == "" {
 				missing = append(missing, "content")
 			}
 			msg := fmt.Sprintf("the thread you created was missing: [%s]", strings.Join(missing, ","))

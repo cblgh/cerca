@@ -15,11 +15,11 @@ import (
 )
 
 type AdminData struct {
-	Admins    []database.User
-	Users     []database.User
-	Proposals []PendingProposal
+	Admins        []database.User
+	Users         []database.User
+	Proposals     []PendingProposal
 	Registrations []database.RegisteredInvite
-	IsAdmin   bool
+	IsAdmin       bool
 }
 
 type ModerationData struct {
@@ -260,7 +260,6 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 
 /* TODO (2024-12-02): make it possible for an admin to reset another admin's password; maybe using quorum? */
 
-
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
 	ed := util.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
@@ -451,7 +450,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			proposalString := h.translator.TranslateWithData(str, i18n.TranslationData{Data: prop})
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
-		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals, Registrations: registrations }
+		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals, Registrations: registrations}
 		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
@@ -471,12 +470,12 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 
 	type Invites struct {
 		ErrorMessage string
-		CreateRoute string
-		DeleteRoute string
+		CreateRoute  string
+		DeleteRoute  string
 		ForumRootURL string
-		Batches []database.InviteBatch
+		Batches      []database.InviteBatch
 	}
-	
+
 	var data Invites
 	data.CreateRoute = INVITES_CREATE_ROUTE
 	data.DeleteRoute = INVITES_DELETE_ROUTE

@@ -11,19 +11,20 @@ import (
 )
 
 var commandExplanations = map[string]string{
-	"run": "run the forum",
-	"adduser": "create a new user",
+	"run":       "run the forum",
+	"adduser":   "create a new user",
 	"makeadmin": "make an existing user an admin",
-	"migrate": "manage database migrations",
-	"resetpw": "reset a user's password",
+	"migrate":   "manage database migrations",
+	"resetpw":   "reset a user's password",
 }
+
 func createHelpString(commandName string, usageExamples []string) string {
-	helpString := fmt.Sprintf("USAGE:\n  %s\n\n  %s\n", 
-	commandExplanations[commandName], 
-	strings.Join(usageExamples, "\n  "))
+	helpString := fmt.Sprintf("USAGE:\n  %s\n\n  %s\n",
+		commandExplanations[commandName],
+		strings.Join(usageExamples, "\n  "))
 
 	if commandName == "run" {
-		helpString += "\nCOMMANDS:\n" 
+		helpString += "\nCOMMANDS:\n"
 		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw"}
 		for _, key := range cmds {
 			// pad first string with spaces to the right instead, set its expected width = 11

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"time"
-	"strconv"
 	"sort"
+	"strconv"
+	"time"
 
 	"cerca/constants"
 	"cerca/util"
@@ -436,9 +436,9 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 }
 
 type User struct {
-	Name string
-	ID   int
-	RegistrationOrigin string 
+	Name               string
+	ID                 int
+	RegistrationOrigin string
 }
 
 func (d DB) AddAdmin(userid int) error {
@@ -532,53 +532,53 @@ func (d DB) GetAdmins() []User {
 }
 
 type InviteBatch struct {
-	BatchId string
-	ActingUsername  string
-	UnclaimedInvites []string	
-	Label string
-	Time time.Time
-	Reusable bool
+	BatchId          string
+	ActingUsername   string
+	UnclaimedInvites []string
+	Label            string
+	Time             time.Time
+	Reusable         bool
 }
 
-func (d DB) ClaimInvite (invite string) (bool, string, error) {
-  ed := util.Describe("claim invite")
-  var err error
-  var tx *sql.Tx
-  tx, err = d.db.BeginTx(context.Background(), &sql.TxOptions{})
+func (d DB) ClaimInvite(invite string) (bool, string, error) {
+	ed := util.Describe("claim invite")
+	var err error
+	var tx *sql.Tx
+	tx, err = d.db.BeginTx(context.Background(), &sql.TxOptions{})
 
-  rollbackOnErr := func(incomingErr error) error {
-    if incomingErr != nil {
-      _ = tx.Rollback()
-      log.Println(incomingErr, "rolling back")
-      return incomingErr
-    }
+	rollbackOnErr := func(incomingErr error) error {
+		if incomingErr != nil {
+			_ = tx.Rollback()
+			log.Println(incomingErr, "rolling back")
+			return incomingErr
+		}
 		return nil
-  }
+	}
 
-  type BatchQuery struct {
-    stmt, desc string
-    preparedStmt *sql.Stmt
-  }
+	type BatchQuery struct {
+		stmt, desc   string
+		preparedStmt *sql.Stmt
+	}
 
-  ops := []BatchQuery{
-    BatchQuery{desc: "check if invite to redeem exists", stmt:"SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
-    BatchQuery{desc: "get invite code's batchid and whether marked reusable", stmt:"SELECT batchid, reusable FROM invites WHERE invite = ?"},
-    BatchQuery{desc: "delete invite from table", stmt:"DELETE FROM invites WHERE invite = ?"},
-  }
+	ops := []BatchQuery{
+		BatchQuery{desc: "check if invite to redeem exists", stmt: "SELECT EXISTS (SELECT 1 FROM invites WHERE invite = ?)"},
+		BatchQuery{desc: "get invite code's batchid and whether marked reusable", stmt: "SELECT batchid, reusable FROM invites WHERE invite = ?"},
+		BatchQuery{desc: "delete invite from table", stmt: "DELETE FROM invites WHERE invite = ?"},
+	}
 
-  for i, operation := range ops {
-    ops[i].preparedStmt, err = tx.Prepare(operation.stmt)
-    defer ops[i].preparedStmt.Close()
+	for i, operation := range ops {
+		ops[i].preparedStmt, err = tx.Prepare(operation.stmt)
+		defer ops[i].preparedStmt.Close()
 		if e := rollbackOnErr(ed.Eout(err, operation.desc)); e != nil {
-      return false, "", e
-    }
-  }
+			return false, "", e
+		}
+	}
 
 	// first: check if the invite still exists; uses QueryRow to get back results
 	row := ops[0].preparedStmt.QueryRow(invite)
 	var exists int
 	err = row.Scan(&exists)
-	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[0].desc)); e != nil {
+	if e := rollbackOnErr(ed.Eout(err, "exec "+ops[0].desc)); e != nil {
 		return false, "", e
 	}
 
@@ -593,70 +593,69 @@ func (d DB) ClaimInvite (invite string) (bool, string, error) {
 	var batchid string // uuid v4
 	var reusable bool
 	err = row.Scan(&batchid, &reusable)
-	if e := rollbackOnErr(ed.Eout(err, "exec " + ops[1].desc)); e != nil {
+	if e := rollbackOnErr(ed.Eout(err, "exec "+ops[1].desc)); e != nil {
 		return false, "", e
 	}
 
 	if !reusable {
 		// then, finally: delete the invite code being claimed
 		_, err = ops[2].preparedStmt.Exec(invite)
-		if e := rollbackOnErr(ed.Eout(err, "exec " + ops[2].desc)); e != nil {
+		if e := rollbackOnErr(ed.Eout(err, "exec "+ops[2].desc)); e != nil {
 			return false, "", e
 		}
 	}
 
-  err = tx.Commit()
-  ed.Check(err, "commit transaction")
-  return true, batchid, nil
+	err = tx.Commit()
+	ed.Check(err, "commit transaction")
+	return true, batchid, nil
 }
-
 
 const maxBatchAmount = 100
 const maxUnclaimedAmount = 500
 
-func (d DB) CreateInvites (adminid int, amount int, label string, reusable bool) error {
-  ed := util.Describe("create invites")
-  isAdmin, err := d.IsUserAdmin(adminid)
-  if err != nil {
-    return ed.Eout(err, "IsUserAdmin")
-  }
+func (d DB) CreateInvites(adminid int, amount int, label string, reusable bool) error {
+	ed := util.Describe("create invites")
+	isAdmin, err := d.IsUserAdmin(adminid)
+	if err != nil {
+		return ed.Eout(err, "IsUserAdmin")
+	}
 
-  if !isAdmin {
+	if !isAdmin {
 		return fmt.Errorf("userid %d was not an admin, they can't create an invite", adminid)
-  }
+	}
 
-  // check that amount is within reasonable range
-  if amount > maxBatchAmount {
+	// check that amount is within reasonable range
+	if amount > maxBatchAmount {
 		return fmt.Errorf("batch amount should not exceed %d but was %d; not creating invites ", maxBatchAmount, amount)
-  }
+	}
 
-  // check that already existing unclaimed invites is within a reasonable range
-  stmt := "SELECT COUNT(*) FROM invites"
-  var unclaimed int
+	// check that already existing unclaimed invites is within a reasonable range
+	stmt := "SELECT COUNT(*) FROM invites"
+	var unclaimed int
 	err = d.db.QueryRow(stmt).Scan(&unclaimed)
 	ed.Check(err, "querying for number of unclaimed invites")
-  if unclaimed > maxUnclaimedAmount {
+	if unclaimed > maxUnclaimedAmount {
 		msgstr := "number of unclaimed invites amount should not exceed %d but was %d; ceasing invite creation"
 		return fmt.Errorf(msgstr, maxUnclaimedAmount, unclaimed)
-  }
+	}
 
-  // all cleared!
-  invites := make([]string, 0, amount)
+	// all cleared!
+	invites := make([]string, 0, amount)
 	for i := 0; i < amount; i++ {
-    invites = append(invites, util.GetUUIDv4())
-  }
-  // adjust the amount that will be created if we are near the unclaimed amount threshold
-  if (amount + unclaimed) > maxUnclaimedAmount {
-    amount = maxUnclaimedAmount - unclaimed
-  }
+		invites = append(invites, util.GetUUIDv4())
+	}
+	// adjust the amount that will be created if we are near the unclaimed amount threshold
+	if (amount + unclaimed) > maxUnclaimedAmount {
+		amount = maxUnclaimedAmount - unclaimed
+	}
 
-  if amount <= 0 {
+	if amount <= 0 {
 		return fmt.Errorf("number of unclaimed invites amount %d has been reached; not creating invites ", maxUnclaimedAmount)
-  }
+	}
 
 	// this id identifies all invites from this batch
 	batchid := util.GetUUIDv4()
-  creationTime := time.Now()
+	creationTime := time.Now()
 	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time, reusable) VALUES (?, ?, ?, ?, ?, ?)")
 	util.Check(err, "prepare invite insert stmt")
 	defer preparedStmt.Close()
@@ -668,7 +667,7 @@ func (d DB) CreateInvites (adminid int, amount int, label string, reusable bool)
 	return nil
 }
 
-func (d DB) DestroyInvites (invites []string) {
+func (d DB) DestroyInvites(invites []string) {
 	ed := util.Describe("destroy invites")
 	stmt := "DELETE FROM invites WHERE invite = ?"
 	for _, invite := range invites {
@@ -697,7 +696,7 @@ func (d DB) GetAllInvites() []InviteBatch {
 
 	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label, i.reusable FROM invites i INNER JOIN users u ON i.adminid = u.id")
 	ed.Check(err, "create query")
-	
+
 	// keep track of invite batches by creating a key based on username + creation time
 	batches := make(map[string]*InviteBatch)
 	var keys []string
@@ -730,12 +729,12 @@ func (d DB) GetAllInvites() []InviteBatch {
 }
 
 type RegisteredInvite struct {
-	Label string
+	Label   string
 	BatchID string
-	Count int
+	Count   int
 }
 
-func (d DB) CountRegistrationsByInviteBatch () []RegisteredInvite {
+func (d DB) CountRegistrationsByInviteBatch() []RegisteredInvite {
 	ed := util.Describe("database/moderation.go: count registrations by invite batch")
 	stmt := `SELECT i.label, i.batchid, COUNT(*) 
 	FROM registrations r INNER JOIN invites i 
@@ -754,4 +753,3 @@ func (d DB) CountRegistrationsByInviteBatch () []RegisteredInvite {
 	}
 	return registrations
 }
-

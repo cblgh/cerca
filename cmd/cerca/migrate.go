@@ -7,7 +7,6 @@ import (
 	"os"
 )
 
-
 func migrate() {
 	migrations := map[string]func(string) error{
 		"2024-01-password-hash-migration":  database.Migration20240116_PwhashChange,

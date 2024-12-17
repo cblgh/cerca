@@ -154,8 +154,8 @@ var English = map[string]string{
 	"RegisterHTMLMessage": `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
 
 	"RegisterInviteInstructionsTitle": "How to get an invite code",
-	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterConductCodeBoxOne":       `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":       `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"NewPassword":    "new password",
 	"ChangePassword": "change password",
@@ -241,8 +241,8 @@ var Swedish = map[string]string{
 	"RegisterHTMLMessage": `Du har nu ett konto! Välkommen. Besök <a href="/">trådindexet</a> för att läsa och svara på trådar, eller för att starta en ny.`,
 
 	"RegisterInviteInstructionsTitle": "Instruktioner för invitationskod",
-	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterConductCodeBoxOne":       `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":       `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":      "På denna sida går vi igenom ett par steg för att säkert nollställa ditt lösenord—utan att behöva ta till mejl!",
 	"PasswordResetUsernameQuestion": "För de första: hur löd användarnamnet?",
@@ -329,9 +329,9 @@ var EspanolMexicano = map[string]string{
 
 	"RegisterHTMLMessage": `You now have an account! Welcome. Visit the <a href="/">index</a> to read and reply to threads, or start a new one.`,
 
-	"RegisterInviteInstructionsTitle":			 "How to get an invite code",
-	"RegisterConductCodeBoxOne":             `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
-	"RegisterConductCodeBoxTwo":             `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
+	"RegisterInviteInstructionsTitle": "How to get an invite code",
+	"RegisterConductCodeBoxOne":       `I have refreshed my memory of the <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":       `Yes, I have actually <a target="_blank" href="{{ .Data.Link }}">read it</a>`,
 
 	"PasswordResetDescription":      "On this page we'll go through a few steps to securely reset your password—without resorting to any emails!",
 	"PasswordResetUsernameQuestion": "First up: what was your username?",

@@ -4,11 +4,11 @@ import (
 	"cerca/crypto"
 	"context"
 	"database/sql"
-	"regexp"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"time"
 
 	"cerca/util"
@@ -123,7 +123,7 @@ func createTables(db *sql.DB) {
 		FOREIGN KEY (recipientid) REFERENCES users(id)
 	);
 		`,
-	`
+		`
 	CREATE TABLE IF NOT EXISTS invites (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		batchid TEXT NOT NULL, -- uuid v4
@@ -135,8 +135,8 @@ func createTables(db *sql.DB) {
 
 		FOREIGN KEY(adminid) REFERENCES users(id)
 	);
-	`,	
-	`
+	`,
+		`
   CREATE TABLE IF NOT EXISTS registrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     userid INTEGER,
@@ -314,15 +314,16 @@ type Thread struct {
 	Slug    string
 	Private bool
 	ID      int
-	Show		bool // whether to show the thread in the thread index or not
+	Show    bool // whether to show the thread in the thread index or not
 	Publish time.Time
 	PostID  int
 }
 
 var categoryPattern = regexp.MustCompile(`\[(.*?)\]`)
-func (t Thread) GetCategory () string {
+
+func (t Thread) GetCategory() string {
 	matches := categoryPattern.FindStringSubmatch(t.Title)
-	if matches == nil { 
+	if matches == nil {
 		return "no category"
 	}
 	return matches[1]
