@@ -33,6 +33,7 @@ import (
 
 type TemplateData struct {
 	Data       interface{}
+	SortByPosts bool
 	QuickNav   bool
 	LoggedIn   bool
 	IsAdmin    bool
@@ -451,7 +452,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	}
 	sort.Strings(categories)
 
-	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap }, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
+	view := TemplateData{Data: IndexData{Threads: threads, Categories: categories, VisibleCategoriesMap: categoriesMap }, SortByPosts: mostRecentPost, IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("Threads")}
 	h.renderView(res, "index", view)
 }
 
