@@ -917,12 +917,11 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(sessionKey string, isdev bool, dir string, conf types.Config) {
-	port := ":8272"
+func Serve(sessionKey string, port int, isdev bool, dir string, conf types.Config) {
+	portString := fmt.Sprintf(":%d", port)
 
 	if isdev {
 		developing = true
-		port = ":8277"
 	}
 
 	forum, err := NewServer(sessionKey, dir, conf)
@@ -930,11 +929,11 @@ func Serve(sessionKey string, isdev bool, dir string, conf types.Config) {
 		util.Check(err, "instantiate CercaForum")
 	}
 
-	l, err := net.Listen("tcp", port)
+	l, err := net.Listen("tcp", portString)
 	if err != nil {
 		util.Check(err, "setting up tcp listener")
 	}
-	fmt.Println("Serving forum on", port)
+	fmt.Println("Serving forum on", portString)
 
 	rateLimitingInstance := NewRateLimitingWare([]string{"/rss/", "/rss.xml"})
 	limitingMiddleware := rateLimitingInstance.Handler(forum)

@@ -62,13 +62,17 @@ func complain(msg string, args ...interface{}) {
 	os.Exit(0)
 }
 
+const DEFAULT_PORT = 8272
+const DEFAULT_DEV_PORT = 8277
 func run() {
 	var sessionKey string
 	var configPath string
 	var dataDir string
 	var dev bool
+	var port int
 
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
+	flag.IntVar(&port, "port", DEFAULT_PORT, "port to run the forum on")
 	flag.StringVar(&sessionKey, "authkey", "", "session cookies authentication key")
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
@@ -84,6 +88,10 @@ func run() {
 		flag.Usage()
 		return
 	}
+	// if dev mode and port not specified then use the default dev port to prevent collision with default serving port
+	if dev && port == DEFAULT_PORT {
+		port = DEFAULT_DEV_PORT 
+	}
 
 	if len(sessionKey) == 0 {
 		if !dev {
@@ -97,7 +105,7 @@ func run() {
 		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
 	}
 	config := util.ReadConfig(configPath)
-	server.Serve(sessionKey, dev, dataDir, config)
+	server.Serve(sessionKey, port, dev, dataDir, config)
 }
 
 func main() {
