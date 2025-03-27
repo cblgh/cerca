@@ -1,7 +1,7 @@
 {{ template "head" . }}
 <main>
     {{ if len .Data.Threads | eq 0 }} 
-    <p> There are currently no threads. </p>
+    <p> {{ "ThreadsViewEmpty" | translate }} </p>
     {{ else if len .Data.Categories | lt 1 }}
     <details>
         <summary> filter threads (showing {{ len .Data.VisibleCategoriesMap }} of {{ len .Data.Categories

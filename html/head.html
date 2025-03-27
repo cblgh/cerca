@@ -215,7 +215,7 @@
                 {{ if eq .Title $threads }}
                 <li> 
                     <details>
-                        <summary>{{ "Sort" | translate }}: {{ if .SortByPosts }}posts{{ else }}threads{{ end }}</summary>
+                        <summary>{{ "Sort" | translate }}: {{ if .SortByPosts }} {{ "Posts" | translate }} {{ else }} {{ "Threads" | translate }} {{ end }}</summary>
                         <ul>
                             <li> 
                                 <form type="GET" action="/"/>
