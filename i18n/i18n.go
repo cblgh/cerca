@@ -25,7 +25,7 @@ var English = map[string]string{
 	"GoBack":      "Go back",
 
 	"SortRecentPosts":   "recent posts",
-	"SortRecentThreads": "most recent threads",
+	"SortRecentThreads": "recent threads",
 
 	"modlogCreateInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> created a batch of invites`,
 	"modlogDeleteInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> deleted a batch of invites`,
