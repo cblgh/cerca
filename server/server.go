@@ -75,6 +75,13 @@ type RegisterData struct {
 	InviteInstructions template.HTML
 	ConductLink        string
 }
+type AccountData struct {
+	ErrorMessage       string
+	ChangePasswordRoute  string
+	ChangeUsernameRoute  string
+	DeleteAccountRoute string
+	LoggedInUsername string
+}
 
 type LoginData struct {
 	FailedAttempt bool
@@ -224,6 +231,7 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 	}
 	views := []string{
 		"about",
+		"account",
 		"about-template",
 		"footer",
 		"generic-message",
@@ -702,7 +710,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			renderErr("Error in db when claiming invite code")
 			return
 		}
-		if !inviteRedeemed {
+		if !developing && !inviteRedeemed {
 			renderErr("The invite was not valid and could not be used to create an account.")
 			return
 		}
@@ -744,6 +752,16 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, _ := h.IsLoggedIn(req)
 	input := util.Markup(string(h.files["about"]))
 	h.renderView(res, "about-template", TemplateData{Data: input, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("About")})
+}
+
+func (h RequestHandler) AccountRoute(res http.ResponseWriter, req *http.Request) {
+	loggedIn, userid := h.IsLoggedIn(req)
+	username, err := h.db.GetUsername(userid)
+	var errMessage string
+	if err != nil {
+		errMessage ="Could not get the username for the logged-in user"
+	}
+	h.renderView(res, "account", TemplateData{Data: AccountData{LoggedInUsername: username, ErrorMessage: errMessage, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -972,6 +990,10 @@ const INVITES_ROUTE = "/invites"
 const INVITES_CREATE_ROUTE = "/invites/create"
 const INVITES_DELETE_ROUTE = "/invites/delete"
 
+const ACCOUNT_CHANGE_PASSWORD_ROUTE = "/account/change-password"
+const ACCOUNT_CHANGE_USERNAME_ROUTE = "/account/change-username"
+const ACCOUNT_DELETE_ROUTE  = "/account/delete"
+
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
@@ -1025,8 +1047,13 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 	s.ServeMux.HandleFunc("/moderations", handler.ModerationLogRoute)
 	s.ServeMux.HandleFunc("/proposal-veto", handler.VetoProposal)
 	s.ServeMux.HandleFunc("/proposal-confirm", handler.ConfirmProposal)
+	// self-service account changes a user can tend to on their own behalf
+	s.ServeMux.HandleFunc(ACCOUNT_CHANGE_PASSWORD_ROUTE, handler.AccountChangePassword)
+	s.ServeMux.HandleFunc(ACCOUNT_CHANGE_USERNAME_ROUTE, handler.AccountChangeUsername)
+	s.ServeMux.HandleFunc(ACCOUNT_DELETE_ROUTE, handler.AccountSelfServiceDelete)
 	// regular ol forum routes
 	s.ServeMux.HandleFunc("/about", handler.AboutRoute)
+	s.ServeMux.HandleFunc("/account", handler.AccountRoute)
 	s.ServeMux.HandleFunc("/logout", handler.LogoutRoute)
 	s.ServeMux.HandleFunc("/login", handler.LoginRoute)
 	s.ServeMux.HandleFunc("/register", handler.RegisterRoute)
