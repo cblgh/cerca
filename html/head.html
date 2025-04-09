@@ -212,6 +212,7 @@
                 {{ dumpLogo }}
             </a>
             <nav>
+                <!-- first row of nav items -->
                 <ul type="menu">
                 {{ $threads := "Threads" | translate }}
                 {{ if eq .Title $threads }}
@@ -248,7 +249,8 @@
                     <li><a href="/login">{{ "Login" | translate }}</a></li>
                     {{ end }}
                 </ul>
-                <ul type="menu">
+                <!-- second row of nav items; only has "logged in" elements :)-->
+                <ul style="justify-content: end;" type="menu">
                     {{ if .LoggedIn }}
                     <li><a href="/account">account</a></li>
                     {{ end }}
