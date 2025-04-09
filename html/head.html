@@ -213,48 +213,49 @@
             </a>
             <nav>
                 <ul type="menu">
+                {{ $threads := "Threads" | translate }}
+                {{ if eq .Title $threads }}
+                    <li> 
+                        <details>
+                            <summary>{{ "Sort" | translate }}: {{ if .SortByPosts }} {{ "Posts" | translate }} {{ else }} {{ "Threads" | translate }} {{ end }}</summary>
+                            <ul>
+                                <li> 
+                                    <form type="GET" action="/"/>
+                                    <input type="hidden" name="sort" value="posts"/>
+                                    <button type="submit">{{ "SortRecentPosts" | translate }}
+                                    </form>
+                                </li>
+                                <li> 
+                                    <form type="GET" action="/"/>
+                                    <input type="hidden" name="sort" value="threads"/>
+                                    <button type="submit">{{ "SortRecentThreads" | translate }}
+                                    </form>
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    {{ end }}
+                    {{ if .QuickNav }}
+                    <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
+                    {{ end }}
+                    <li><a href="/about">{{ "About" | translate }}</a></li>
+                    {{ if .HasRSS }}
+                    <li><a href="/rss.xml">rss</a></li>
+                    {{ end }}
                     {{ if .LoggedIn }}
                     <li><a href="/logout">{{"Logout" | translate }}</a></li>
                     {{ else }}
                     <li><a href="/login">{{ "Login" | translate }}</a></li>
                     {{ end }}
-                    {{ if .QuickNav }}
-                    <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
-                    {{ end }}
+                </ul>
+                <ul type="menu">
                     {{ if .LoggedIn }}
                     <li><a href="/account">account</a></li>
                     {{ end }}
                     {{ if .IsAdmin }}
                     <li><a href="/admin">admin</a></li>
                     {{ end }}
-                    <li><a href="/about">{{ "About" | translate }}</a></li>
-                    {{ if .HasRSS }}
-                    <li><a href="/rss.xml">rss</a></li>
-                    {{ end }}
                 </ul>
-                    {{ $threads := "Threads" | translate }}
-                    {{ if eq .Title $threads }}
-                    <ul style="justify-content: end" type="menu">
-                    <li>
-                    <details>
-                        <summary><span style="font-style: italic">sort: {{ if .SortByPosts }} {{ "Posts" | translate }} {{ else }} {{ "Threads" | translate }} {{ end }}</span></summary>
-                        <ul style="background: wheat;">
-                            <li> 
-                                <form type="GET" action="/"/>
-                                <input type="hidden" name="sort" value="posts"/>
-                                <button type="submit">sort by {{ "SortRecentPosts" | translate }}
-                                </form>
-                            </li>
-                            <li> 
-                                <form type="GET" action="/"/>
-                                <input type="hidden" name="sort" value="threads"/>
-                                <button type="submit">sort by {{ "SortRecentThreads" | translate }}
-                                </form>
-                            </li>
-                        </ul>
-                    </details>
-                </ul>
-                {{ end }}
             </nav>
         </header>
 
