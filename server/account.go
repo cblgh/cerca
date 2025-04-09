@@ -2,11 +2,9 @@ package server
 
 import (
 	"fmt"
-	"errors"
 	"net/http"
 
 	"cerca/crypto"
-	"cerca/util"
 )
 
 func renderMsgAccountView (h *RequestHandler, res http.ResponseWriter, req *http.Request, caller, errInput string) {
@@ -16,51 +14,45 @@ func renderMsgAccountView (h *RequestHandler, res http.ResponseWriter, req *http
 	h.renderView(res, "account", TemplateData{Data: AccountData{ErrorMessage: errMessage, LoggedInUsername: username, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
 
-func (h *RequestHandler) checkPasswordIsCorrect(userid int, password string) error  {
-	ed := util.Describe("checkPasswordIsCorrect")
-	username, err := h.db.GetUsername(userid)
-	if err != nil {
-		return errors.New("could not get the username for the logged-in user")
-	}
-	// * hash received password and compare to stored hash
-	passwordHash, _, err := h.db.GetPasswordHash(username)
-	if err = ed.Eout(err, "getting password hash and uid"); err == nil && !crypto.ValidatePasswordHash(password, passwordHash) {
-		return errors.New("incorrect current password")
-	}
-	if err != nil {
-		return errors.New("password check failed")
-	}
-	return nil
-}
-
 func (h *RequestHandler) AccountChangePassword (res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Change password"
 	renderErr := func(errMsg string) {
 		renderMsgAccountView(h, res, req, sectionTitle, errMsg)
 	}
+	// simple alias for the same thing, to make it less confusing in the different cases :) might be changed into some
+	// other success behaviour at some future point
 	renderSuccess := renderErr
-	if req.Method == "GET" || !loggedIn {
-		IndexRedirect(res, req)
+	if req.Method == "GET" {
+		if !loggedIn {
+			IndexRedirect(res, req)
+			return
+		}
+		http.Redirect(res, req, "/account", http.StatusSeeOther)
 		return
 	} else if req.Method == "POST" {
-		// verify 
+		// verify existing credentials
 		currentPassword := req.PostFormValue("current-password")
 		err := h.checkPasswordIsCorrect(userid, currentPassword)
 		if err != nil {
-			renderErr(err.Error())
+			renderErr("Current password did not match up with the hash stored in database")
 			return
 		}
+
 		newPassword := req.PostFormValue("new-password")
 		newPasswordCopy := req.PostFormValue("new-password-copy")
+
+		// too short
 		if len(newPassword) < 9 {
 			renderErr("New password is too short (needs to be at least 9 characters or longer)")
 			return
 		}
+		// repeat password did not match
 		if newPassword != newPasswordCopy {
 			renderErr("New password was incorrectly repeated")
 			return
 		}
+		// happy path
 		if newPassword == newPasswordCopy {
 			passwordHash, err := crypto.HashPassword(newPassword)
 			if err != nil {
@@ -68,24 +60,69 @@ func (h *RequestHandler) AccountChangePassword (res http.ResponseWriter, req *ht
 			}
 			h.db.UpdateUserPasswordHash(userid, passwordHash)
 			renderSuccess("Password has been updated!")
-			return
 		}
 	}
-	fmt.Println("change password!")
 }
 func (h *RequestHandler) AccountChangeUsername (res http.ResponseWriter, req *http.Request) {
-	loggedIn, _ := h.IsLoggedIn(req)
-	if req.Method == "GET" || !loggedIn {
-		IndexRedirect(res, req)
-		return
+	loggedIn, userid := h.IsLoggedIn(req)
+	sectionTitle := "Change username"
+	renderErr := func(errMsg string) {
+		renderMsgAccountView(h, res, req, sectionTitle, errMsg)
 	}
-	fmt.Println("change username!")
-}
-func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req *http.Request) {
-	loggedIn, _ := h.IsLoggedIn(req)
-	if req.Method == "GET" || !loggedIn {
-		IndexRedirect(res, req)
+	renderSuccess := renderErr
+	if req.Method == "GET" {
+		if !loggedIn {
+			IndexRedirect(res, req)
+			return
+		}
+		http.Redirect(res, req, "/account", http.StatusSeeOther)
 		return
+	} else if req.Method == "POST" {
+		// verify existing credentials
+		currentPassword := req.PostFormValue("current-password")
+		err := h.checkPasswordIsCorrect(userid, currentPassword)
+		if err != nil {
+			renderErr("Current password did not match up with the hash stored in database")
+			return
+		}
+		newUsername := req.PostFormValue("new-username")
+		fmt.Println("new username", newUsername)
+		var exists bool
+		if exists, err = h.db.CheckUsernameExists(newUsername); err != nil {
+			renderErr("Database had a problem when checking username")
+			return
+		} else if exists {
+			renderErr(fmt.Sprintf("Username %s appears to already exist, please pick another name", newUsername))
+			return
+		}
+		renderSuccess(fmt.Sprintf("You are now known as %s", newUsername))
+		h.db.UpdateUsername(userid, newUsername)
+		// TODO (2024-04-09): add modlog entry so that other forum users (or only admins?) can follow along with changing nicknames
+	}
+}
+
+func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req *http.Request) {
+	loggedIn, userid := h.IsLoggedIn(req)
+	sectionTitle := "Delete account"
+	renderErr := func(errMsg string) {
+		renderMsgAccountView(h, res, req, sectionTitle, errMsg)
+	}
+	renderSuccess := renderErr
+	if req.Method == "GET" {
+		if !loggedIn {
+			IndexRedirect(res, req)
+			return
+		}
+		http.Redirect(res, req, "/account", http.StatusSeeOther)
+		return
+	} else if req.Method == "POST" {
+		// verify existing credentials
+		currentPassword := req.PostFormValue("current-password")
+		err := h.checkPasswordIsCorrect(userid, currentPassword)
+		if err != nil {
+			renderErr("Current password did not match up with the hash stored in database")
+			return
+		}
 	}
 	fmt.Println("delete!")
 }

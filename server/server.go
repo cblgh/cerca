@@ -527,6 +527,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 	case "POST":
 		username := req.PostFormValue("username")
 		password := req.PostFormValue("password")
+
 		// * hash received password and compare to stored hash
 		passwordHash, userid, err := h.db.GetPasswordHash(username)
 		// make sure user exists
@@ -577,21 +578,8 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 			oldPassword := req.PostFormValue("password-old")
 			newPassword := req.PostFormValue("password-new")
 
-			// check that the submitted, old password is valid
-			username, err := h.db.GetUsername(uid)
+			err := h.checkPasswordIsCorrect(uid, oldPassword)
 			if err != nil {
-				dump(ed.Eout(err, "get username"))
-				return
-			}
-
-			pwhashOld, _, err := h.db.GetPasswordHash(username)
-			if err != nil {
-				dump(ed.Eout(err, "get old password hash"))
-				return
-			}
-
-			oldPasswordValid := crypto.ValidatePasswordHash(oldPassword, pwhashOld)
-			if !oldPasswordValid {
 				renderErr("old password did not match what was in database; not changing password")
 				return
 			}
