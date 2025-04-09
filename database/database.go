@@ -480,6 +480,16 @@ func (d DB) GetPasswordHash(username string) (string, int, error) {
 	return hash, userid, nil
 }
 
+func (d DB) GetPasswordHashByUserID(userid int) (string, error) {
+	stmt := `SELECT passwordhash FROM users where id = ?`
+	var hash string
+	err := d.db.QueryRow(stmt, userid).Scan(&hash)
+	if err != nil {
+		return "", util.Eout(err, "get password hash by userid")
+	}
+	return hash, nil
+}
+
 func (d DB) existsQuery(substmt string, args ...interface{}) (bool, error) {
 	stmt := fmt.Sprintf(`SELECT exists (%s)`, substmt)
 	var exists bool
@@ -505,7 +515,7 @@ func (d DB) CheckThreadExists(threadid int) (bool, error) {
 	return d.existsQuery(stmt, threadid)
 }
 
-func (d DB) UpdateUserName(userid int, newname string) {
+func (d DB) UpdateUsername(userid int, newname string) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, userid)
 	util.Check(err, "changing user %d's name to %s", userid, newname)
