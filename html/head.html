@@ -88,12 +88,13 @@
 
             /* neutralize styling of sort options */
             li > form > button {
-		background: unset;
-		border: unset;
-		padding: unset;
-		margin: unset;
-		color: darkred;
-	       text-decoration: underline;
+            background: unset;
+            border: unset;
+            padding: unset;
+            margin: unset;
+            color: darkred;
+            text-decoration: underline;
+            text-align: left;
 	    }
 
 
@@ -124,6 +125,7 @@
 
             header nav {
                 float: right;
+                height: 2rem;
             }
 
             header ul > li {
@@ -162,6 +164,7 @@
             }
             header details ul {
                 position: absolute;
+                padding-left: 0;
             }
             header details ul > li {
                 display: block;
@@ -209,36 +212,33 @@
                 {{ dumpLogo }}
             </a>
             <nav>
+                <!-- first row of nav items -->
                 <ul type="menu">
-
                 {{ $threads := "Threads" | translate }}
                 {{ if eq .Title $threads }}
-                <li> 
-                    <details>
-                        <summary>{{ "Sort" | translate }}: {{ if .SortByPosts }} {{ "Posts" | translate }} {{ else }} {{ "Threads" | translate }} {{ end }}</summary>
-                        <ul>
-                            <li> 
-                                <form type="GET" action="/"/>
-                                <input type="hidden" name="sort" value="posts"/>
-                                <button type="submit">{{ "SortRecentPosts" | translate }}
-                                </form>
-                            </li>
-                            <li> 
-                                <form type="GET" action="/"/>
-                                <input type="hidden" name="sort" value="threads"/>
-                                <button type="submit">{{ "SortRecentThreads" | translate }}
-                                </form>
-                            </li>
-                        </ul>
-                    </details>
-                </li>
-                {{ end }}
+                    <li> 
+                        <details>
+                            <summary>{{ "Sort" | translate }}: {{ if .SortByPosts }} {{ "Posts" | translate }} {{ else }} {{ "Threads" | translate }} {{ end }}</summary>
+                            <ul>
+                                <li> 
+                                    <form type="GET" action="/"/>
+                                    <input type="hidden" name="sort" value="posts"/>
+                                    <button type="submit">{{ "SortRecentPosts" | translate }}
+                                    </form>
+                                </li>
+                                <li> 
+                                    <form type="GET" action="/"/>
+                                    <input type="hidden" name="sort" value="threads"/>
+                                    <button type="submit">{{ "SortRecentThreads" | translate }}
+                                    </form>
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                    {{ end }}
                     {{ if .QuickNav }}
                     <li><a href="#bottom">{{ "Bottom" | translate }}</a></li>
-                    {{end}}
-                    {{ if .IsAdmin }}
-                    <li><a href="/admin">admin</a></li>
-                    {{end}}
+                    {{ end }}
                     <li><a href="/about">{{ "About" | translate }}</a></li>
                     {{ if .HasRSS }}
                     <li><a href="/rss.xml">rss</a></li>
@@ -249,9 +249,17 @@
                     <li><a href="/login">{{ "Login" | translate }}</a></li>
                     {{ end }}
                 </ul>
+                <!-- second row of nav items; only has "logged in" elements :)-->
+                <ul style="justify-content: end;" type="menu">
+                    {{ if .LoggedIn }}
+                    <li><a href="/account">account</a></li>
+                    {{ end }}
+                    {{ if .IsAdmin }}
+                    <li><a href="/admin">admin</a></li>
+                    {{ end }}
+                </ul>
             </nav>
         </header>
-
 
 
 {{ end }}

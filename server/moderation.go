@@ -219,7 +219,7 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 	}
 
 	var data AddUser
-	view := TemplateData{Title: h.translator.Translate("AdminAddNewUser"), Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+	view := TemplateData{Title: h.translator.Translate("AdminAddNewUser"), Data: &data, HasRSS: h.config.RSS.URL != "", IsAdmin: isAdmin, LoggedIn: loggedIn}
 
 	if req.Method == "GET" {
 		h.renderView(res, "admin-add-user", view)
@@ -392,7 +392,7 @@ func (h *RequestHandler) ModerationLogRoute(res http.ResponseWriter, req *http.R
 			viewData.Log = append(viewData.Log, actionString)
 		}
 	}
-	view := TemplateData{Title: h.translator.Translate("ModerationLog"), IsAdmin: isAdmin, LoggedIn: loggedIn, Data: viewData}
+	view := TemplateData{Title: h.translator.Translate("ModerationLog"), IsAdmin: isAdmin, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Data: viewData}
 	h.renderView(res, "moderation-log", view)
 }
 
@@ -451,7 +451,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 			pendingProposals[i] = PendingProposal{ID: prop.ProposalID, ProposerID: prop.ActingID, Action: proposalString, Time: t, TimePassed: now.After(t)}
 		}
 		data := AdminData{Admins: admins, Users: normalUsers, Proposals: pendingProposals, Registrations: registrations}
-		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn, LoggedInID: userid}
+		view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 		h.renderView(res, "admin", view)
 	}
 }
@@ -485,7 +485,7 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 		data.ForumRootURL = h.config.RSS.URL
 	}
 
-	view := TemplateData{Title: "Invites", Data: &data, HasRSS: false, IsAdmin: isAdmin, LoggedIn: loggedIn}
+	view := TemplateData{Title: "Invites", Data: &data, HasRSS: h.config.RSS.URL != "", IsAdmin: isAdmin, LoggedIn: loggedIn}
 
 	if req.Method == "GET" {
 		h.renderView(res, "admin-invites", view)
@@ -547,7 +547,7 @@ func (h *RequestHandler) ListAdmins(res http.ResponseWriter, req *http.Request) 
 	loggedIn, _ := h.IsLoggedIn(req)
 	admins := h.db.GetAdmins()
 	data := AdminData{Admins: admins}
-	view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: false, LoggedIn: loggedIn}
+	view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn}
 	h.renderView(res, "admins-list", view)
 	return
 }
