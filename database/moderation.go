@@ -51,28 +51,10 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 		}
 		return false
 	}
+
 	if rollbackOnErr(ed.Eout(err, "start transaction")) {
 		return
 	}
-
-	// create prepared statements performing the required removal operations for tables that reference a userid as a
-	// foreign key: threads, posts, moderation_log, and registrations
-
-	/* TODO (2024-11-22): consider playing around with a "table-driven" refactor of the transaction here, as in example below:
-	* args - #1: descriptive error, #2 sql statement, #3 values to execute statement with
-	{
-		{"prepare posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []int{deletedUserID, userid}}
-	}
-	then for _, row := range table {
-		row.preparedStmt = tx.Prepare(row[1]) .... rollBack  .... ed.Eout(err, row[0])
-	}
-
-	...
-
-	and then later for _, row := range table {
-		err = tx.Execute(row.preparedStmt, row[2]...)
-	}
-	*/
 
 	type Triplet struct {
 		Desc string
@@ -80,6 +62,9 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 		Args []any
 	}
 		
+	// create prepared statements performing the required removal operations for tables that reference a userid as a
+	// foreign key: threads, posts, moderation_log, and registrations
+
 	rawTriples := []Triplet{
 		Triplet{"threads stmt", "UPDATE threads SET authorid = ? WHERE authorid = ?", []any{deletedUserID, userid}},
 		Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}},
