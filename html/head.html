@@ -124,7 +124,6 @@
             }
 
             header nav {
-                float: right;
                 height: 2rem;
             }
 
@@ -213,7 +212,7 @@
             </a>
             <nav>
                 <!-- first row of nav items -->
-                <ul type="menu">
+                <ul style="height: 1.25rem;" type="menu">
                 {{ $threads := "Threads" | translate }}
                 {{ if eq .Title $threads }}
                     <li> 
