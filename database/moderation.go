@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"cerca/constants"
+	"cerca/crypto"
 	"cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -32,7 +33,13 @@ import (
 // if allowing deletion of post contents as well when removing account,
 // userid should be used to get all posts from table posts and change the contents
 // to say _deleted_
-func (d DB) RemoveUser(userid int) (finalErr error) {
+type RemoveUserOptions struct {
+	KeepContent bool
+	KeepUsername bool
+}
+func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
+	keepContent := options.KeepContent
+	keepUsername := options.KeepUsername
 	ed := util.Describe("remove user")
 	// there is a single user we call the "deleted user", and we make sure this deleted user exists on startup
 	// they will take the place of the old user when they remove their account.
@@ -65,13 +72,37 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 	// create prepared statements performing the required removal operations for tables that reference a userid as a
 	// foreign key: threads, posts, moderation_log, and registrations
 
-	rawTriples := []Triplet{
-		Triplet{"threads stmt", "UPDATE threads SET authorid = ? WHERE authorid = ?", []any{deletedUserID, userid}},
-		Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}},
-		Triplet{"modlog stmt#1", "UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?", []any{deletedUserID, userid}},
-		Triplet{"modlog stmt#2", "UPDATE moderation_log SET actingid= ? WHERE actingid = ?", []any{deletedUserID, userid}},
-		Triplet{"registrations stmt", "DELETE FROM registrations where userid = ?", []any{userid}},
-		Triplet{"delete user stmt", "DELETE FROM users where id = ?", []any{userid}},
+	rawTriples := []Triplet{}
+	if !keepUsername {
+		rawTriples = append(rawTriples, Triplet{"threads stmt", "UPDATE threads SET authorid = ? WHERE authorid = ?", []any{deletedUserID, userid}})
+	}
+
+	// now for interacting with authored posts, we shall have to handle all permutations of keeping/removing post contents and/or username attribution
+	if !keepContent && !keepUsername {
+		rawTriples = append(rawTriples, Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}})
+	} else if keepContent && !keepUsername {
+		rawTriples = append(rawTriples, Triplet{"posts stmt", `UPDATE posts SET authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}})
+	} else if !keepContent && keepUsername {
+		rawTriples = append(rawTriples, Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_" WHERE authorid = ?`, []any{userid}})
+	}
+
+	// TODO (2025-04-13): not sure whether altering modlog history like this is a good idea or not; accountability goes outta the window cause all you can see is "<admin> removed <deleted user>"
+	if !keepUsername {
+		rawTriples = append(rawTriples, Triplet{"modlog stmt#1", "UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?", []any{deletedUserID, userid}})
+		rawTriples = append(rawTriples, Triplet{"modlog stmt#2", "UPDATE moderation_log SET actingid= ? WHERE actingid = ?", []any{deletedUserID, userid}})
+		rawTriples = append(rawTriples, Triplet{"registrations stmt", "DELETE FROM registrations where userid = ?", []any{userid}})
+	}
+
+	if !keepUsername {
+		// remove the account entirely
+		rawTriples = append(rawTriples, Triplet{"delete user stmt", "DELETE FROM users where id = ?", []any{userid}})
+	} else {
+		// disable using the account by generating and setting a gibberish password
+		throwawayPasswordHash, err := crypto.HashPassword(crypto.GeneratePassword())
+		if rollbackOnErr(ed.Eout(err, fmt.Sprintf("prepare throwaway password"))) {
+			return
+		}
+		rawTriples = append(rawTriples, Triplet{"nullify logins by replacing user password", "UPDATE users SET passswordhash = ? where id = ?", []any{throwawayPasswordHash, userid}})
 	}
 
 	var preparedStmts []*sql.Stmt
@@ -390,7 +421,8 @@ func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (fina
 		err = d.DemoteAdmin(recipientid)
 		ed.Check(err, "remove user", recipientid)
 	case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
-		err = d.RemoveUser(recipientid)
+		// TODO (2025-04-13): introduce/record proposal granularity for admin delete view wrt these booleans
+		err = d.RemoveUser(recipientid, RemoveUserOptions{KeepContent: false, KeepUsername: false})
 		ed.Check(err, "remove user", recipientid)
 	case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
 		d.AddAdmin(recipientid)

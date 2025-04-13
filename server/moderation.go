@@ -103,7 +103,8 @@ func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, ta
 	} else {
 		switch proposedAction {
 		case constants.MODLOG_ADMIN_PROPOSE_REMOVE_USER:
-			err = db.RemoveUser(targetUserId)
+			// TODO (2025-04-13): introduce granularity to admin delete view wrt these booleans
+			err = db.RemoveUser(targetUserId, database.RemoveUserOptions{KeepContent: false, KeepUsername: false})
 			modlogErr = db.AddModerationLog(adminUserId, -1, constants.MODLOG_REMOVE_USER)
 		case constants.MODLOG_ADMIN_PROPOSE_MAKE_ADMIN:
 			err = db.AddAdmin(targetUserId)
