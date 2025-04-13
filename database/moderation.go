@@ -57,11 +57,6 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 
 	// create prepared statements performing the required removal operations for tables that reference a userid as a
 	// foreign key: threads, posts, moderation_log, and registrations
-	threadsStmt, err := tx.Prepare("UPDATE threads SET authorid = ? WHERE authorid = ?")
-	defer threadsStmt.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare threads stmt")) {
-		return
-	}
 
 	/* TODO (2024-11-22): consider playing around with a "table-driven" refactor of the transaction here, as in example below:
 	* args - #1: descriptive error, #2 sql statement, #3 values to execute statement with
@@ -79,60 +74,44 @@ func (d DB) RemoveUser(userid int) (finalErr error) {
 	}
 	*/
 
-	postsStmt, err := tx.Prepare(`UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`)
-	defer postsStmt.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare posts stmt")) {
-		return
+	type Triplet struct {
+		Desc string
+		Statement string
+		Args []any
+	}
+		
+	rawTriples := []Triplet{
+		Triplet{"threads stmt", "UPDATE threads SET authorid = ? WHERE authorid = ?", []any{deletedUserID, userid}},
+		Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}},
+		Triplet{"modlog stmt#1", "UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?", []any{deletedUserID, userid}},
+		Triplet{"modlog stmt#2", "UPDATE moderation_log SET actingid= ? WHERE actingid = ?", []any{deletedUserID, userid}},
+		Triplet{"registrations stmt", "DELETE FROM registrations where userid = ?", []any{userid}},
+		Triplet{"delete user stmt", "DELETE FROM users where id = ?", []any{userid}},
 	}
 
-	modlogStmt1, err := tx.Prepare("UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?")
-	defer modlogStmt1.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt #1")) {
-		return
+	var preparedStmts []*sql.Stmt
+
+	prepStmt := func (rawStmt string) (*sql.Stmt, error) {
+		var stmt *sql.Stmt
+		stmt, err = tx.Prepare(rawStmt)
+		defer stmt.Close()
+		return stmt, err
 	}
 
-	modlogStmt2, err := tx.Prepare("UPDATE moderation_log SET actingid = ? WHERE actingid = ?")
-	defer modlogStmt2.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare modlog stmt #2")) {
-		return
+	for _, triple := range rawTriples {
+		prep, err := prepStmt(triple.Statement)
+		if rollbackOnErr(ed.Eout(err, fmt.Sprintf("prepare %s", triple.Desc))) {
+			return
+		}
+		preparedStmts = append(preparedStmts, prep)
 	}
 
-	stmtReg, err := tx.Prepare("DELETE FROM registrations where userid = ?")
-	defer stmtReg.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare registrations stmt")) {
-		return
-	}
-
-	// and finally: removing the entry from the user's table itself
-	stmtUsers, err := tx.Prepare("DELETE FROM users where id = ?")
-	defer stmtUsers.Close()
-	if rollbackOnErr(ed.Eout(err, "prepare users stmt")) {
-		return
-	}
-
-	_, err = threadsStmt.Exec(deletedUserID, userid)
-	if rollbackOnErr(ed.Eout(err, "exec threads stmt")) {
-		return
-	}
-	_, err = postsStmt.Exec(deletedUserID, userid)
-	if rollbackOnErr(ed.Eout(err, "exec posts stmt")) {
-		return
-	}
-	_, err = modlogStmt1.Exec(deletedUserID, userid)
-	if rollbackOnErr(ed.Eout(err, "exec modlog #1 stmt")) {
-		return
-	}
-	_, err = modlogStmt2.Exec(deletedUserID, userid)
-	if rollbackOnErr(ed.Eout(err, "exec modlog #2 stmt")) {
-		return
-	}
-	_, err = stmtReg.Exec(userid)
-	if rollbackOnErr(ed.Eout(err, "exec registration stmt")) {
-		return
-	}
-	_, err = stmtUsers.Exec(userid)
-	if rollbackOnErr(ed.Eout(err, "exec users stmt")) {
-		return
+	for i, stmt := range preparedStmts {
+		triple := rawTriples[i]
+		_, err = stmt.Exec(triple.Args...)
+		if rollbackOnErr(ed.Eout(err, fmt.Sprintf("exec %s", triple.Desc))) {
+			return
+		}
 	}
 
 	err = tx.Commit()
