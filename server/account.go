@@ -107,7 +107,6 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 	renderErr := func(errMsg string) {
 		renderMsgAccountView(h, res, req, sectionTitle, errMsg)
 	}
-	renderSuccess := renderErr
 	if req.Method == "GET" {
 		if !loggedIn {
 			IndexRedirect(res, req)
