@@ -553,7 +553,7 @@ func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 func (d DB) GetUsers(includeAdmin bool) []User {
 	ed := util.Describe("get users")
 	query := `SELECT u.name, u.id, r.link
-  FROM users u INNER JOIN registrations r on u.id = r.userid
+  FROM users u LEFT OUTER JOIN registrations r on u.id = r.userid
 	%s
   ORDER BY u.id
   `
@@ -574,9 +574,15 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 
 	var user User
 	var users []User
+	var registrationOrigin sql.NullString
 	for rows.Next() {
-		if err := rows.Scan(&user.Name, &user.ID, &user.RegistrationOrigin); err != nil {
+		if err := rows.Scan(&user.Name, &user.ID, &registrationOrigin); err != nil {
 			ed.Check(err, "scanning loop")
+		}
+		if registrationOrigin.Valid {
+			user.RegistrationOrigin = registrationOrigin.String
+		} else {
+			user.RegistrationOrigin = "no registered info"
 		}
 		users = append(users, user)
 	}
