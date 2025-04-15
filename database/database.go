@@ -480,6 +480,16 @@ func (d DB) GetPasswordHash(username string) (string, int, error) {
 	return hash, userid, nil
 }
 
+func (d DB) GetPasswordHashByUserID(userid int) (string, error) {
+	stmt := `SELECT passwordhash FROM users where id = ?`
+	var hash string
+	err := d.db.QueryRow(stmt, userid).Scan(&hash)
+	if err != nil {
+		return "", util.Eout(err, "get password hash by userid")
+	}
+	return hash, nil
+}
+
 func (d DB) existsQuery(substmt string, args ...interface{}) (bool, error) {
 	stmt := fmt.Sprintf(`SELECT exists (%s)`, substmt)
 	var exists bool
@@ -505,7 +515,7 @@ func (d DB) CheckThreadExists(threadid int) (bool, error) {
 	return d.existsQuery(stmt, threadid)
 }
 
-func (d DB) UpdateUserName(userid int, newname string) {
+func (d DB) UpdateUsername(userid int, newname string) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, userid)
 	util.Check(err, "changing user %d's name to %s", userid, newname)
@@ -543,7 +553,7 @@ func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 func (d DB) GetUsers(includeAdmin bool) []User {
 	ed := util.Describe("get users")
 	query := `SELECT u.name, u.id, r.link
-  FROM users u INNER JOIN registrations r on u.id = r.userid
+  FROM users u LEFT OUTER JOIN registrations r on u.id = r.userid
 	%s
   ORDER BY u.id
   `
@@ -564,9 +574,15 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 
 	var user User
 	var users []User
+	var registrationOrigin sql.NullString
 	for rows.Next() {
-		if err := rows.Scan(&user.Name, &user.ID, &user.RegistrationOrigin); err != nil {
+		if err := rows.Scan(&user.Name, &user.ID, &registrationOrigin); err != nil {
 			ed.Check(err, "scanning loop")
+		}
+		if registrationOrigin.Valid {
+			user.RegistrationOrigin = registrationOrigin.String
+		} else {
+			user.RegistrationOrigin = "no registered info"
 		}
 		users = append(users, user)
 	}
