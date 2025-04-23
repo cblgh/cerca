@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"cerca/database"
 	"cerca/crypto"
 )
 
@@ -86,7 +87,6 @@ func (h *RequestHandler) AccountChangeUsername (res http.ResponseWriter, req *ht
 			return
 		}
 		newUsername := req.PostFormValue("new-username")
-		fmt.Println("new username", newUsername)
 		var exists bool
 		if exists, err = h.db.CheckUsernameExists(newUsername); err != nil {
 			renderErr("Database had a problem when checking username")
@@ -115,6 +115,11 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 		http.Redirect(res, req, "/account", http.StatusSeeOther)
 		return
 	} else if req.Method == "POST" {
+		fmt.Printf("%s route hit with POST\n", ACCOUNT_DELETE_ROUTE)
+		if !loggedIn {
+			renderErr("You are, somehow, not logged in. Please refresh your browser, try to logout, and then log back in again.")
+			return
+		}
 		// verify existing credentials
 		currentPassword := req.PostFormValue("current-password")
 		err := h.checkPasswordIsCorrect(userid, currentPassword)
@@ -122,6 +127,54 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 			renderErr("Current password did not match up with the hash stored in database")
 			return
 		}
+
+		/* since deletion is such a permanent action, we take some precautions with the following code and choose a verbose
+		* but redundant approach to confirming the correctness of the received input */
+		deleteConfirmationCheckbox := req.PostFormValue("delete-confirm")
+		if deleteConfirmationCheckbox != "on" {
+			renderErr("The delete account confirmation checkbox was, somehow, not ticked.")
+			return
+		}
+
+		deleteIsConfigured := false // boolean to make sure that deleteOpts was actually set and doesn't just contain default values
+		delErrMsg := "[DERR%d] The delete account functionality hit an error, please ping the forum maintainer with this message and error code!"
+		deleteDecision := req.PostFormValue("delete-post-decision")
+		var deleteOpts database.RemoveUserOptions 
+
+		switch deleteDecision {
+		case "posts-intact-username-intact":
+			// <b>Keep</b> post contents and <b>keep</b> username attribution
+			deleteOpts = database.RemoveUserOptions{KeepContent: true, KeepUsername: true}
+			deleteIsConfigured = true
+		case "posts-intact-username-removed":
+			// <b>Keep</b> post contents but <b>remove</b> username from posts
+			deleteOpts = database.RemoveUserOptions{KeepContent: true, KeepUsername: false}
+			deleteIsConfigured = true
+		case "posts-removed-username-removed":
+			// <b>Remove</b> post contents and <b>remove</b> my username
+			deleteOpts = database.RemoveUserOptions{KeepContent: false, KeepUsername: false}
+			deleteIsConfigured = true
+		case "posts-removed-username-intact":
+			// <b>Remove</b> post contents and <b>keep</b> my username
+			deleteOpts = database.RemoveUserOptions{KeepContent: false, KeepUsername: true}
+			deleteIsConfigured = true
+		default:
+			renderErr(fmt.Sprintf(delErrMsg, 1))
+			fmt.Println("hit default for deleteDecision - not doing anything! this isn't good!!")
+			return
+		}
+		if !deleteIsConfigured {
+			renderErr(fmt.Sprintf(delErrMsg, 2))
+			return
+		}
+		// all our checks have passed and it looks like we're in for some deleting!
+		fmt.Println("deleting user with userid", userid)
+		err = h.db.RemoveUser(userid, deleteOpts)
+		if err != nil {
+			renderErr(fmt.Sprintf(delErrMsg, 3))
+			return
+		}
+		// log the user out
+		http.Redirect(res, req, "/logout", http.StatusSeeOther)
 	}
-	fmt.Println("delete!")
 }
