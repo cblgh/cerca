@@ -95,8 +95,8 @@ func (h *RequestHandler) AccountChangeUsername (res http.ResponseWriter, req *ht
 			renderErr(fmt.Sprintf("Username %s appears to already exist, please pick another name", newUsername))
 			return
 		}
-		renderSuccess(fmt.Sprintf("You are now known as %s", newUsername))
 		h.db.UpdateUsername(userid, newUsername)
+		renderSuccess(fmt.Sprintf("You are now known as %s", newUsername))
 		// TODO (2024-04-09): add modlog entry so that other forum users (or only admins?) can follow along with changing nicknames
 	}
 }
