@@ -54,7 +54,7 @@ func admin() {
 	}
 
 	// log cmd actions just as admin web-actions are logged
-	systemUserid := db.GetSystemUserid()
+	systemUserid := db.GetSystemUserID()
 	err = db.AddModerationLog(systemUserid, userid, constants.MODLOG_ADMIN_MAKE)
 	if err != nil {
 		complain("adding mod log for adding new admin failed (%w)", err)

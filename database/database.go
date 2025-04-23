@@ -527,7 +527,7 @@ func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	util.Check(err, "changing user %d's description to %s", userid, newhash)
 }
 
-func (d DB) GetSystemUserid() int {
+func (d DB) GetSystemUserID() int {
 	ed := util.Describe("get system user id")
 	systemUserid, err := d.GetUserID(SYSTEM_USER_NAME)
 	// it should always exist
