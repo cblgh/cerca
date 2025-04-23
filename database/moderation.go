@@ -73,10 +73,13 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	// foreign key: threads, posts, moderation_log, and registrations
 
 	rawTriples := []Triplet{}
+	/* UPDATING THREADS */
+	// if we remove the username we shall also have to alter the threads started by this user
 	if !keepUsername {
 		rawTriples = append(rawTriples, Triplet{"threads stmt", "UPDATE threads SET authorid = ? WHERE authorid = ?", []any{deletedUserID, userid}})
 	}
 
+	/* UPDATING POSTS */
 	// now for interacting with authored posts, we shall have to handle all permutations of keeping/removing post contents and/or username attribution
 	if !keepContent && !keepUsername {
 		rawTriples = append(rawTriples, Triplet{"posts stmt", `UPDATE posts SET content = "_deleted_", authorid = ? WHERE authorid = ?`, []any{deletedUserID, userid}})
@@ -87,12 +90,14 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	}
 
 	// TODO (2025-04-13): not sure whether altering modlog history like this is a good idea or not; accountability goes outta the window cause all you can see is "<admin> removed <deleted user>"
+	/* UPDATING MODLOGS */
 	if !keepUsername {
 		rawTriples = append(rawTriples, Triplet{"modlog stmt#1", "UPDATE moderation_log SET recipientid = ? WHERE recipientid = ?", []any{deletedUserID, userid}})
 		rawTriples = append(rawTriples, Triplet{"modlog stmt#2", "UPDATE moderation_log SET actingid= ? WHERE actingid = ?", []any{deletedUserID, userid}})
 		rawTriples = append(rawTriples, Triplet{"registrations stmt", "DELETE FROM registrations where userid = ?", []any{userid}})
 	}
 
+	/* REMOVING CREDENTIALS */
 	if !keepUsername {
 		// remove the account entirely
 		rawTriples = append(rawTriples, Triplet{"delete user stmt", "DELETE FROM users where id = ?", []any{userid}})
@@ -102,7 +107,7 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 		if rollbackOnErr(ed.Eout(err, fmt.Sprintf("prepare throwaway password"))) {
 			return
 		}
-		rawTriples = append(rawTriples, Triplet{"nullify logins by replacing user password", "UPDATE users SET passswordhash = ? where id = ?", []any{throwawayPasswordHash, userid}})
+		rawTriples = append(rawTriples, Triplet{"nullify logins by replacing user password", "UPDATE users SET passwordhash = ? where id = ?", []any{throwawayPasswordHash, userid}})
 	}
 
 	var preparedStmts []*sql.Stmt
@@ -110,7 +115,6 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	prepStmt := func (rawStmt string) (*sql.Stmt, error) {
 		var stmt *sql.Stmt
 		stmt, err = tx.Prepare(rawStmt)
-		defer stmt.Close()
 		return stmt, err
 	}
 
@@ -119,6 +123,7 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 		if rollbackOnErr(ed.Eout(err, fmt.Sprintf("prepare %s", triple.Desc))) {
 			return
 		}
+		defer prep.Close()
 		preparedStmts = append(preparedStmts, prep)
 	}
 
