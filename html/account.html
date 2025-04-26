@@ -1,0 +1,108 @@
+{{ template "head" . }}
+<main>
+    <h1> {{ .Title }}</h1>
+    <p>The place to make account changes. In order to make any change, you need to confirm with your current password.</p>
+    <section>
+    {{ if .Data.ErrorMessage }}
+    <div style="margin-bottom: 1rem; border-radius: 0.25rem; padding: 0.25rem 0.5rem; width: max-content; background: black; color: wheat;">
+        <p style="margin: 0"><b> {{ .Data.ErrorMessage }} </b></p>
+    </div>
+    {{ end }}
+
+    <h2>Change password</h2>
+
+    <form method="POST" action="{{ .Data.ChangePasswordRoute }}">
+        <div>
+            <label for="current-password-2">Current {{ "Password" | translate }}:</label>
+            <input type="password" minlength="9" required id="current-password-2" name="current-password">
+        </div>
+        <label for="new-password">New {{ "Password" | translate }}:</label>
+        <input type="password" minlength="9" required id="new-password" name="new-password">
+        <label for="new-password">Repeat the new {{ "Password" | translate }}:</label>
+        <div>
+            <input type="password" minlength="9" required id="new-password-copy" name="new-password-copy">
+        </div>
+        <div>
+            <input type="submit" value='Change password'>
+        </div>
+    </form>
+    </section>
+
+    <section>
+    <h2>Change username</h2>
+    <form method="POST" action="{{ .Data.ChangeUsernameRoute }}">
+        <div>
+            <label for="current-username">Current {{ "Username" | translate }}:</label>
+            <input type="text" id="current-username" readonly disabled value="{{ .Data.LoggedInUsername }}" name="current-username" >
+        </div>
+        <div>
+            <label for="new-username">New {{ "Username" | translate }}:</label>
+            <input type="text" required id="new-username" name="new-username">
+        </div>
+        <div>
+            <label for="current-password-1">Confirm with {{ "Password" | translate }}:</label>
+            <input type="password" minlength="9" required id="current-password-1" name="current-password">
+        </div>
+        <div>
+            <input type="submit" value='Change username'>
+        </div>
+    </form>
+    </section>
+
+    <section>
+    <h2>Delete account</h2>
+    <form method="POST" action="{{ .Data.DeleteAccountRoute }}">
+        <p>Choosing this action will delete your account. Decide below how you want account deletion to affect the posts
+        you have made.</p>
+        <small style="display: block"><i>Note 1:</i> mentions of your username made by others in their posts are not currently edited as a result
+        of your account deletion.</small>
+        <small style="display: block"><i>Note 2:</i> database backups that have yet to be replaced by newer backups or copies made of public threads by
+        external web scrapers will not be affected by your account deletion.</small>
+        <fieldset style="padding-bottom: 2rem">
+            <legend>Decide on your posting legacy</legend>
+            <p>
+                Deleting your account means deleting its details from the database so that it can't be used again.
+                However, below <b>you can decide on the granularity of your decision</b>.
+            </p>
+            <div>
+                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-intact" value="posts-intact-username-intact">
+                <label style="display: inline-block" for="radio-post-intact-username-intact">
+                    <b>Keep</b> post contents and <b>keep</b> username attribution
+                </label>
+            </div>
+            <hr>
+            <div>
+                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-removed" value="posts-intact-username-removed">
+                <label style="display: inline-block" for="radio-post-intact-username-removed">
+                    <b>Keep</b> post contents but <b>remove</b> username from posts
+                </label>
+            </div>
+            <hr>
+            <div>
+                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-removed-username-intact" value="posts-removed-username-intact">
+                <label style="display: inline-block" for="radio-post-removed-username-intact">
+                    <b>Remove</b> post contents and <b>keep</b> my username
+                </label>
+            </div>
+            <hr>
+            <div>
+                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision"  id="radio-post-removed-username-removed" value="posts-removed-username-removed">
+                <label style="display: inline-block" for="radio-post-removed-username-removed">
+                    <b>Remove</b> post contents and <b>remove</b> my username
+                </label>
+            </div>
+        </fieldset>
+        <div>
+            <input type="checkbox" required id="delete-confirm" name="delete-confirm">
+            <label style="margin-bottom: 1rem; display: inline-block" for="delete-confirm">Yes, I want to delete my account and I understand the decision is permanent.</label>
+        </div>
+        <label for="current-password-3">Confirm with {{ "Password" | translate }}:</label>
+        <input type="password" minlength="9" required id="current-password-3" name="current-password">
+        <div>
+        <input type="submit" value='Delete my account'>
+        </div>
+    </form>
+    </section>
+
+</main>
+{{ template "footer" . }}
