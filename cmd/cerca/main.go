@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"path/filepath"
 
+	"cerca/defaults"
 	"cerca/server"
 	"cerca/util"
 )
@@ -106,6 +108,10 @@ func run() {
 		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
 	}
 	config := util.ReadConfig(configPath)
+	_, err = util.CreateIfNotExist(filepath.Join("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
+	if err != nil {
+		complain("couldn't output default theme.css")
+	}
 	server.Serve(sessionKey, port, dev, dataDir, config)
 }
 
