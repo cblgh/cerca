@@ -8,7 +8,7 @@ import (
 
 
 func authkey() {
-	authkeyFlags := flag.NewFlagSet("adduser", flag.ExitOnError)
+	authkeyFlags := flag.NewFlagSet("authkey", flag.ExitOnError)
 
 	help := createHelpString("authkey", []string{
 		`cerca authkey <no other args>`,
