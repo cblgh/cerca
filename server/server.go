@@ -768,8 +768,15 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 			h.renderGenericMessage(res, req, data)
 			return
 		}
+
+		params := req.URL.Query()
+		var newTitle string
+		if _, exists := params["title"]; exists {
+			newTitle = params["title"][0]
+		}
+		// note: for Data we pass and initialize an anonymous struct that only contains NewTitle. this makes newTitle accessible in html/new-thread.html as .Data.NewTitle
 		h.renderView(res, "new-thread", TemplateData{
-			HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
+			Data: struct{NewTitle string}{newTitle}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
