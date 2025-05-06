@@ -1,0 +1,52 @@
+/* below are the style rules that define the visual theme of the forum 
+ * change these to change the forum's colours */
+
+/* NORMAL THEME */
+/* default theme colors:
+ * black
+ * wheat - bg
+ * #666 - visited link
+ * darkred - highlights: links, certain tags
+*/
+/*
+body { background: wheat; color: black; }
+textarea { background: black; color: wheat; }
+ul li { list-style-type: circle; }
+blockquote { border-left-color: darkred; }
+a:not([class]), pre code { color: darkred; }
+h1, h2, h2 > a:not([class], :visited), span > b { color: black; }
+a:visited { color: #666; }
+header a, header a:visited { color: darkred; }
+*/
+/* post author name is styled with `span > b` */
+/* span > b { color: black; } */
+
+/* HALLOWEEN THEME */
+/*
+/* halloween theme colors
+ * #ff8000
+ * wheat
+ * gray
+ * #111
+ * #f2f2f2
+*/
+/*
+header svg { fill: #ff8000; }
+#logo {
+	width: 48px;
+	height: 48px;
+	display: block;
+}
+p { color: #f2f2f2; }
+blockquote { border-color: wheat; }
+textarea { background: black; color: wheat; }
+h1 a:visited, a:not([class]) { color: wheat; }
+a:visited { color: gray; }
+body { background: #111; color: #ff8000;   }
+header details a:visited { color: #ff8000; }
+
+/* author colors */
+/*
+span > b { color: #ff8000; }
+*/
+

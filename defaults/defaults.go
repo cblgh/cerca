@@ -18,3 +18,7 @@ var DEFAULT_REGISTRATION string
 
 //go:embed sample-config.toml
 var DEFAULT_CONFIG string
+
+//go:embed sample-theme.css
+var DEFAULT_THEME string
+
