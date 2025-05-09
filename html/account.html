@@ -64,36 +64,37 @@
                 Deleting your account means deleting its details from the database so that it can't be used again.
                 However, below <b>you can decide on the granularity of your decision</b>.
             </p>
+            <div style="margin-bottom: 1rem; border-radius: 0.25rem; padding: 2rem; width: max-content; background: black; color: wheat;">
+                <input style="margin-bottom: 0;" type="checkbox" id="delete-everything" name="delete-everything">
+                <label style="margin-bottom: 0; display: inline-block" for="delete-everything">Erase all my posts and leave no attribution</label>
+            </div>
+
+            <details><summary>If the account removal approach above isn't desirable, choose one of the options below <b>instead</b></summary>
             <div>
-                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-intact" value="posts-intact-username-intact">
-                <label style="display: inline-block" for="radio-post-intact-username-intact">
-                    <b>Keep</b> post contents and <b>keep</b> username attribution
+                <input style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-no-choice" checked value="no-choice">
+                <label style="display: inline-block" for="radio-post-no-choice"><b>None</b>
                 </label>
             </div>
-            <hr>
             <div>
-                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-removed" value="posts-intact-username-removed">
-                <label style="display: inline-block" for="radio-post-intact-username-removed">
-                    <b>Keep</b> post contents but <b>remove</b> username from posts
+                <input style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-intact" value="posts-intact-username-intact">
+                <label style="display: inline-block" for="radio-post-intact-username-intact"><b>Lock your account and disable its use. Your posts will be kept.</b>
                 </label>
             </div>
-            <hr>
             <div>
-                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-removed-username-intact" value="posts-removed-username-intact">
-                <label style="display: inline-block" for="radio-post-removed-username-intact">
-                    <b>Remove</b> post contents and <b>keep</b> my username
+                <input style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-intact-username-removed" value="posts-intact-username-removed">
+                <label style="display: inline-block" for="radio-post-intact-username-removed"><b>Keep your posts but make them anonymously authored.</b>
                 </label>
             </div>
-            <hr>
             <div>
-                <input required style="margin-bottom: 0" type="radio" name="delete-post-decision"  id="radio-post-removed-username-removed" value="posts-removed-username-removed">
-                <label style="display: inline-block" for="radio-post-removed-username-removed">
-                    <b>Remove</b> post contents and <b>remove</b> my username
+                <input style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-removed-username-intact" value="posts-removed-username-intact">
+                <label style="display: inline-block" for="radio-post-removed-username-intact"><b>Remove post contents but still display your username.</b>
                 </label>
+                <p style="margin-top: 1rem; margin-bottom: 0; font-style: italic;">Note: all options (other than <i>none</i>) result in the closing of your account.</p>
             </div>
+            </details>
         </fieldset>
         <div>
-            <input type="checkbox" required id="delete-confirm" name="delete-confirm">
+            <input type="checkbox" id="delete-confirm" required name="delete-confirm">
             <label style="margin-bottom: 1rem; display: inline-block" for="delete-confirm">Yes, I want to delete my account and I understand the decision is permanent.</label>
         </div>
         <label for="current-password-3">Confirm with {{ "Password" | translate }}:</label>
