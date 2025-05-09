@@ -136,10 +136,32 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 			return
 		}
 
-		deleteIsConfigured := false // boolean to make sure that deleteOpts was actually set and doesn't just contain default values
 		delErrMsg := "[DERR%d] The delete account functionality hit an error, please ping the forum maintainer with this message and error code!"
-		deleteDecision := req.PostFormValue("delete-post-decision")
 		var deleteOpts database.RemoveUserOptions 
+		// contains values from a radio button
+		deleteDecision := req.PostFormValue("delete-post-decision")
+		// delete-everything is a checkbox: check if it was checked
+		wantDeleteEverything := req.PostFormValue("delete-everything") == "on"
+		// boolean to make sure that a delete option was accurately through either the delete-everything checkbox
+		// or the granular options represented by radio buttons.
+		// this check ensures that `deleteOpts` was actually set and doesn't just contain default values
+		deleteIsConfigured := false 
+
+		// if delete everything and a granular option is chosen, error out instead
+		if (len(deleteDecision) > 0 && deleteDecision != "no-choice") && wantDeleteEverything {
+			renderErr("Choose either delete everything, or one of the more granular options; not both")
+			return
+		}
+		// no option was chosen
+		if (deleteDecision == "no-choice" || deleteDecision == "") && !wantDeleteEverything {
+			renderErr("You did not choose a delete option; please try again and choose one of the account delete options.")
+			return
+		}
+
+		if wantDeleteEverything {
+			deleteOpts = database.RemoveUserOptions{KeepContent: false, KeepUsername: false}
+			deleteIsConfigured = true
+		}
 
 		switch deleteDecision {
 		case "posts-intact-username-intact":
@@ -150,23 +172,24 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 			// <b>Keep</b> post contents but <b>remove</b> username from posts
 			deleteOpts = database.RemoveUserOptions{KeepContent: true, KeepUsername: false}
 			deleteIsConfigured = true
-		case "posts-removed-username-removed":
-			// <b>Remove</b> post contents and <b>remove</b> my username
-			deleteOpts = database.RemoveUserOptions{KeepContent: false, KeepUsername: false}
-			deleteIsConfigured = true
 		case "posts-removed-username-intact":
 			// <b>Remove</b> post contents and <b>keep</b> my username
 			deleteOpts = database.RemoveUserOptions{KeepContent: false, KeepUsername: true}
 			deleteIsConfigured = true
+		case "no-choice":
+			break
 		default:
 			renderErr(fmt.Sprintf(delErrMsg, 1))
 			fmt.Println("hit default for deleteDecision - not doing anything! this isn't good!!")
 			return
 		}
+
 		if !deleteIsConfigured {
 			renderErr(fmt.Sprintf(delErrMsg, 2))
+			fmt.Println("delete was not configured! this isn't good!!")
 			return
 		}
+
 		// all our checks have passed and it looks like we're in for some deleting!
 		fmt.Println("deleting user with userid", userid)
 		err = h.db.RemoveUser(userid, deleteOpts)
