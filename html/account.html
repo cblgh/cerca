@@ -54,9 +54,9 @@
     <form method="POST" action="{{ .Data.DeleteAccountRoute }}">
         <p>Choosing this action will delete your account. Decide below how you want account deletion to affect the posts
         you have made.</p>
-        <small style="display: block"><i>Note 1:</i> mentions of your username made by others in their posts are not currently edited as a result
+        <small style="display: block"><i><b>Note 1</b>:</i> mentions of your username made by others in their posts are not currently edited as a result
         of your account deletion.</small>
-        <small style="display: block"><i>Note 2:</i> database backups that have yet to be replaced by newer backups or copies made of public threads by
+        <small style="display: block"><i><b>Note 2</b>:</i> database backups that have yet to be replaced by newer backups or copies made of public threads by
         external web scrapers will not be affected by your account deletion.</small>
         <fieldset style="padding-bottom: 2rem">
             <legend>Decide on your posting legacy</legend>
@@ -89,7 +89,7 @@
                 <input style="margin-bottom: 0" type="radio" name="delete-post-decision" id="radio-post-removed-username-intact" value="posts-removed-username-intact">
                 <label style="display: inline-block" for="radio-post-removed-username-intact"><b>Remove post contents but still display your username.</b>
                 </label>
-                <p style="margin-top: 1rem; margin-bottom: 0; font-style: italic;">Note: all options (other than <i>none</i>) result in the closing of your account.</p>
+                <p style="margin-top: 1rem; margin-bottom: 0; font-style: italic;"><b>Note</b>: all options (other than 'None') result in the closing of your account.</p>
             </div>
             </details>
         </fieldset>
