@@ -34,9 +34,10 @@ import (
 // userid should be used to get all posts from table posts and change the contents
 // to say _deleted_
 type RemoveUserOptions struct {
-	KeepContent bool
+	KeepContent  bool
 	KeepUsername bool
 }
+
 func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	keepContent := options.KeepContent
 	keepUsername := options.KeepUsername
@@ -64,11 +65,11 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	}
 
 	type Triplet struct {
-		Desc string
+		Desc      string
 		Statement string
-		Args []any
+		Args      []any
 	}
-		
+
 	// create prepared statements performing the required removal operations for tables that reference a userid as a
 	// foreign key: threads, posts, moderation_log, and registrations
 
@@ -112,7 +113,7 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 
 	var preparedStmts []*sql.Stmt
 
-	prepStmt := func (rawStmt string) (*sql.Stmt, error) {
+	prepStmt := func(rawStmt string) (*sql.Stmt, error) {
 		var stmt *sql.Stmt
 		stmt, err = tx.Prepare(rawStmt)
 		return stmt, err

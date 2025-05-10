@@ -6,7 +6,6 @@ import (
 	"flag"
 )
 
-
 func authkey() {
 	authkeyFlags := flag.NewFlagSet("authkey", flag.ExitOnError)
 

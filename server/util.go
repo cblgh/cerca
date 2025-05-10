@@ -19,4 +19,3 @@ func (h *RequestHandler) checkPasswordIsCorrect(userid int, password string) err
 	}
 	return nil
 }
-

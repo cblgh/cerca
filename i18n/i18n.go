@@ -96,13 +96,13 @@ var English = map[string]string{
 	"PasswordMin":               "Must be at least 9 characters long",
 	"PasswordForgot":            "Forgot your password?",
 
-	"Posts":						 "posts",
+	"Posts":             "posts",
 	"Threads":           "threads",
 	"ThreadNew":         "new thread",
 	"ThreadThe":         "the thread",
 	"Index":             "index",
 	"GoBackToTheThread": "Go back to the thread",
-	"ThreadsViewEmpty": "There are currently no threads.",
+	"ThreadsViewEmpty":  "There are currently no threads.",
 
 	"ThreadCreate":        "Create thread",
 	"Title":               "Title",
@@ -252,13 +252,13 @@ var Swedish = map[string]string{
 	"PasswordMin":               "Måste vara minst 9 karaktärer långt",
 	"PasswordForgot":            "Glömt lösenordet?",
 
-	"Posts":						 "poster",
+	"Posts":             "poster",
 	"Threads":           "trådar",
 	"ThreadNew":         "ny tråd",
 	"ThreadThe":         "tråden",
 	"Index":             "index",
 	"GoBackToTheThread": "Gå tillbaka till tråden",
-	"ThreadsViewEmpty":		"Det finns för närvarande inga trådar",
+	"ThreadsViewEmpty":  "Det finns för närvarande inga trådar",
 
 	"ThreadCreate":        "Skapa en tråd",
 	"Title":               "Titel",
@@ -344,7 +344,7 @@ var EspanolMexicano = map[string]string{
 	"PasswordMin":               "Debe tener por lo menos 9 caracteres.",
 	"PasswordForgot":            "Olvidaste tu contraseña?",
 
-	"Posts":						 "posts",
+	"Posts":             "posts",
 	"Threads":           "threads",
 	"ThreadNew":         "new thread",
 	"ThreadThe":         "the thread",

@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"cerca/defaults"
 	"cerca/server"
@@ -13,11 +13,11 @@ import (
 )
 
 var commandExplanations = map[string]string{
-	"run":       "run the forum",
-	"adduser":   "create a new user",
-	"makeadmin": "make an existing user an admin",
-	"migrate":   "manage database migrations",
-	"resetpw":   "reset a user's password",
+	"run":        "run the forum",
+	"adduser":    "create a new user",
+	"makeadmin":  "make an existing user an admin",
+	"migrate":    "manage database migrations",
+	"resetpw":    "reset a user's password",
 	"genauthkey": "generate and output an authkey for use with `cerca run`",
 }
 
@@ -67,6 +67,7 @@ func complain(msg string, args ...interface{}) {
 
 const DEFAULT_PORT = 8272
 const DEFAULT_DEV_PORT = 8277
+
 func run() {
 	var sessionKey string
 	var configPath string
@@ -93,7 +94,7 @@ func run() {
 	}
 	// if dev mode and port not specified then use the default dev port to prevent collision with default serving port
 	if dev && port == DEFAULT_PORT {
-		port = DEFAULT_DEV_PORT 
+		port = DEFAULT_DEV_PORT
 	}
 
 	if len(sessionKey) == 0 {

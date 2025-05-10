@@ -76,11 +76,11 @@ type RegisterData struct {
 	ConductLink        string
 }
 type AccountData struct {
-	ErrorMessage       string
-	ChangePasswordRoute  string
-	ChangeUsernameRoute  string
-	DeleteAccountRoute string
-	LoggedInUsername string
+	ErrorMessage        string
+	ChangePasswordRoute string
+	ChangeUsernameRoute string
+	DeleteAccountRoute  string
+	LoggedInUsername    string
 }
 
 type LoginData struct {
@@ -747,7 +747,7 @@ func (h RequestHandler) AccountRoute(res http.ResponseWriter, req *http.Request)
 	username, err := h.db.GetUsername(userid)
 	var errMessage string
 	if err != nil {
-		errMessage ="Could not get the username for the logged-in user"
+		errMessage = "Could not get the username for the logged-in user"
 	}
 	h.renderView(res, "account", TemplateData{Data: AccountData{LoggedInUsername: username, ErrorMessage: errMessage, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
@@ -782,7 +782,7 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 		}
 		// note: for Data we pass and initialize an anonymous struct that only contains NewTitle. this makes newTitle accessible in html/new-thread.html as .Data.NewTitle
 		h.renderView(res, "new-thread", TemplateData{
-			Data: struct{NewTitle string}{newTitle}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
+			Data: struct{ NewTitle string }{newTitle}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: h.translator.Translate("ThreadNew")})
 	case "POST":
 		// Handle POST (=>
 		title := req.PostFormValue("title")
@@ -980,7 +980,7 @@ const INVITES_DELETE_ROUTE = "/invites/delete"
 
 const ACCOUNT_CHANGE_PASSWORD_ROUTE = "/account/change-password"
 const ACCOUNT_CHANGE_USERNAME_ROUTE = "/account/change-username"
-const ACCOUNT_DELETE_ROUTE  = "/account/delete"
+const ACCOUNT_DELETE_ROUTE = "/account/delete"
 
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice

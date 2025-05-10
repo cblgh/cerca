@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"cerca/database"
 	"cerca/crypto"
+	"cerca/database"
 )
 
-func renderMsgAccountView (h *RequestHandler, res http.ResponseWriter, req *http.Request, caller, errInput string) {
+func renderMsgAccountView(h *RequestHandler, res http.ResponseWriter, req *http.Request, caller, errInput string) {
 	errMessage := fmt.Sprintf("%s: %s", caller, errInput)
 	loggedIn, userid := h.IsLoggedIn(req)
 	username, _ := h.db.GetUsername(userid)
 	h.renderView(res, "account", TemplateData{Data: AccountData{ErrorMessage: errMessage, LoggedInUsername: username, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
 
-func (h *RequestHandler) AccountChangePassword (res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) AccountChangePassword(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Change password"
 	renderErr := func(errMsg string) {
@@ -64,7 +64,7 @@ func (h *RequestHandler) AccountChangePassword (res http.ResponseWriter, req *ht
 		}
 	}
 }
-func (h *RequestHandler) AccountChangeUsername (res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) AccountChangeUsername(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Change username"
 	renderErr := func(errMsg string) {
@@ -101,7 +101,7 @@ func (h *RequestHandler) AccountChangeUsername (res http.ResponseWriter, req *ht
 	}
 }
 
-func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req *http.Request) {
+func (h *RequestHandler) AccountSelfServiceDelete(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Delete account"
 	renderErr := func(errMsg string) {
@@ -137,7 +137,7 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 		}
 
 		delErrMsg := "[DERR%d] The delete account functionality hit an error, please ping the forum maintainer with this message and error code!"
-		var deleteOpts database.RemoveUserOptions 
+		var deleteOpts database.RemoveUserOptions
 		// contains values from a radio button
 		deleteDecision := req.PostFormValue("delete-post-decision")
 		// delete-everything is a checkbox: check if it was checked
@@ -145,7 +145,7 @@ func (h *RequestHandler) AccountSelfServiceDelete (res http.ResponseWriter, req 
 		// boolean to make sure that a delete option was accurately through either the delete-everything checkbox
 		// or the granular options represented by radio buttons.
 		// this check ensures that `deleteOpts` was actually set and doesn't just contain default values
-		deleteIsConfigured := false 
+		deleteIsConfigured := false
 
 		// if delete everything and a granular option is chosen, error out instead
 		if (len(deleteDecision) > 0 && deleteDecision != "no-choice") && wantDeleteEverything {
