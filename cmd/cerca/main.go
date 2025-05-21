@@ -19,6 +19,7 @@ var commandExplanations = map[string]string{
 	"migrate":    "manage database migrations",
 	"resetpw":    "reset a user's password",
 	"genauthkey": "generate and output an authkey for use with `cerca run`",
+	"version":    "output version information",
 }
 
 func createHelpString(commandName string, usageExamples []string) string {
@@ -28,7 +29,7 @@ func createHelpString(commandName string, usageExamples []string) string {
 
 	if commandName == "run" {
 		helpString += "\nCOMMANDS:\n"
-		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey"}
+		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey", "version"}
 		for _, key := range cmds {
 			// pad first string with spaces to the right instead, set its expected width = 11
 			helpString += fmt.Sprintf("  %-11s%s\n", key, commandExplanations[key])
@@ -135,6 +136,8 @@ func main() {
 		run()
 	case "genauthkey":
 		authkey()
+	case "version":
+		version()
 	default:
 		fmt.Printf("ERR: no such subcommand '%s'\n", command)
 		run()
