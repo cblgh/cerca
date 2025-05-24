@@ -78,6 +78,10 @@ The configuration format is [TOML](https://toml.io/en/) and the config is popula
 defaults:
 
 ```TOML
+[tooling]
+cerca_root = "" # optional - see docs/hosting.md for more info. if set, this should point to the folder hosting the base of your forum. 
+                # can also be set with the CERCA_ROOT environment variable
+
 [general]	
 name = "" # whatever you want to name your forum; primarily used as display in tab titles
 conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
