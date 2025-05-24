@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"cerca/defaults"
@@ -68,6 +67,8 @@ func complain(msg string, args ...interface{}) {
 
 const DEFAULT_PORT = 8272
 const DEFAULT_DEV_PORT = 8277
+const DEFAULT_CONFIG_NAME = "cerca.toml"
+const DEFAULT_DATA_DIR = "./data"
 
 func run() {
 	var sessionKey string
@@ -79,8 +80,8 @@ func run() {
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
 	flag.IntVar(&port, "port", DEFAULT_PORT, "port to run the forum on")
 	flag.StringVar(&sessionKey, "authkey", "", "session cookies authentication key")
-	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
-	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
+	flag.StringVar(&configPath, "config", DEFAULT_CONFIG_NAME, "config and settings file containing cerca's customizations")
+	flag.StringVar(&dataDir, "data", DEFAULT_DATA_DIR, "directory where cerca will dump its database")
 
 	help := createHelpString("run", []string{
 		"cerca -authkey \"CHANGEME\"",
@@ -105,12 +106,39 @@ func run() {
 		sessionKey = "0"
 	}
 
+	var cercaRoot string
+	for _, env := range os.Environ() {
+		parts := strings.Split(env, "=")
+		if parts[0] == "CERCA_ROOT" {
+			cercaRoot = parts[1]
+		}
+	}
+
+	// if --config isn't set and CERCA_ROOT is set, set config path to use the cerca root/cerca.toml
+	if configPath == DEFAULT_CONFIG_NAME && cercaRoot != "" {
+		configPath = util.JoinWithBase(cercaRoot, DEFAULT_CONFIG_NAME)
+	}
+
+	config := util.ReadConfig(configPath)
+	// if CERCA_ROOT env var is set but config.Tooling.CercaRoot is not set, then use the CERCA_ROOT  value.
+	// note that implicitly, config.Tooling.CercaRoot takes precedence over any env variable CERCA_ROOT if both are set
+	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
+		config.Tooling.CercaRoot = cercaRoot
+	}
+
+	// if --data is not passed, then join the default dataDir with the cerca root
+	if dataDir == DEFAULT_DATA_DIR && config.Tooling.CercaRoot != "" {
+		dataDir = config.JoinWithRoot(dataDir)
+	}
+
 	err := os.MkdirAll(dataDir, 0750)
 	if err != nil {
 		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
 	}
-	config := util.ReadConfig(configPath)
-	_, err = util.CreateIfNotExist(filepath.Join("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
+
+
+	//                             vvvvvvvvvdoes this make sense wrt rest of system?vv
+	_, err = util.CreateIfNotExist(config.JoinWithRoot("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
 	if err != nil {
 		complain("couldn't output default theme.css")
 	}

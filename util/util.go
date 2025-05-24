@@ -59,6 +59,21 @@ func (ed ErrorDescriber) Check(err error, msg string, args ...interface{}) {
 	Check(err, msg, args...)
 }
 
+// returns `path` joined using os-dep separators if it is an absolute path, otherwise constructs a path
+// by joining `base` with `path`
+func JoinWithBase(base string, path ...string) string {
+	joinedPath := filepath.Join(path...)
+	if filepath.IsAbs(joinedPath) {
+		return joinedPath
+	}
+	var p []string
+	p = append(p, base)
+	p = append(p, joinedPath)
+	finalPath, err := filepath.Abs(filepath.Join(p...))
+	Check(err, "JoinWithBase abs(path)")
+	return finalPath
+}
+
 // format all errors consistently, and provide context for the error using the string `msg`
 func Eout(err error, msg string, args ...interface{}) error {
 	if err != nil {

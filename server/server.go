@@ -1054,7 +1054,7 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
 	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
-	fileserver := http.FileServer(http.Dir("html/assets/"))
+	fileserver := http.FileServer(http.Dir(config.JoinWithRoot("html/assets/")))
 	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
 
 	return s, nil
