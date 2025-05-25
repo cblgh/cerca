@@ -106,13 +106,7 @@ func run() {
 		sessionKey = "0"
 	}
 
-	var cercaRoot string
-	for _, env := range os.Environ() {
-		parts := strings.Split(env, "=")
-		if parts[0] == "CERCA_ROOT" {
-			cercaRoot = parts[1]
-		}
-	}
+	cercaRoot := util.GetEnvCercaRoot()
 
 	// if --config isn't set and CERCA_ROOT is set, set config path to use the cerca root/cerca.toml
 	if configPath == DEFAULT_CONFIG_NAME && cercaRoot != "" {
@@ -120,7 +114,7 @@ func run() {
 	}
 
 	config := util.ReadConfig(configPath)
-	// if CERCA_ROOT env var is set but config.Tooling.CercaRoot is not set, then use the CERCA_ROOT  value.
+	// if CERCA_ROOT env var is set but config.Tooling.CercaRoot is not set, then use the CERCA_ROOT value.
 	// note that implicitly, config.Tooling.CercaRoot takes precedence over any env variable CERCA_ROOT if both are set
 	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
 		config.Tooling.CercaRoot = cercaRoot
@@ -136,8 +130,6 @@ func run() {
 		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
 	}
 
-
-	//                             vvvvvvvvvdoes this make sense wrt rest of system?vv
 	_, err = util.CreateIfNotExist(config.JoinWithRoot("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
 	if err != nil {
 		complain("couldn't output default theme.css")

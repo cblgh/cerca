@@ -107,6 +107,16 @@ func Contains(slice []string, s string) bool {
 	return false
 }
 
+func GetEnvCercaRoot () string {
+	for _, env := range os.Environ() {
+		parts := strings.Split(env, "=")
+		if parts[0] == "CERCA_ROOT" {
+			return parts[1]
+		}
+	}
+	return ""
+}
+
 var contentGuardian = bluemonday.UGCPolicy()
 var strictContentGuardian = bluemonday.StrictPolicy()
 
