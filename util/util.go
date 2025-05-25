@@ -74,6 +74,13 @@ func JoinWithBase(base string, path ...string) string {
 	return finalPath
 }
 
+func EnsureCercaRootSet(config *types.Config) {
+	cercaRoot := GetEnvCercaRoot()
+	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
+		config.Tooling.CercaRoot = cercaRoot
+	}
+}
+
 // format all errors consistently, and provide context for the error using the string `msg`
 func Eout(err error, msg string, args ...interface{}) error {
 	if err != nil {

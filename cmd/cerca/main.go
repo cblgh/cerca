@@ -108,7 +108,7 @@ func run() {
 
 	cercaRoot := util.GetEnvCercaRoot()
 
-	// if --config isn't set and CERCA_ROOT is set, set config path to use the cerca root/cerca.toml
+	// if --config isn't set and CERCA_ROOT is set, set config lookup path to "$CERCA_ROOT/cerca.toml"
 	if configPath == DEFAULT_CONFIG_NAME && cercaRoot != "" {
 		configPath = util.JoinWithBase(cercaRoot, DEFAULT_CONFIG_NAME)
 	}
@@ -116,9 +116,7 @@ func run() {
 	config := util.ReadConfig(configPath)
 	// if CERCA_ROOT env var is set but config.Tooling.CercaRoot is not set, then use the CERCA_ROOT value.
 	// note that implicitly, config.Tooling.CercaRoot takes precedence over any env variable CERCA_ROOT if both are set
-	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
-		config.Tooling.CercaRoot = cercaRoot
-	}
+	util.EnsureCercaRootSet(&config)
 
 	// if --data is not passed, then join the default dataDir with the cerca root
 	if dataDir == DEFAULT_DATA_DIR && config.Tooling.CercaRoot != "" {

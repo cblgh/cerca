@@ -991,11 +991,7 @@ const ACCOUNT_DELETE_ROUTE = "/account/delete"
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
 func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
-	// repeat from ./cmd/cerca that ensures the correct value of CERCA_ROOT is chosen
-	cercaRoot := util.GetEnvCercaRoot()
-	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
-		config.Tooling.CercaRoot = cercaRoot
-	}
+	util.EnsureCercaRootSet(&config)
 	// note: this ensures the CERCA_ROOT is used if initialization has not happened via ./cmd/cerca
 	dir = config.JoinWithRoot(dir)
 	s := &CercaForum{
