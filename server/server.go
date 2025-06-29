@@ -16,15 +16,15 @@ import (
 	"syscall"
 	"time"
 
-	"cerca/crypto"
-	"cerca/database"
-	"cerca/defaults"
-	cercaHTML "cerca/html"
-	"cerca/i18n"
-	"cerca/limiter"
-	"cerca/server/session"
-	"cerca/types"
-	"cerca/util"
+	"github.com/cblgh/cerca/crypto"
+	"github.com/cblgh/cerca/database"
+	"github.com/cblgh/cerca/defaults"
+	cercaHTML "github.com/cblgh/cerca/html"
+	"github.com/cblgh/cerca/i18n"
+	"github.com/cblgh/cerca/limiter"
+	"github.com/cblgh/cerca/server/session"
+	"github.com/cblgh/cerca/types"
+	"github.com/cblgh/cerca/util"
 
 	"github.com/cblgh/plain/rss"
 )
@@ -213,8 +213,8 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 				Name string
 				Link string
 			}{
-				Name: config.Community.Name,
-				Link: config.Community.ConductLink,
+				Name: config.General.Name,
+				Link: config.General.ConductLink,
 			}
 			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
@@ -272,8 +272,8 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	if h.config.Community.Name != "" {
-		data.ForumName = h.config.Community.Name
+	if h.config.General.Name != "" {
+		data.ForumName = h.config.General.Name
 	}
 	if data.ForumName == "" {
 		data.ForumName = "Forum"
@@ -494,7 +494,7 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 	}
 	feedName := config.RSS.Name
 	if feedName == "" {
-		feedName = config.Community.Name
+		feedName = config.General.Name
 	}
 	feed := rss.OutputRSS(feedName, config.RSS.URL, config.RSS.Description, entries)
 	return feed
@@ -647,7 +647,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 
 	rules := util.Markup(string(h.files["rules"]))
 	registration := util.Markup(string(h.files["registration-instructions"]))
-	conduct := h.config.Community.ConductLink
+	conduct := h.config.General.ConductLink
 
 	// how this works: an invite code is provided by the user. this is provided either by clicking a register link that has a prefilled query parameter:
 	// ?invite="asdasd" or by specifying an invite code manually
@@ -930,14 +930,14 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(sessionKey string, port int, isdev bool, dir string, conf types.Config) {
+func Serve(port int, isdev bool, conf types.Config) {
 	portString := fmt.Sprintf(":%d", port)
 
 	if isdev {
 		developing = true
 	}
 
-	forum, err := NewServer(sessionKey, dir, conf)
+	forum, err := NewServer(conf.General.AuthKey, conf.General.DataDir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -985,7 +985,7 @@ const ACCOUNT_DELETE_ROUTE = "/account/delete"
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
+func NewServer(authKey string, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
@@ -1016,10 +1016,10 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 
 	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
 	// for currently translated languages, see i18n/i18n.go
-	translator := i18n.Init(config.Community.Language)
+	translator := i18n.Init(config.General.Language)
 	templates := template.Must(generateTemplates(config, translator))
 	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), files, config, translator, templates, feed}
+	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes

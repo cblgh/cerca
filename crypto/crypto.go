@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"cerca/util"
+	"github.com/cblgh/cerca/util"
 	"crypto/rand"
 	"github.com/matthewhartstonge/argon2"
 	"math/big"

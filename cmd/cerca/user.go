@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cerca/constants"
-	"cerca/crypto"
-	"cerca/database"
-	"cerca/util"
+	"github.com/cblgh/cerca/constants"
+	"github.com/cblgh/cerca/crypto"
+	"github.com/cblgh/cerca/database"
+	"github.com/cblgh/cerca/util"
 	"flag"
 	"fmt"
 	"os"

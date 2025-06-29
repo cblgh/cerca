@@ -1,7 +1,7 @@
 package database
 
 import (
-	"cerca/util"
+	"github.com/cblgh/cerca/util"
 	"context"
 	"database/sql"
 	"encoding/base64"

@@ -1,7 +1,7 @@
 package i18n
 
 import (
-	"cerca/util"
+	"github.com/cblgh/cerca/util"
 	"fmt"
 	"html/template"
 	"log"
@@ -445,4 +445,4 @@ func Init(lang string) Translator {
 // usage:
 // 	  tr := Init("EnglishSwedish")
 // 	  fmt.Println(tr.Translate("LoginNoAccount"))
-// 	  fmt.Println(tr.TranslateWithData("LoginDescription", Community{"Merveilles", "https://merveill.es"}))
+// 	  fmt.Println(tr.TranslateWithData("LoginDescription", General{"Merveilles", "https://merveill.es"}))

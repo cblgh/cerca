@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cerca/constants"
-	"cerca/database"
+	"github.com/cblgh/cerca/constants"
+	"github.com/cblgh/cerca/database"
 	"flag"
 	"fmt"
 	"os"
