@@ -2,11 +2,13 @@
 <main>
     <h1> {{ "Register" | translate | capitalize }}</h1>
     {{ .Data.Rules }} <!-- registration rules will be inserted here from the rules document being read from the config -->
-    <details>
-        <summary> {{ "RegisterInviteInstructionsTitle" | translate }}</summary>
-        <!-- add your community's registration instructions by editing the registration-instructions document, see the config for where to find it!-->
-        {{ .Data.InviteInstructions }}
-    </details>
+    {{ if gt (len .Data.InviteInstructions) 0 }}
+        <details>
+            <summary> {{ "RegisterInviteInstructionsTitle" | translate }}</summary>
+            <!-- add your community's registration instructions by editing the registration-instructions document, see the config for where to find it!-->
+            {{ .Data.InviteInstructions }}
+        </details>
+    {{ end }}
 
     <form method="post">
         <label for="username">{{ "Username" | translate | capitalize }}:</label>
