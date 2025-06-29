@@ -213,8 +213,8 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 				Name string
 				Link string
 			}{
-				Name: config.Community.Name,
-				Link: config.Community.ConductLink,
+				Name: config.General.Name,
+				Link: config.General.ConductLink,
 			}
 			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
@@ -272,8 +272,8 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	if h.config.Community.Name != "" {
-		data.ForumName = h.config.Community.Name
+	if h.config.General.Name != "" {
+		data.ForumName = h.config.General.Name
 	}
 	if data.ForumName == "" {
 		data.ForumName = "Forum"
@@ -494,7 +494,7 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 	}
 	feedName := config.RSS.Name
 	if feedName == "" {
-		feedName = config.Community.Name
+		feedName = config.General.Name
 	}
 	feed := rss.OutputRSS(feedName, config.RSS.URL, config.RSS.Description, entries)
 	return feed
@@ -647,7 +647,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 
 	rules := util.Markup(string(h.files["rules"]))
 	registration := util.Markup(string(h.files["registration-instructions"]))
-	conduct := h.config.Community.ConductLink
+	conduct := h.config.General.ConductLink
 
 	// how this works: an invite code is provided by the user. this is provided either by clicking a register link that has a prefilled query parameter:
 	// ?invite="asdasd" or by specifying an invite code manually
