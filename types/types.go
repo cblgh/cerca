@@ -5,8 +5,10 @@ import (
 )
 
 type Config struct {
-	Community struct {
+	General struct {
 		Name        string `json:"name"`
+		DataDir     string `json:"data_dir"`
+		AuthKey     string `json:"auth_key"`
 		ConductLink string `json:"conduct_url"` // optional
 		Language    string `json:"language"`
 	} `json:"general"`

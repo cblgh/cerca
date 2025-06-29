@@ -1,0 +1,13 @@
+[Unit]
+Description=cerca
+After=syslog.target network.target
+
+[Service]
+User=cerca
+ExecStart=/usr/local/bin/cerca -config /etc/cerca/config.toml
+RemainAfterExit=no
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
