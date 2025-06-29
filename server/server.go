@@ -930,14 +930,14 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(port int, isdev bool, dir string, conf types.Config) {
+func Serve(port int, isdev bool, conf types.Config) {
 	portString := fmt.Sprintf(":%d", port)
 
 	if isdev {
 		developing = true
 	}
 
-	forum, err := NewServer(conf.General.AuthKey, dir, conf)
+	forum, err := NewServer(conf.General.AuthKey, conf.General.DataDir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
