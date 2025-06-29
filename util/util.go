@@ -27,8 +27,8 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/exp/utf8string"
 
-	"cerca/defaults"
-	"cerca/types"
+	"github.com/cblgh/cerca/defaults"
+	"github.com/cblgh/cerca/types"
 )
 
 /* util.Eout example invocations

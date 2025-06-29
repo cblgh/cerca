@@ -1,7 +1,7 @@
 package i18n
 
 import (
-	"cerca/util"
+	"github.com/cblgh/cerca/util"
 	"fmt"
 	"html/template"
 	"log"

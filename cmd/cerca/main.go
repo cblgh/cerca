@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"cerca/server"
-	"cerca/util"
+	"github.com/cblgh/cerca/server"
+	"github.com/cblgh/cerca/util"
 )
 
 var commandExplanations = map[string]string{

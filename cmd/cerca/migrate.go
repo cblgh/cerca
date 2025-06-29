@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cerca/database"
+	"github.com/cblgh/cerca/database"
 	"flag"
 	"fmt"
 	"os"

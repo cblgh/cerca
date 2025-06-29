@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"cerca/util"
+	"github.com/cblgh/cerca/util"
 	"errors"
 	"fmt"
 	"net/http"

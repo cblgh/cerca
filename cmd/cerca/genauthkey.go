@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cerca/crypto"
+	"github.com/cblgh/cerca/crypto"
 	"crypto/sha256"
 	"flag"
 )

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"cerca/constants"
-	"cerca/crypto"
-	"cerca/util"
+	"github.com/cblgh/cerca/constants"
+	"github.com/cblgh/cerca/crypto"
+	"github.com/cblgh/cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
 )

@@ -1,4 +1,4 @@
-module cerca
+module github.com/cblgh/cerca
 
 go 1.21
 
