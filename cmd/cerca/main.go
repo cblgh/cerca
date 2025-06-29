@@ -135,7 +135,7 @@ func main() {
 	case "run":
 		run()
 	case "genauthkey":
-		authkey()
+		genauthkey()
 	case "version":
 		version()
 	default:

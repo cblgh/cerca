@@ -6,11 +6,11 @@ import (
 	"flag"
 )
 
-func authkey() {
-	authkeyFlags := flag.NewFlagSet("authkey", flag.ExitOnError)
+func genauthkey() {
+	authkeyFlags := flag.NewFlagSet("genauthkey", flag.ExitOnError)
 
-	help := createHelpString("authkey", []string{
-		`cerca authkey <no other args>`,
+	help := createHelpString("genauthkey", []string{
+		`cerca genauthkey <no other args>`,
 	})
 	authkeyFlags.Usage = func() { usage(help, authkeyFlags) }
 
