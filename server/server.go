@@ -964,11 +964,16 @@ type CercaForum struct {
 
 func (u *CercaForum) directory() string {
 	if u.Directory == "" {
-		dir, err := os.Getwd()
-		if err != nil {
-			log.Fatal(err)
+		cercaRoot := util.GetEnvCercaRoot()
+		if cercaRoot != "" {
+			u.Directory = util.JoinWithBase(cercaRoot, "CercaForum")
+		} else {
+			dir, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
+			u.Directory = filepath.Join(dir, "CercaForum")
 		}
-		u.Directory = filepath.Join(dir, "CercaForum")
 	}
 	os.MkdirAll(u.Directory, 0755)
 	return u.Directory
@@ -986,6 +991,9 @@ const ACCOUNT_DELETE_ROUTE = "/account/delete"
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
 func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
+	util.EnsureCercaRootSet(&config)
+	// note: this ensures the CERCA_ROOT is used if initialization has not happened via ./cmd/cerca
+	dir = config.JoinWithRoot(dir)
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
@@ -1054,7 +1062,7 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
 	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
-	fileserver := http.FileServer(http.Dir("html/assets/"))
+	fileserver := http.FileServer(http.Dir(config.JoinWithRoot("html/assets/")))
 	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
 
 	return s, nil

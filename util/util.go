@@ -59,6 +59,28 @@ func (ed ErrorDescriber) Check(err error, msg string, args ...interface{}) {
 	Check(err, msg, args...)
 }
 
+// returns `path` joined using os-dep separators if it is an absolute path, otherwise constructs a path
+// by joining `base` with `path`
+func JoinWithBase(base string, path ...string) string {
+	joinedPath := filepath.Join(path...)
+	if filepath.IsAbs(joinedPath) {
+		return joinedPath
+	}
+	var p []string
+	p = append(p, base)
+	p = append(p, joinedPath)
+	finalPath, err := filepath.Abs(filepath.Join(p...))
+	Check(err, "JoinWithBase abs(path)")
+	return finalPath
+}
+
+func EnsureCercaRootSet(config *types.Config) {
+	cercaRoot := GetEnvCercaRoot()
+	if cercaRoot != "" && config.Tooling.CercaRoot == "" {
+		config.Tooling.CercaRoot = cercaRoot
+	}
+}
+
 // format all errors consistently, and provide context for the error using the string `msg`
 func Eout(err error, msg string, args ...interface{}) error {
 	if err != nil {
@@ -90,6 +112,16 @@ func Contains(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func GetEnvCercaRoot () string {
+	for _, env := range os.Environ() {
+		parts := strings.Split(env, "=")
+		if parts[0] == "CERCA_ROOT" {
+			return parts[1]
+		}
+	}
+	return ""
 }
 
 var contentGuardian = bluemonday.UGCPolicy()
