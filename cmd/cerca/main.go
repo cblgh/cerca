@@ -70,7 +70,6 @@ const DEFAULT_PORT = 8272
 const DEFAULT_DEV_PORT = 8277
 
 func run() {
-	var sessionKey string
 	var configPath string
 	var dataDir string
 	var dev bool
@@ -78,13 +77,12 @@ func run() {
 
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
 	flag.IntVar(&port, "port", DEFAULT_PORT, "port to run the forum on")
-	flag.StringVar(&sessionKey, "authkey", "", "session cookies authentication key")
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 
 	help := createHelpString("run", []string{
-		"cerca -authkey \"CHANGEME\"",
-		"cerca -dev",
+		"cerca -config <path-to-cerca.toml>",
+		"cerca -config <path-to-cerca.toml> -dev",
 	})
 	flag.Usage = func() { usage(help, nil) }
 	flag.Parse()
@@ -98,12 +96,6 @@ func run() {
 		port = DEFAULT_DEV_PORT
 	}
 
-	if len(sessionKey) == 0 {
-		if !dev {
-			complain("please pass a random session auth key with --authkey")
-		}
-		sessionKey = "0"
-	}
 
 	err := os.MkdirAll(dataDir, 0750)
 	if err != nil {
@@ -114,7 +106,15 @@ func run() {
 	if err != nil {
 		complain("couldn't output default theme.css")
 	}
-	server.Serve(sessionKey, port, dev, dataDir, config)
+
+	if len(config.General.AuthKey) == 0 {
+		if !dev {
+			complain("please add an auth_key to the config file")
+		}
+		config.General.AuthKey = "0"
+	}
+
+	server.Serve(port, dev, dataDir, config)
 }
 
 func main() {

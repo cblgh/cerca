@@ -1,5 +1,6 @@
 [general]
 name = "" # whatever you want to name your forum; primarily used as display in tab titles
+auth_key = "" # generate with `cerca genauthkey`
 conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
 language = "English" # Swedish, English. contributions for more translations welcome!
 

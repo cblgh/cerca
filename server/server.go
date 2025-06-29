@@ -930,14 +930,14 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(sessionKey string, port int, isdev bool, dir string, conf types.Config) {
+func Serve(port int, isdev bool, dir string, conf types.Config) {
 	portString := fmt.Sprintf(":%d", port)
 
 	if isdev {
 		developing = true
 	}
 
-	forum, err := NewServer(sessionKey, dir, conf)
+	forum, err := NewServer(conf.General.AuthKey, dir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -985,7 +985,7 @@ const ACCOUNT_DELETE_ROUTE = "/account/delete"
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
+func NewServer(authKey string, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
@@ -1016,10 +1016,10 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 
 	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
 	// for currently translated languages, see i18n/i18n.go
-	translator := i18n.Init(config.Community.Language)
+	translator := i18n.Init(config.General.Language)
 	templates := template.Must(generateTemplates(config, translator))
 	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), files, config, translator, templates, feed}
+	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes

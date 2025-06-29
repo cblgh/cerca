@@ -17,6 +17,5 @@ func genauthkey() {
 	hashInput := []byte(crypto.GeneratePassword())
 	h := sha256.New()
 	h.Write(hashInput)
-	inform("Generated a random key:")
-	inform("--authkey %x", h.Sum(nil))
+	inform("%x", h.Sum(nil))
 }
