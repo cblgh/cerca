@@ -178,13 +178,10 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 // establish closure over config + translator so that it's present in templates during render
-func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
-	// only read logo contents once when generating
-	logo, err := os.ReadFile(config.Documents.LogoPath)
-	util.Check(err, "generate-template: dump logo")
+func generateTemplates(config types.Config, files map[string][]byte, translator i18n.Translator) (*template.Template, error) {
 	templateFuncs := template.FuncMap{
 		"dumpLogo": func() template.HTML {
-			return template.HTML(logo)
+			return template.HTML(files["logo"])
 		},
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
@@ -646,7 +643,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	}
 
 	rules := util.Markup(string(h.files["rules"]))
-	registration := util.Markup(string(h.files["registration-instructions"]))
+	registration := util.Markup(string(h.files["registration"]))
 	conduct := h.config.General.ConductLink
 
 	// how this works: an invite code is provided by the user. this is provided either by clicking a register link that has a prefilled query parameter:
@@ -991,20 +988,27 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 		Directory: dir,
 	}
 
-	dbpath := filepath.Join(s.directory(), "forum.db")
-	db := database.InitDB(dbpath)
-
 	config.EnsureDefaultPaths()
+
+	dbPath := filepath.Join(s.directory(), "forum.db")
+	docsPath := filepath.Join(s.directory(), "docs")
+	assetsPath := filepath.Join(s.directory(), "assets")
+
+	db := database.InitDB(dbPath)
+
 	// load the documents specified in the config
 	// iff document doesn't exist, dump a default document where it should be and read that
 	type triple struct{ key, docpath, content string }
+
 	triples := []triple{
-		{"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
-		{"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
-		{"registration-instructions", config.Documents.RegistrationExplanationPath, defaults.DEFAULT_REGISTRATION},
-		{"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
+		{"about", filepath.Join(docsPath, "about.md"), defaults.DEFAULT_ABOUT},
+		{"rules", filepath.Join(docsPath, "rules.md"), defaults.DEFAULT_RULES},
+		{"registration", filepath.Join(docsPath, "registration.md"), defaults.DEFAULT_REGISTRATION},
+		{"logo", filepath.Join(assetsPath, "logo.html"), defaults.DEFAULT_LOGO},
+		{"theme", filepath.Join(assetsPath, "theme.css"), defaults.DEFAULT_THEME}, // note: technically don't need to load theme into `files` but we use this routine to output it 
 	}
 
+	// TODO (2025-07-05 cblgh): ensure execution without --config dumps config file in cwd AND produces a notice about it
 	files := make(map[string][]byte)
 	for _, t := range triples {
 		data, err := util.LoadFile(t.key, t.docpath, t.content)
@@ -1017,7 +1021,7 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
 	// for currently translated languages, see i18n/i18n.go
 	translator := i18n.Init(config.General.Language)
-	templates := template.Must(generateTemplates(config, translator))
+	templates := template.Must(generateTemplates(config, files, translator))
 	feed := GenerateRSS(&db, config)
 	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
 
@@ -1054,7 +1058,7 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
 	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
-	fileserver := http.FileServer(http.Dir("html/assets/"))
+	fileserver := http.FileServer(http.Dir(assetsPath))
 	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
 
 	return s, nil

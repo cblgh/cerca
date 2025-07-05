@@ -81,15 +81,33 @@ Cerca supports community customization.
 
 * Write a custom [about text](/defaults/sample-about.md) describing the community inhabiting the forum
 * Define your own [registration rules](/defaults/sample-rules.md),
-  [instructions on getting an invite code to register](/defaults/sample-registration-instructions.md),
+  [instructions on getting an invite code to register](/defaults/sample-registration.md),
   and link to an existing code of conduct
 * Set your own [custom logo](/defaults/sample-logo.html) (whether svg, png or emoji)
 * Create your own theme by writing plain, frameworkless [css](/html/assets/theme.css)
 
-The installation process will create a config file in `/etc/cerca/config.toml`, which you are free to customise. You can
-also specify your own config file location with the `-config` option.
+The installation process will create a config file in `/etc/cerca/config.toml`, which you are
+free to customise. You can also specify your own config file location with the `-config`
+option.
 
-The installation process also copies sample content files to `/var/lib/cerca/content`, which you can then edit.
+The installation process also copies sample content files to `/var/lib/cerca/docs`, which you can then edit.
+
+In general, after running the `cerca` process once, you will find that all the customizable
+files are located relative to the `data_dir` specified in the config file:
+
+```
+├── assets
+│   ├── logo.html
+│   └── theme.css
+├── docs
+│   ├── about.md
+│   ├── registration.md
+│   └── rules.md
+└── forum.db
+```
+
+Change any of these files and then restart the `cerca` process to serve the changes (force-refresh your
+browser to see `theme.css` changes).
 
 ## Contributing
 

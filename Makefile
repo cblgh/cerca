@@ -2,6 +2,7 @@ PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 DATADIR = /var/lib/cerca
 CONFDIR = /etc/cerca
+CONF_FILE = '${CONFDIR}/cerca.toml'
 
 cerca:
 	go build ./cmd/cerca
@@ -9,19 +10,20 @@ cerca:
 install: cerca
 	@# Install config
 	mkdir -p '$(CONFDIR)'
-	sed \
+	mkdir -p '$(DATADIR)'
+	@# run cerca once to output the default config
+	./cerca --config '${CONF_FILE}' || true
+	@# use sed to populate field auth_key of default config
+	sed -i \
 		's/auth_key = ""/auth_key = "$(shell ./cerca genauthkey)"/' \
-		'defaults/sample-config.toml' \
-		> '/tmp/config.toml'
-	cp -i --no-preserve=mode,ownership '/tmp/config.toml' '$(CONFDIR)/config.toml' || true
-	rm '/tmp/config.toml'
+		'$(CONF_FILE)'
+	@# use sed to populate data_dir of default config to what is defined by this makefile
+	sed -i \
+		's|data_dir = "/var/lib/cerca"|data_dir = "$(DATADIR)"|' \
+		'$(CONF_FILE)'
 	@# Install data
-	mkdir -p '$(DATADIR)/content'
-	cp -ri --no-preserve=mode,ownership 'html/assets' '$(DATADIR)/' || true
-	cp -i --no-preserve=mode,ownership 'defaults/sample-logo.html' '$(DATADIR)/content/logo.html' || true
-	cp -i --no-preserve=mode,ownership 'defaults/sample-about.md' '$(DATADIR)/content/about.md' || true
-	cp -i --no-preserve=mode,ownership 'defaults/sample-rules.md' '$(DATADIR)/content/rules.md' || true
-	cp -i --no-preserve=mode,ownership 'defaults/sample-registration-instructions.md' '$(DATADIR)/content/registration-instructions.md' || true
+	@# run cerca for 1 sec to populate the default data files
+	timeout 1 ./cerca --port 9999 --config '${CONF_FILE}' || true
 	find '$(DATADIR)' '$(CONFDIR)' -type f -exec chmod 644 {} +
 	find '$(DATADIR)' '$(CONFDIR)' -type d -exec chmod 755 {} +
 	id cerca && chown -R cerca:cerca '$(DATADIR)' '$(CONFDIR)'

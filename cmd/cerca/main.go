@@ -4,10 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"cerca/defaults"
 	"cerca/server"
 	"cerca/util"
 )
@@ -95,10 +93,6 @@ func run() {
 	}
 
 	config := util.ReadConfig(configPath)
-	_, err := util.CreateIfNotExist(filepath.Join("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
-	if err != nil {
-		complain("couldn't output default theme.css")
-	}
 
 	if len(config.General.AuthKey) == 0 {
 		if !dev {
