@@ -3,8 +3,16 @@ package main
 import (
 	"cerca/crypto"
 	"crypto/sha256"
+	"fmt"
 	"flag"
 )
+
+func runAuthKeyGenFunction() string {
+	hashInput := []byte(crypto.GeneratePassword())
+	h := sha256.New()
+	h.Write(hashInput)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
 
 func genauthkey() {
 	authkeyFlags := flag.NewFlagSet("genauthkey", flag.ExitOnError)
@@ -13,9 +21,6 @@ func genauthkey() {
 		`cerca genauthkey <no other args>`,
 	})
 	authkeyFlags.Usage = func() { usage(help, authkeyFlags) }
-
-	hashInput := []byte(crypto.GeneratePassword())
-	h := sha256.New()
-	h.Write(hashInput)
-	inform("%x", h.Sum(nil))
+	keyHash := runAuthKeyGenFunction()
+	inform(keyHash)
 }

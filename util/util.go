@@ -27,7 +27,6 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/exp/utf8string"
 
-	"cerca/defaults"
 	"cerca/types"
 )
 
@@ -233,11 +232,9 @@ func RelativeTime(t time.Time) string {
 
 func ReadConfig(confpath string) types.Config {
 	ed := Describe("config")
-	_, err := CreateIfNotExist(confpath, defaults.DEFAULT_CONFIG)
-	ed.Check(err, "create default config")
 
 	data, err := os.ReadFile(confpath)
-	ed.Check(err, "read file")
+	ed.Check(err, "read config file")
 
 	var conf types.Config
 	decoder := json.NewDecoder(toml.New(bytes.NewBuffer(data)))
@@ -250,11 +247,6 @@ func ReadConfig(confpath string) types.Config {
 
 func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
 	ed := Describe("load file")
-	_, err := CreateIfNotExist(docpath, defaultContent)
-	err = ed.Eout(err, "create if not exist (%s) %s", key, docpath)
-	if err != nil {
-		return nil, err
-	}
 	data, err := os.ReadFile(docpath)
 	err = ed.Eout(err, "read %s", docpath)
 	if err != nil {

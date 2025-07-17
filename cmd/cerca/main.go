@@ -18,6 +18,7 @@ var commandExplanations = map[string]string{
 	"resetpw":    "reset a user's password",
 	"genauthkey": "generate and output an authkey for use with `cerca run`",
 	"version":    "output version information",
+	"write-defaults":  "output and save a default cerca config file and associated content files",
 }
 
 func createHelpString(commandName string, usageExamples []string) string {
@@ -27,10 +28,10 @@ func createHelpString(commandName string, usageExamples []string) string {
 
 	if commandName == "run" {
 		helpString += "\nCOMMANDS:\n"
-		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey", "version"}
+		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey", "version", "write-defaults"}
 		for _, key := range cmds {
 			// pad first string with spaces to the right instead, set its expected width = 11
-			helpString += fmt.Sprintf("  %-11s%s\n", key, commandExplanations[key])
+			helpString += fmt.Sprintf("  %-15s%s\n", key, commandExplanations[key])
 		}
 	}
 
@@ -77,6 +78,7 @@ func run() {
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 
 	help := createHelpString("run", []string{
+		"cerca write-defaults -config <path-to-cerca.toml> --data-dir <dir-to-store-files-and-database>",
 		"cerca -config <path-to-cerca.toml>",
 		"cerca -config <path-to-cerca.toml> -dev",
 	})
@@ -125,6 +127,8 @@ func main() {
 		genauthkey()
 	case "version":
 		version()
+	case "write-defaults":
+		writeDefaults()
 	default:
 		fmt.Printf("ERR: no such subcommand '%s'\n", command)
 		run()

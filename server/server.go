@@ -1005,10 +1005,8 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 		{"rules", filepath.Join(docsPath, "rules.md"), defaults.DEFAULT_RULES},
 		{"registration", filepath.Join(docsPath, "registration.md"), defaults.DEFAULT_REGISTRATION},
 		{"logo", filepath.Join(assetsPath, "logo.html"), defaults.DEFAULT_LOGO},
-		{"theme", filepath.Join(assetsPath, "theme.css"), defaults.DEFAULT_THEME}, // note: technically don't need to load theme into `files` but we use this routine to output it 
 	}
 
-	// TODO (2025-07-05 cblgh): ensure execution without --config dumps config file in cwd AND produces a notice about it
 	files := make(map[string][]byte)
 	for _, t := range triples {
 		data, err := util.LoadFile(t.key, t.docpath, t.content)

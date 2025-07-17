@@ -52,16 +52,18 @@ Here is the complete help for the `cerca` command:
 USAGE:
   run the forum
 
+  cerca write-defaults -config <path-to-cerca.toml> --data-dir <dir-to-store-files-and-database>
   cerca -config <path-to-cerca.toml>
   cerca -config <path-to-cerca.toml> -dev
 
 COMMANDS:
-  adduser    create a new user
-  makeadmin  make an existing user an admin
-  migrate    manage database migrations
-  resetpw    reset a user's password
-  genauthkey generate and output an authkey for use with `cerca run`
-  version    output version information
+  adduser        create a new user
+  makeadmin      make an existing user an admin
+  migrate        manage database migrations
+  resetpw        reset a user's password
+  genauthkey     generate and output an authkey for use with `cerca run`
+  version        output version information
+  write-defaults output and save a default cerca config file and associated content files
 
 OPTIONS:
   -config string
@@ -127,8 +129,17 @@ Install [golang](https://go.dev/).
 
 To launch a local instance of the forum on Linux:
 
+First output and configure the default config and the required content files by running the
+`cerca write-defaults` command:
+
 ```
-go run ./cmd/cerca -dev
+go run ./cmd/cerca write-defaults --config ./cerca.toml --data-dir ./cerca-data
+```
+
+Then run the forum:
+
+```
+go run ./cmd/cerca -dev -config ./cerca.toml
 ```
 
 It should respond `Serving forum on :8277`. You can now go to [http://localhost:8277](http://localhost:8277).
