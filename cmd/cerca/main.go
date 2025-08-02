@@ -78,7 +78,7 @@ func run() {
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
 
 	help := createHelpString("run", []string{
-		"cerca write-defaults -config <path-to-cerca.toml> --data-dir <dir-to-store-files-and-database>",
+		"cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>",
 		"cerca -config <path-to-cerca.toml>",
 		"cerca -config <path-to-cerca.toml> -dev",
 	})

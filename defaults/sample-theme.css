@@ -2,13 +2,13 @@
  * change these to change the forum's colours */
 
 /* NORMAL THEME */
-/* default theme colors:
- * black
- * wheat - bg
- * #666 - visited link
- * darkred - highlights: links, certain tags
+/* default theme colors
+ * font color: 			black
+ * background color:		wheat
+ * visited link: 		#666 
+ * highlights, links, tags: 	darkred
 */
-/*
+
 body { background: wheat; color: black; }
 textarea { background: black; color: wheat; }
 ul li { list-style-type: circle; }
@@ -17,7 +17,7 @@ a:not([class]), pre code { color: darkred; }
 h1, h2, h2 > a:not([class], :visited), span > b { color: black; }
 a:visited { color: #666; }
 header a, header a:visited { color: darkred; }
-*/
+
 /* post author name is styled with `span > b` */
 /* span > b { color: black; } */
 

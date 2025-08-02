@@ -22,7 +22,7 @@ func writeDefaults() {
 	writeFlags.StringVar(&dataDir, "data-dir", "", "outputs default files to the specified data directory and sets key `data_dir` in config before writing")
 
 	help := createHelpString("write-defaults", []string{
-		`cerca write-defaults --config /home/my-user/my-configs/cerca.toml --data-dir /var/lib/cerca`,
+		`cerca write-defaults -config /home/my-user/my-configs/cerca.toml -data-dir /var/lib/cerca`,
 	})
 	writeFlags.Usage = func() { usage(help, writeFlags) }
 	writeFlags.Parse(os.Args[2:])
@@ -69,6 +69,7 @@ func writeDefaults() {
 		{"rules", filepath.Join(docsPath, "rules.md"), defaults.DEFAULT_RULES},
 		{"registration", filepath.Join(docsPath, "registration.md"), defaults.DEFAULT_REGISTRATION},
 		{"logo", filepath.Join(assetsPath, "logo.html"), defaults.DEFAULT_LOGO},
+		{"logo.png", filepath.Join(assetsPath, "logo.png"), defaults.DEFAULT_LOGO_PNG},
 		{"theme", filepath.Join(assetsPath, "theme.css"), defaults.DEFAULT_THEME},
 	}
 

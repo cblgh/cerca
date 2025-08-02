@@ -10,6 +10,9 @@ var DEFAULT_ABOUT string
 //go:embed sample-logo.html
 var DEFAULT_LOGO string
 
+//go:embed logo.png
+var DEFAULT_LOGO_PNG string
+
 //go:embed sample-rules.md
 var DEFAULT_RULES string
 

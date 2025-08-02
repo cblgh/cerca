@@ -9,7 +9,7 @@
  * darkred - highlights: links, certain tags
 */
 
-body { background: wheat; color: black; }
+body { background: red; color: blue; }
 textarea { background: black; color: wheat; }
 ul li { list-style-type: circle; }
 /* post author name is styled with `span > b` */

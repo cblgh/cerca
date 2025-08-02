@@ -1,7 +1,11 @@
-# Cerca
+#  Cerca 
+
+<img src='./defaults/logo.png' width='96px' height='96px'/>
+
 _lean forum software_
 
 Meaning:
+
 * to search, quest, run _(it)_
 * near, close, around, nearby, nigh _(es)_
 * approximately, roughly _(en; from **circa**)_
@@ -29,7 +33,7 @@ It was written for the purpose of powering the nascent [Merveilles community for
 
 Assuming you're using Linux with systemd, which is the most common scenario, follow these steps.
 
-1. Create a user: `useradd -r cerca`
+1. Create a new system user: `useradd -r cerca`
 1. Make sure user can't log in: `usermod -s /bin/false cerca`
 1. Build `cerca`: `make`
 1. Install `cerca`: `sudo make install`
@@ -39,10 +43,26 @@ Assuming you're using Linux with systemd, which is the most common scenario, fol
 1. Copy service file: `cp contrib/cerca.service /etc/systemd/system/cerca.service`
 1. Reload service file: `systemctl daemon-reload`
 1. Enable and immediately start cerca: `systemctl enable --now cerca`
-1. Add a user for yourself: `cerca adduser -database /var/lib/cerca/forum.db -username <username>`
+1. Add a forum user for yourself: `cerca adduser -database /var/lib/cerca/forum.db -username <username>`
 1. Make yourself an admin: `cerca makeadmin -database /var/lib/cerca/forum.db -username <username>`
 
 Feel free to inspect logs with `journalctl -feu cerca`.
+
+## Manual install
+
+For a simple manual install, run the following commands:
+
+```golang
+// first, write a default config and save at the specified path.
+// this command also writes the database and content files cerca needs
+cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>
+
+// cerca can now host your forum - pass the config path you gave previously
+cerca -config <path-to-cerca.toml>
+
+// for more options and commands, run -help:
+cerca -help
+```
 
 ## Other features
 
@@ -52,7 +72,7 @@ Here is the complete help for the `cerca` command:
 USAGE:
   run the forum
 
-  cerca write-defaults -config <path-to-cerca.toml> --data-dir <dir-to-store-files-and-database>
+  cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>
   cerca -config <path-to-cerca.toml>
   cerca -config <path-to-cerca.toml> -dev
 
@@ -133,7 +153,7 @@ First output and configure the default config and the required content files by 
 `cerca write-defaults` command:
 
 ```
-go run ./cmd/cerca write-defaults --config ./cerca.toml --data-dir ./cerca-data
+go run ./cmd/cerca write-defaults -config ./cerca.toml -data-dir ./cerca-data
 ```
 
 Then run the forum:
@@ -166,3 +186,7 @@ Additionally, run [upx](https://upx.github.io) on any generated binary:
 ```
 upx --lzma cerca
 ```
+
+### Credits
+
+Cerca's logo was made for the project by the talented [rostiger](https://nchrs.xyz/)
