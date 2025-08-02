@@ -5,7 +5,7 @@
     {{ if gt (len .Data.InviteInstructions) 0 }}
         <details>
             <summary> {{ "RegisterInviteInstructionsTitle" | translate }}</summary>
-            <!-- add your community's registration instructions by editing the registration-instructions document, see the config for where to find it!-->
+        <!-- add your community's registration instructions by editing the registration.md document, see the README for where to find it!-->
             {{ .Data.InviteInstructions }}
         </details>
     {{ end }}

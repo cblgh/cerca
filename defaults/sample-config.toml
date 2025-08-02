@@ -1,15 +1,11 @@
-[general]	
-name = "" # whatever you want to name your forum; primarily used as display in tab titles
+[general]
+name = "Cerca" # whatever you want to name your forum; primarily used as display in tab titles
+auth_key = "" # generate with `cerca genauthkey` if empty (i.e. "")
+data_dir = "/var/lib/cerca" # where the database should be stored — feel free to keep default value
 conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
 language = "English" # Swedish, English. contributions for more translations welcome!
 
-[rss]
+[rss] # NOTE: to enable RSS, you have to set key `forum_url` below
 feed_name = "" # defaults to [general]'s name if unset
 feed_description = ""
 forum_url = "" # should be forum index route https://example.com. used to generate post routes for feed, must be set to generate a feed
-
-[documents]
-logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
-about = "content/about.md"
-rules = "content/rules.md"
-registration_instructions = "content/registration-instructions.md"

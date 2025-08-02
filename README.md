@@ -1,7 +1,11 @@
-# Cerca
+#  Cerca 
+
+<img src='./defaults/logo.png' width='96px' height='96px'/>
+
 _lean forum software_
 
 Meaning:
+
 * to search, quest, run _(it)_
 * near, close, around, nearby, nigh _(es)_
 * approximately, roughly _(en; from **circa**)_
@@ -25,85 +29,110 @@ It was written for the purpose of powering the nascent [Merveilles community for
 * **Low maintenance**: Cerca is architected to minimize maintenance and hosting costs by carefully choosing which features it supports, how they work, and which features are intentionally omitted
 * **RSS**: Receive updates when threads are created or new posts are made by subscribing to the forum RSS feed
 
-## Usage
+## Installation
+
+Assuming you're using Linux with systemd, which is the most common scenario, follow these steps.
+
+1. Create a new system user: `useradd -r cerca`
+1. Make sure user can't log in: `usermod -s /bin/false cerca`
+1. Build `cerca`: `make`
+1. Install `cerca`: `sudo make install`
+1. Copy nginx config from `contrib/nginx.conf` to the appropriate place in `/etc/nginx/`
+   and adjust according to your needs
+1. Reload nginx config: `sudo systemctl reload nginx`
+1. Copy service file: `cp contrib/cerca.service /etc/systemd/system/cerca.service`
+1. Reload service file: `systemctl daemon-reload`
+1. Enable and immediately start cerca: `systemctl enable --now cerca`
+1. Add a forum user for yourself: `cerca adduser -database /var/lib/cerca/forum.db -username <username>`
+1. Make yourself an admin: `cerca makeadmin -database /var/lib/cerca/forum.db -username <username>`
+
+Feel free to inspect logs with `journalctl -feu cerca`.
+
+## Manual install
+
+For a simple manual install, run the following commands:
+
+```golang
+// first, write a default config and save at the specified path.
+// this command also writes the database and content files cerca needs
+cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>
+
+// cerca can now host your forum - pass the config path you gave previously
+cerca -config <path-to-cerca.toml>
+
+// for more options and commands, run -help:
+cerca -help
+```
+
+## Other features
+
+Here is the complete help for the `cerca` command:
 
 ```
-cerca --help
-
 USAGE:
   run the forum
 
-    cerca -authkey "CHANGEME"
-    cerca -dev
+  cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>
+  cerca -config <path-to-cerca.toml>
+  cerca -config <path-to-cerca.toml> -dev
 
 COMMANDS:
-  adduser    create a new user
-  makeadmin  make an existing user an admin
-  migrate    manage database migrations
-  resetpw    reset a user's password
+  adduser        create a new user
+  makeadmin      make an existing user an admin
+  migrate        manage database migrations
+  resetpw        reset a user's password
+  genauthkey     generate and output an authkey for use with `cerca run`
+  version        output version information
+  write-defaults output and save a default cerca config file and associated content files
 
 OPTIONS:
-  -authkey string
-        session cookies authentication key
   -config string
         config and settings file containing cerca's customizations (default "cerca.toml")
-  -data string
-        directory where cerca will dump its database (default "./data")
   -dev
         trigger development mode
+  -port int
+        port to run the forum on (default 8272)
 ```
 
-To execute the other commands, run them as:
-
-```
-cerca adduser --username "<username>"
-```
+For example, you can reset a user's password with
+`cerca resetpw -database /var/lib/cerca/forum.db -username <username>`.
 
 ## Config
+
 Cerca supports community customization.
 
 * Write a custom [about text](/defaults/sample-about.md) describing the community inhabiting the forum
-* Define your own [registration rules](/defaults/sample-rules.md), [instructions on getting an invite code to register](/defaults/sample-registration-instructions.md), and link to an existing code of conduct
+* Define your own [registration rules](/defaults/sample-rules.md),
+  [instructions on getting an invite code to register](/defaults/sample-registration.md),
+  and link to an existing code of conduct
 * Set your own [custom logo](/defaults/sample-logo.html) (whether svg, png or emoji)
 * Create your own theme by writing plain, frameworkless [css](/html/assets/theme.css)
 
-To enable these customizations, there's a config file. To choose a config file, run cerca with
-the `--config` option; the default config file is set to `./cerca.toml`.
+The installation process will create a config file in `/etc/cerca/config.toml`, which you are
+free to customise. You can also specify your own config file location with the `-config`
+option.
+
+The installation process also copies sample content files to `/var/lib/cerca/docs`, which you can then edit.
+
+In general, after running the `cerca` process once, you will find that all the customizable
+files are located relative to the `data_dir` specified in the config file:
 
 ```
-cerca --config ./configs/cerca.toml
+├── assets
+│   ├── logo.html
+│   └── theme.css
+├── docs
+│   ├── about.md
+│   ├── registration.md
+│   └── rules.md
+└── forum.db
 ```
 
-The configuration format is [TOML](https://toml.io/en/) and the config is populated with the following
-defaults:
-
-```TOML
-[general]	
-name = "" # whatever you want to name your forum; primarily used as display in tab titles
-conduct_url = "" # optional + recommended: if omitted, the CoC checkboxes in /register will be hidden
-language = "English" # Swedish, English and a few others. contributions for more translations welcome!
-
-[rss]
-feed_name = "" # defaults to [general]'s name if unset
-feed_description = ""
-forum_url = "" # should be forum index route https://example.com. used to generate post routes for feed, must be set to generate a feed
-
-[documents]
-logo =  "content/logo.html" # can contain emoji, <img>, <svg> etc. see defaults/sample-logo.html in repo for instructions
-about = "content/about.md"
-rules = "content/rules.md"
-registration_instructions = "content/registration-instructions.md"
-```
-
-Content documents that are not found will be prepopulated using Cerca's [sample content
-files](/defaults). The easiest thing to do is to run Cerca once and let it populate content
-files using the samples, and then edit the files in `content/*` after the fact, before running
-Cerca again to see your changes.
-
-Either write your own configuration following the above format, or run cerca once to populate it and
-then edit the created config.
+Change any of these files and then restart the `cerca` process to serve the changes (force-refresh your
+browser to see `theme.css` changes).
 
 ## Contributing
+
 If you want to join the fun, first have a gander at the [CONTRIBUTING.md](/CONTRIBUTING.md)
 document. It lays out the overall idea of the project, and outlines what kind of contributions
 will help improve the project.
@@ -118,11 +147,22 @@ have a look at the existing [translations (i18n.go)](/i18n/i18n.go) and submit y
 
 Install [golang](https://go.dev/).
 
-To launch a local instance of the forum, run those commands (linux):
+To launch a local instance of the forum on Linux:
 
-- `go run ./cmd/cerca --dev`
+First output and configure the default config and the required content files by running the
+`cerca write-defaults` command:
 
-It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](http://localhost:8277).
+```
+go run ./cmd/cerca write-defaults -config ./cerca.toml -data-dir ./cerca-data
+```
+
+Then run the forum:
+
+```
+go run ./cmd/cerca -dev -config ./cerca.toml
+```
+
+It should respond `Serving forum on :8277`. You can now go to [http://localhost:8277](http://localhost:8277).
 
 ### Building a binary
 
@@ -130,7 +170,8 @@ It should respond `Serving forum on :8277`. Just go on [http://localhost:8277](h
 go build ./cmd/cerca
 ```
 
-### Building with reduced size 
+### Building with reduced size
+
 This is optional, but if you want to minimize the size of the binary follow the instructions
 below. Less useful for active development, more useful for sending binaries to other computers.
 
@@ -145,3 +186,7 @@ Additionally, run [upx](https://upx.github.io) on any generated binary:
 ```
 upx --lzma cerca
 ```
+
+### Credits
+
+Cerca's logo was made for the project by the talented [rostiger](https://nchrs.xyz/)

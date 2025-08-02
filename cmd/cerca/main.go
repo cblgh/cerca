@@ -4,10 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"cerca/defaults"
 	"cerca/server"
 	"cerca/util"
 )
@@ -20,6 +18,7 @@ var commandExplanations = map[string]string{
 	"resetpw":    "reset a user's password",
 	"genauthkey": "generate and output an authkey for use with `cerca run`",
 	"version":    "output version information",
+	"write-defaults":  "output and save a default cerca config file and associated content files",
 }
 
 func createHelpString(commandName string, usageExamples []string) string {
@@ -29,10 +28,10 @@ func createHelpString(commandName string, usageExamples []string) string {
 
 	if commandName == "run" {
 		helpString += "\nCOMMANDS:\n"
-		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey", "version"}
+		cmds := []string{"adduser", "makeadmin", "migrate", "resetpw", "genauthkey", "version", "write-defaults"}
 		for _, key := range cmds {
 			// pad first string with spaces to the right instead, set its expected width = 11
-			helpString += fmt.Sprintf("  %-11s%s\n", key, commandExplanations[key])
+			helpString += fmt.Sprintf("  %-15s%s\n", key, commandExplanations[key])
 		}
 	}
 
@@ -70,21 +69,18 @@ const DEFAULT_PORT = 8272
 const DEFAULT_DEV_PORT = 8277
 
 func run() {
-	var sessionKey string
 	var configPath string
-	var dataDir string
 	var dev bool
 	var port int
 
 	flag.BoolVar(&dev, "dev", false, "trigger development mode")
 	flag.IntVar(&port, "port", DEFAULT_PORT, "port to run the forum on")
-	flag.StringVar(&sessionKey, "authkey", "", "session cookies authentication key")
 	flag.StringVar(&configPath, "config", "cerca.toml", "config and settings file containing cerca's customizations")
-	flag.StringVar(&dataDir, "data", "./data", "directory where cerca will dump its database")
 
 	help := createHelpString("run", []string{
-		"cerca -authkey \"CHANGEME\"",
-		"cerca -dev",
+		"cerca write-defaults -config <path-to-cerca.toml> -data-dir <dir-to-store-files-and-database>",
+		"cerca -config <path-to-cerca.toml>",
+		"cerca -config <path-to-cerca.toml> -dev",
 	})
 	flag.Usage = func() { usage(help, nil) }
 	flag.Parse()
@@ -98,23 +94,16 @@ func run() {
 		port = DEFAULT_DEV_PORT
 	}
 
-	if len(sessionKey) == 0 {
+	config := util.ReadConfig(configPath)
+
+	if len(config.General.AuthKey) == 0 {
 		if !dev {
-			complain("please pass a random session auth key with --authkey")
+			complain("please add an auth_key to the config file")
 		}
-		sessionKey = "0"
+		config.General.AuthKey = "0"
 	}
 
-	err := os.MkdirAll(dataDir, 0750)
-	if err != nil {
-		complain(fmt.Sprintf("couldn't create dir '%s'", dataDir))
-	}
-	config := util.ReadConfig(configPath)
-	_, err = util.CreateIfNotExist(filepath.Join("html", "assets", "theme.css"), defaults.DEFAULT_THEME)
-	if err != nil {
-		complain("couldn't output default theme.css")
-	}
-	server.Serve(sessionKey, port, dev, dataDir, config)
+	server.Serve(port, dev, config)
 }
 
 func main() {
@@ -135,9 +124,11 @@ func main() {
 	case "run":
 		run()
 	case "genauthkey":
-		authkey()
+		genauthkey()
 	case "version":
 		version()
+	case "write-defaults":
+		writeDefaults()
 	default:
 		fmt.Printf("ERR: no such subcommand '%s'\n", command)
 		run()

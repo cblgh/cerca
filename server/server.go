@@ -178,13 +178,10 @@ func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 }
 
 // establish closure over config + translator so that it's present in templates during render
-func generateTemplates(config types.Config, translator i18n.Translator) (*template.Template, error) {
-	// only read logo contents once when generating
-	logo, err := os.ReadFile(config.Documents.LogoPath)
-	util.Check(err, "generate-template: dump logo")
+func generateTemplates(config types.Config, files map[string][]byte, translator i18n.Translator) (*template.Template, error) {
 	templateFuncs := template.FuncMap{
 		"dumpLogo": func() template.HTML {
-			return template.HTML(logo)
+			return template.HTML(files["logo"])
 		},
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")
@@ -213,8 +210,8 @@ func generateTemplates(config types.Config, translator i18n.Translator) (*templa
 				Name string
 				Link string
 			}{
-				Name: config.Community.Name,
-				Link: config.Community.ConductLink,
+				Name: config.General.Name,
+				Link: config.General.ConductLink,
 			}
 			return translator.TranslateWithData(key, i18n.TranslationData{data})
 		},
@@ -272,8 +269,8 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 		data.Title = strings.ReplaceAll(viewName, "-", " ")
 	}
 
-	if h.config.Community.Name != "" {
-		data.ForumName = h.config.Community.Name
+	if h.config.General.Name != "" {
+		data.ForumName = h.config.General.Name
 	}
 	if data.ForumName == "" {
 		data.ForumName = "Forum"
@@ -494,7 +491,7 @@ func GenerateRSS(db *database.DB, config types.Config) string {
 	}
 	feedName := config.RSS.Name
 	if feedName == "" {
-		feedName = config.Community.Name
+		feedName = config.General.Name
 	}
 	feed := rss.OutputRSS(feedName, config.RSS.URL, config.RSS.Description, entries)
 	return feed
@@ -646,8 +643,8 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 	}
 
 	rules := util.Markup(string(h.files["rules"]))
-	registration := util.Markup(string(h.files["registration-instructions"]))
-	conduct := h.config.Community.ConductLink
+	registration := util.Markup(string(h.files["registration"]))
+	conduct := h.config.General.ConductLink
 
 	// how this works: an invite code is provided by the user. this is provided either by clicking a register link that has a prefilled query parameter:
 	// ?invite="asdasd" or by specifying an invite code manually
@@ -930,14 +927,14 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	h.renderView(res, "edit-post", view)
 }
 
-func Serve(sessionKey string, port int, isdev bool, dir string, conf types.Config) {
+func Serve(port int, isdev bool, conf types.Config) {
 	portString := fmt.Sprintf(":%d", port)
 
 	if isdev {
 		developing = true
 	}
 
-	forum, err := NewServer(sessionKey, dir, conf)
+	forum, err := NewServer(conf.General.AuthKey, conf.General.DataDir, conf)
 	if err != nil {
 		util.Check(err, "instantiate CercaForum")
 	}
@@ -985,24 +982,29 @@ const ACCOUNT_DELETE_ROUTE = "/account/delete"
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
 // of net.Listener.
-func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error) {
+func NewServer(authKey string, dir string, config types.Config) (*CercaForum, error) {
 	s := &CercaForum{
 		ServeMux:  http.ServeMux{},
 		Directory: dir,
 	}
 
-	dbpath := filepath.Join(s.directory(), "forum.db")
-	db := database.InitDB(dbpath)
-
 	config.EnsureDefaultPaths()
+
+	dbPath := filepath.Join(s.directory(), "forum.db")
+	docsPath := filepath.Join(s.directory(), "docs")
+	assetsPath := filepath.Join(s.directory(), "assets")
+
+	db := database.InitDB(dbPath)
+
 	// load the documents specified in the config
 	// iff document doesn't exist, dump a default document where it should be and read that
 	type triple struct{ key, docpath, content string }
+
 	triples := []triple{
-		{"about", config.Documents.AboutPath, defaults.DEFAULT_ABOUT},
-		{"rules", config.Documents.RegisterRulesPath, defaults.DEFAULT_RULES},
-		{"registration-instructions", config.Documents.RegistrationExplanationPath, defaults.DEFAULT_REGISTRATION},
-		{"logo", config.Documents.LogoPath, defaults.DEFAULT_LOGO},
+		{"about", filepath.Join(docsPath, "about.md"), defaults.DEFAULT_ABOUT},
+		{"rules", filepath.Join(docsPath, "rules.md"), defaults.DEFAULT_RULES},
+		{"registration", filepath.Join(docsPath, "registration.md"), defaults.DEFAULT_REGISTRATION},
+		{"logo", filepath.Join(assetsPath, "logo.html"), defaults.DEFAULT_LOGO},
 	}
 
 	files := make(map[string][]byte)
@@ -1016,10 +1018,10 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 
 	// TODO (2022-10-20): when receiving user request, inspect user-agent language and change language from server default
 	// for currently translated languages, see i18n/i18n.go
-	translator := i18n.Init(config.Community.Language)
-	templates := template.Must(generateTemplates(config, translator))
+	translator := i18n.Init(config.General.Language)
+	templates := template.Must(generateTemplates(config, files, translator))
 	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(sessionKey, developing), files, config, translator, templates, feed}
+	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
@@ -1054,7 +1056,7 @@ func NewServer(sessionKey, dir string, config types.Config) (*CercaForum, error)
 	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
 	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
-	fileserver := http.FileServer(http.Dir("html/assets/"))
+	fileserver := http.FileServer(http.Dir(assetsPath))
 	s.ServeMux.Handle("/assets/", http.StripPrefix("/assets/", fileserver))
 
 	return s, nil
