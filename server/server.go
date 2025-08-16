@@ -249,6 +249,7 @@ func generateTemplates(config types.Config, files map[string][]byte, translator 
 		"password-reset",
 		"change-password",
 		"change-password-success",
+		"script.submit-on-c-enter",
 	}
 
 	rootTemplate := template.New("root")
