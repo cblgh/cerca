@@ -315,6 +315,158 @@ var Swedish = map[string]string{
 	"ChangePassword":                "ändra lösenord",
 }
 
+var Danish = map[string]string{
+	"About":    "om",
+	"Login":    "log ind",
+	"Logout":   "log ud",
+	"Sort":     "sorter",
+	"Enter":    "Indsend",
+	"Register": "registrer",
+	"Bottom":   "gå til bunden",
+
+	"LoggedIn":    "logget ind",
+	"NotLoggedIn": "ikke logget ind",
+	"LogIn":       "log ind",
+	"GoBack":      "gå tilbage",
+
+	"SortRecentPosts":   "sorter efter nyeste opslag",
+	"SortRecentThreads": "sorter efter nyeste tråd",
+
+	"modlogCreateInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> lavede en række af invitationer`,
+	"modlogDeleteInvites":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> slettede en række af invitationer`,
+	"modlogResetPassword":      `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> nulstillede en brugers password`,
+	"modlogResetPasswordAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> nulstillede <b> {{ .Data.RecipientUsername}}</b>'s password`,
+	"modlogRemoveUser":         `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> fjernede en brugers konto`,
+	"modlogMakeAdmin":          `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> gjorde <b> {{ .Data.RecipientUsername}}</b> til admin`,
+	"modlogAddUser":            `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> registerede manuels en konto til en bruger`,
+	"modlogAddUserAdmin":       `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> registerede manuelt en konto til <b> {{ .Data.RecipientUsername }}</b>`,
+	"modlogDemoteAdmin": `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> fratog <b> 
+	{{ if eq .Data.ActingUsername .Data.RecipientUsername }} dem selv deres admin status
+	{{ else }} {{ .Data.RecipientUsername}} {{ end }}</b> admin rang og gjorde dem til en normal bruger`,
+	"modlogXProposedY":          `<code>{{ .Data.Time }}</code> <b>{{ .Data.ActingUsername }}</b> foreslog : {{ .Data.Action }}`,
+	"modlogProposalMakeAdmin":   `Gør <b> {{ .Data.RecipientUsername}}</b> til admin`,
+	"modlogProposalDemoteAdmin": `Fratag <b> {{ .Data.RecipientUsername}}</b>'s admin status`,
+	"modlogProposalRemoveUser":  `Fjern bruger <b> {{ .Data.RecipientUsername }} </b>`,
+	"modlogConfirm":             "{{ .Data.Action }} <i>blev gennemført af {{ .Data.ActingUsername }}</i>",
+	"modlogVeto":                "<s>{{ .Data.Action }}</s> <i>blev vetoet af {{ .Data.ActingUsername }}</i>",
+
+	"Admins":                        "admins",
+	"AdminVeto":                     "Veto",
+	"AdminConfirm":                  "Bekræft",
+	"AdminForumAdministration":      "Forum Administration",
+	"AdminYou":                      "dig!",
+	"AdminUsers":                    "Brugere",
+	"AdminNoAdmins":                 "Der er ingen admins",
+	"AdminNoUsers":                  "Der er ingen andre admins",
+	"AdminNoPendingProposals":       "Der er ingen afventende forslag",
+	"AdminAddNewUser":               "Tilføj en ny bruger",
+	"AdminAddNewUserQuestion":       "Er der nogen som ønsker at deltage i forummet? Du kan ",
+	"AdminStepDown":                 "Træd fra",
+	"AdminStepDownExplanation":      "Hvis du gerne vil stoppe med at være en admin, så kan du",
+	"AdminViewPastActions":          "Se tidligere handinger i ",
+	"ModerationLog":                 "moderations log",
+	"AdminDemote":                   "Fratag staus",
+	"DeletedUser":                   "slettede bruger",
+	"RemoveAccount":                 "fjern konto",
+	"AdminMakeAdmin":                "Gør til admin",
+	"Submit":                        "Indsend",
+	"AdminSelfConfirmationsHover":   "der skal gå uge før at admin selv-bekræftelse er ok",
+	"Proposal":                      "Forslag",
+	"PendingProposals":              "Afventende forslag",
+	"AdminSelfProposalsBecomeValid": "Dato selvindsendte forslag træder i kræft",
+	"AdminPendingExplanation": `To admins er krævet for <i>at gøre en bruger til admin</i>, <i>fratage en eksisterende 
+															admin sin admin status</i>, eller <i>for at fjerne en bruger</i>. Den første admin foreslår en administrations handling, den anden admin bekræfter
+															(eller vetoer) handlingen. Hvis der går længe nok uden et veto, kan den første admin bekræfte og gennemføre deres eget
+															foreslag.`,
+
+	"AdminAddUserExplanation":          "Registrer en ny bruger konto. Efter at have registreret den nye konto vil du blive givet et generet password og instruktioner som du kan videre sende til brugeren.",
+	"AdminForumHasAdmins":              "Forummet har i øjeblikket følgende admins.",
+	"AdminOnlyLoggedInMayView":         "Kun brugere som er logget ind, kan se forummets admins.",
+	"AdminPasswordSuccessInstructions": `Instruktioner: %s's password blev sat til: %s. Efter at du har logget ind, ændre venligst dit password ved at gå til /reset`,
+
+	"ModLogNoActions":           "der er ingen logged moderations handlinger",
+	"ModLogExplanation":         `Denne liste viser de moderations handlinger som forummet's adminis har taget.`,
+	"ModLogExplanationAdmin":    `Du er logged ind på denne side som en admin, du vil se flere detaljer end normalt. `,
+	"ModLogOnlyLoggedInMayView": "Kun brugere som er logget ind kan se moderations loggen.",
+
+	/* end 2025-03-26: to translate to swedish */
+
+	"LoginNoAccount":       "Mangler du en konto? <a href='/register'>Ansøg om en her</a>.",
+	"LoginFailure":         "<b>Mislykket login forsøg:</b> forkert password, forkert brugernavn, eller ikke-eksisterende bruger.",
+	"LoginAlreadyLoggedIn": `Du er allerede logget ind. Vil du <a href="/logout">logge ud</a>?`,
+
+	"Username":                  "brugernavn",
+	"Current":                   "nuværende",
+	"New":                       "ny",
+	"ChangePasswordDescription": "På den her side kan du ændre dit password.",
+	"Password":                  "password",
+	"PasswordMin":               "Skal være mindst 9 tegn langt",
+	"PasswordForgot":            "Glemt dit password?",
+
+	"Posts":             "opslag",
+	"Threads":           "tråde",
+	"ThreadNew":         "ny tråd",
+	"ThreadThe":         "tråden",
+	"Index":             "index",
+	"GoBackToTheThread": "Gå tilbage til tråden",
+	"ThreadsViewEmpty":  "Der findes iøjeblikket ingen tråde",
+
+	"ThreadCreate":        "Lav en tråd",
+	"Title":               "Titel",
+	"Content":             "Indhold",
+	"Create":              "Udgiv opslaget",
+	"Private":             "Privat",
+	"TextareaPlaceholder": "Tabula rasa",
+
+	"PasswordReset":                   "nulstil password",
+	"PasswordResetSuccess":            "Nulstilning af password—lykkedes!",
+	"PasswordResetSuccessMessage":     "Du har nulstillet dit password!",
+	"PasswordResetSuccessLinkMessage": "Giv det et forsøg",
+
+	"RegisterMessage":     "Du har allerede en konto (du er logged in med den).",
+	"RegisterLinkMessage": "Besøg",
+	"RegisterSuccess":     "konto registeret successfuld",
+
+	"ErrUnaccepted":        "Fejl, anmodningen ikke accepteret",
+	"ErrThread404":         "Tråd ej fundet",
+	"ErrThread404Message":  "Denne tråde findes ikke (måske ikke længere?)",
+	"ErrGeneric404":        "Siden kunne ikke findes",
+	"ErrGeneric404Message": "Den besøgte side findes ikke (længere?). Fejlkode %d.",
+
+	"NewThreadMessage":            "Enbart medlemmarna av detta forum får skapa nya trådar",
+	"NewThreadLinkMessage":        "Om du er et medlem,",
+	"NewThreadCreateError":        "Fejl opstod ved oprettelsen af tråden",
+	"NewThreadCreateErrorMessage": "Det opstod en datafejl mens tråden blev lavet, årsag.",
+	"PostEdit":                    "Post preview",
+
+	"AriaPostMeta":          "Post meta",
+	"AriaDeletePost":        "Slet dette opslag",
+	"AriaRespondIntoThread": "Skriv tilbage i denne tråd",
+	"PromptDeleteQuestion":  "Slet opslaget for altid?",
+	"Delete":                "slet",
+	"Edit":                  "rediger",
+	"EditedAt":              "redigere ved",
+	"Post":                  "indsend",
+	"Author":                "Forfatter",
+	"Responded":             "svarede",
+	"YourAnswer":            "Dit svar",
+
+	"AriaHome":       "Hjem",
+	"ThreadStartNew": "Start en ny tråd",
+
+	"RegisterHTMLMessage": `Du har nu en konto! Velkommen. Besøg <a href="/">tråd indexet</a> for at læse og svar på tråde, eller for at start en ny.`,
+
+	"RegisterInviteInstructionsTitle": "Instruktioner til at få en invitationskode",
+	"RegisterConductCodeBoxOne":       `Jeg har læst <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
+	"RegisterConductCodeBoxTwo":       `Ja, jeg har faktisk læst <a target="_blank" href="{{ .Data.Link }}">læst den</a>`,
+
+	"PasswordResetDescription":      "På denne side går vi igennem et par ting for at sikre nulstillingen af dit password—uden at behøve at bruge mail!",
+	"PasswordResetUsernameQuestion": "For det første: hvad er dit brugernavn?",
+	"NewPassword":                   "nyt password",
+	"ChangePassword":                "ændre password",
+}
+
+
 var EspanolLATAM = map[string]string{
 	"About":    "acerca de",
 	"Login":    "acceder",
@@ -472,6 +624,7 @@ var translations = map[string]map[string]string{
 	"English":         English,
 	"EspañolLATAM":   EspanolLATAM,
 	"Swedish":         Swedish,
+	"Danish":          Danish,
 }
 
 type TranslationData struct {
