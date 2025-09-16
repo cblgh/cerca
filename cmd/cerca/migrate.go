@@ -19,10 +19,10 @@ func migrate() {
 	migrateFlags := flag.NewFlagSet("migrate", flag.ExitOnError)
 	migrateFlags.BoolVar(&listMigrations, "list", false, "list possible migrations")
 	migrateFlags.StringVar(&migration, "migration", "", "name of the migration you want to perform on the database")
-	migrateFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	migrateFlags.StringVar(&dbPath, "database", "", "full path to the forum database; e.g. ./data/forum.db")
 
 	help := createHelpString("migrate", []string{
-		`cerca migrate -migration 2024-02-thread-private-migration`,
+		`cerca migrate -migration 2024-02-thread-private-migration -database "<path/to/forum.db>"`,
 		"cerca migrate -list",
 	})
 	migrateFlags.Usage = func() { usage(help, migrateFlags) }
@@ -42,7 +42,7 @@ func migrate() {
 		os.Exit(0)
 	}
 
-	if migration == "" {
+	if migration == "" || dbPath == "" {
 		complain(help)
 	} else if _, ok := migrations[migration]; !ok {
 		complain(fmt.Sprintf("chosen migration »%s» does not match one of the available migrations. see migrations with flag --list", migration))

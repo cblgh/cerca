@@ -13,10 +13,10 @@ func reset() {
 
 	resetFlags := flag.NewFlagSet("resetpw", flag.ExitOnError)
 	resetFlags.StringVar(&username, "username", "", "username whose credentials should be reset")
-	resetFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	resetFlags.StringVar(&dbPath, "database", "", "full path to the forum database; e.g. ./data/forum.db")
 
 	help := createHelpString("resetpw", []string{
-		`cerca resetpw -username "<existing username>"`,
+		`cerca resetpw -username "<existing username>" -database "<path/to/forum.db>"`,
 	})
 	resetFlags.Usage = func() { usage(help, resetFlags) }
 	resetFlags.Parse(os.Args[2:])
@@ -27,7 +27,7 @@ func reset() {
 		return
 	}
 
-	if username == "" {
+	if username == "" || dbPath == "" {
 		complain(help)
 	}
 

@@ -48,10 +48,10 @@ func user() {
 	userFlags := flag.NewFlagSet("adduser", flag.ExitOnError)
 	userFlags.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
 	userFlags.StringVar(&username, "username", "", "username who should be created")
-	userFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	userFlags.StringVar(&dbPath, "database", "", "full path to the forum database; e.g. ./data/forum.db")
 
 	help := createHelpString("adduser", []string{
-		`cerca adduser -username "<new username>"`,
+		`cerca adduser -username "<new username>" -database "<path/to/forum.db>"`,
 	})
 	userFlags.Usage = func() { usage(help, userFlags) }
 	userFlags.Parse(os.Args[2:])
@@ -62,7 +62,7 @@ func user() {
 		return
 	}
 
-	if username == "" {
+	if username == "" || dbPath == "" {
 		complain(help)
 	}
 

@@ -16,10 +16,10 @@ func admin() {
 	adminFlags := flag.NewFlagSet("makeadmin", flag.ExitOnError)
 	adminFlags.StringVar(&forumDomain, "url", "https://forum.merveilles.town", "root url to forum, referenced in output")
 	adminFlags.StringVar(&username, "username", "", "username who should be made admin")
-	adminFlags.StringVar(&dbPath, "database", "./data/forum.db", "full path to the forum database; e.g. ./data/forum.db")
+	adminFlags.StringVar(&dbPath, "database", "", "full path to the forum database; e.g. ./data/forum.db")
 
 	help := createHelpString("makeadmin", []string{
-		`cerca makeadmin -username "<existing username>"`,
+		`cerca makeadmin -username "<existing username> -database "<path/to/forum.db>"`,
 	})
 	adminFlags.Usage = func() { usage(help, adminFlags) }
 	adminFlags.Parse(os.Args[2:])
@@ -32,7 +32,7 @@ func admin() {
 
 	adminRoute := fmt.Sprintf("%s/admin", forumDomain)
 
-	if username == "" {
+	if username == "" || dbPath == "" {
 		complain(help)
 	}
 
