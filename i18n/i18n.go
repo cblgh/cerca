@@ -365,7 +365,7 @@ var Danish = map[string]string{
 	"AdminStepDownExplanation":      "Hvis du gerne vil stoppe med at være en admin, så kan du",
 	"AdminViewPastActions":          "Se tidligere handinger i ",
 	"ModerationLog":                 "moderations log",
-	"AdminDemote":                   "Fratag staus",
+	"AdminDemote":                   "Fratag status",
 	"DeletedUser":                   "slettede bruger",
 	"RemoveAccount":                 "fjern konto",
 	"AdminMakeAdmin":                "Gør til admin",
