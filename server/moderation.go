@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"cerca/constants"
-	"cerca/crypto"
-	"cerca/database"
-	"cerca/i18n"
-	"cerca/util"
+	"gomod.cblgh.org/cerca/constants"
+	"gomod.cblgh.org/cerca/crypto"
+	"gomod.cblgh.org/cerca/database"
+	"gomod.cblgh.org/cerca/i18n"
+	"gomod.cblgh.org/cerca/util"
 )
 
 type AdminData struct {

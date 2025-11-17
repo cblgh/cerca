@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"cerca/crypto"
-	"cerca/database"
+	"gomod.cblgh.org/cerca/crypto"
+	"gomod.cblgh.org/cerca/database"
 )
 
 func renderMsgAccountView(h *RequestHandler, res http.ResponseWriter, req *http.Request, caller, errInput string) {

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-	"os"
 	"flag"
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
-	"cerca/defaults"
-	"cerca/database"
-	"cerca/util"
+	"gomod.cblgh.org/cerca/database"
+	"gomod.cblgh.org/cerca/defaults"
+	"gomod.cblgh.org/cerca/util"
 )
 
 func writeDefaults() {
@@ -38,7 +38,7 @@ func writeDefaults() {
 
 	keyHash := runAuthKeyGenFunction()
 	defaultConfWithAuthKey := strings.Replace(defaults.DEFAULT_CONFIG, `auth_key = ""`, fmt.Sprintf(`auth_key = "%s"`, keyHash), 1)
-	defaultConfWithAuthKeyAndData  := strings.Replace(defaultConfWithAuthKey, `data_dir = "/var/lib/cerca"`, fmt.Sprintf(`data_dir = "%s"`, dataDir), 1)
+	defaultConfWithAuthKeyAndData := strings.Replace(defaultConfWithAuthKey, `data_dir = "/var/lib/cerca"`, fmt.Sprintf(`data_dir = "%s"`, dataDir), 1)
 
 	// write the config with auth key and data dir set
 	_, err = util.CreateIfNotExist(confpath, defaultConfWithAuthKeyAndData)

@@ -3,8 +3,8 @@ package server
 import (
 	"errors"
 
-	"cerca/crypto"
-	"cerca/util"
+	"gomod.cblgh.org/cerca/crypto"
+	"gomod.cblgh.org/cerca/util"
 )
 
 func (h *RequestHandler) checkPasswordIsCorrect(userid int, password string) error {

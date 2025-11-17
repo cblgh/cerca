@@ -1,17 +1,17 @@
 package database
 
 import (
-	"cerca/crypto"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"gomod.cblgh.org/cerca/crypto"
 	"log"
 	"os"
 	"regexp"
 	"time"
 
-	"cerca/util"
+	"gomod.cblgh.org/cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
 )
