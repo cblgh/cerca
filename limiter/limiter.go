@@ -13,6 +13,7 @@ type TimedRateLimiter struct {
 	limiters map[string]*rate.Limiter
 	// routes that are rate limited
 	routes         map[string]bool
+	limitAllRoutes bool
 	refreshPeriod  time.Duration
 	timeToRemember time.Duration
 	burst          int
@@ -39,11 +40,17 @@ func (rl *TimedRateLimiter) SetBurstAllowance(burst int) {
 	}
 }
 
+func (rl *TimedRateLimiter) SetLimitAllRoutes(limitAll bool) {
+	rl.limitAllRoutes = limitAll
+}
+
 // find out if resource access is allowed or not: calling consumes a rate limit token
 func (rl *TimedRateLimiter) IsLimited(identifier, route string) bool {
-	// route isn't rate limited
-	if _, exists := rl.routes[route]; !exists {
-		return false
+	if !rl.limitAllRoutes {
+		// route isn't rate limited
+		if _, exists := rl.routes[route]; !exists {
+			return false
+		}
 	}
 	// route is designated to be rate limited, try the limiter to see if we can access it
 	ret := !rl.access(identifier)
