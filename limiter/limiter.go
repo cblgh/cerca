@@ -59,8 +59,10 @@ func (rl *TimedRateLimiter) IsLimited(identifier, route string) bool {
 
 func (rl *TimedRateLimiter) BlockUntilAllowed(identifier, route string, ctx context.Context) error {
 	// route isn't rate limited
-	if _, exists := rl.routes[route]; !exists {
-		return nil
+	if !rl.limitAllRoutes {
+		if _, exists := rl.routes[route]; !exists {
+			return nil
+		}
 	}
 	limiter := rl.getLimiter(identifier)
 	err := limiter.Wait(ctx)
