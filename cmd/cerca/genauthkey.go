@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cerca/crypto"
+	"gomod.cblgh.org/cerca/crypto"
 	"crypto/sha256"
 	"fmt"
 	"flag"

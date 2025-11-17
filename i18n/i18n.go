@@ -1,7 +1,7 @@
 package i18n
 
 import (
-	"cerca/util"
+	"gomod.cblgh.org/cerca/util"
 	"fmt"
 	"html/template"
 	"log"

@@ -7,9 +7,9 @@ import (
 	"flag"
 	"path/filepath"
 
-	"cerca/defaults"
-	"cerca/database"
-	"cerca/util"
+	"gomod.cblgh.org/cerca/defaults"
+	"gomod.cblgh.org/cerca/database"
+	"gomod.cblgh.org/cerca/util"
 )
 
 func writeDefaults() {

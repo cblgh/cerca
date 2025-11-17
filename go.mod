@@ -1,4 +1,4 @@
-module cerca
+module gomod.cblgh.org/cerca
 
 go 1.21
 

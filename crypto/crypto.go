@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"cerca/util"
+	"gomod.cblgh.org/cerca/util"
 	"crypto/rand"
 	"github.com/matthewhartstonge/argon2"
 	"math/big"
