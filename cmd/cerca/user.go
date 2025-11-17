@@ -1,12 +1,12 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"gomod.cblgh.org/cerca/constants"
 	"gomod.cblgh.org/cerca/crypto"
 	"gomod.cblgh.org/cerca/database"
 	"gomod.cblgh.org/cerca/util"
-	"flag"
-	"fmt"
 	"os"
 )
 

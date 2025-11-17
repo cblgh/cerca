@@ -1,13 +1,13 @@
 package database
 
 import (
-	"gomod.cblgh.org/cerca/util"
 	"context"
 	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/matthewhartstonge/argon2"
+	"gomod.cblgh.org/cerca/util"
 	"log"
 	"regexp"
 	"strconv"

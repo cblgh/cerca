@@ -1,11 +1,11 @@
 package database
 
 import (
-	"gomod.cblgh.org/cerca/crypto"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"gomod.cblgh.org/cerca/crypto"
 	"log"
 	"os"
 	"regexp"

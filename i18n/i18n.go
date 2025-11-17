@@ -1,8 +1,8 @@
 package i18n
 
 import (
-	"gomod.cblgh.org/cerca/util"
 	"fmt"
+	"gomod.cblgh.org/cerca/util"
 	"html/template"
 	"log"
 	"strings"
@@ -466,7 +466,6 @@ var Danish = map[string]string{
 	"ChangePassword":                "ændre password",
 }
 
-
 var EspanolLATAM = map[string]string{
 	"About":    "acerca de",
 	"Login":    "acceder",
@@ -564,7 +563,7 @@ var EspanolLATAM = map[string]string{
 	"ThreadCreate":        "Crea un hilo",
 	"Title":               "Título",
 	"Content":             "Contenido",
-	"Private":	       "Privado",
+	"Private":             "Privado",
 	"Create":              "Crear",
 	"TextareaPlaceholder": "Escribe aquí",
 
@@ -607,8 +606,8 @@ var EspanolLATAM = map[string]string{
 	"Responded":             "respondió",
 	"YourAnswer":            "Tu respuesta",
 
-	"AriaHome":       	 "Inicio",
-	"ThreadStartNew":        "Empieza un hilo nuevo",
+	"AriaHome":       "Inicio",
+	"ThreadStartNew": "Empieza un hilo nuevo",
 
 	"RegisterHTMLMessage": `¡Ahora tienes una cuenta! Bienvenide. Visita el <a href="/">inicio</a> para leer o responder los hilos, o empieza uno nuevo.`,
 
@@ -616,15 +615,15 @@ var EspanolLATAM = map[string]string{
 	"RegisterConductCodeBoxOne":       `He refrescado mi memoria del <a target="_blank" href="{{ .Data.Link }}">{{ .Data.Name }} Code of Conduct</a>`,
 	"RegisterConductCodeBoxTwo":       `Sí, realmente lo <a target="_blank" href="{{ .Data.Link }}">he leído</a>.`,
 
-	"NewPassword":                   "Nueva contraseña",
-	"ChangePassword":                "Cambiar contraseña",
-	}
+	"NewPassword":    "Nueva contraseña",
+	"ChangePassword": "Cambiar contraseña",
+}
 
 var translations = map[string]map[string]string{
-	"English":         English,
-	"EspañolLATAM":   EspanolLATAM,
-	"Swedish":         Swedish,
-	"Danish":          Danish,
+	"English":      English,
+	"EspañolLATAM": EspanolLATAM,
+	"Swedish":      Swedish,
+	"Danish":       Danish,
 }
 
 type TranslationData struct {

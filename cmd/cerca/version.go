@@ -1,9 +1,9 @@
 package main
 
 import (
-	"time"
-	"runtime/debug"
 	"fmt"
+	"runtime/debug"
+	"time"
 )
 
 type CommitInfo struct {
@@ -20,7 +20,7 @@ func version() {
 	// we can only get the git commit info when built by invoking `go build` (as opposed to being built & immediately
 	// executed via `go run`)
 	isBuiltBinary := false
-	var commit CommitInfo 
+	var commit CommitInfo
 	var golangVersion string
 	date := now.UTC().Format(time.UnixDate)
 	if info, ok := debug.ReadBuildInfo(); ok {

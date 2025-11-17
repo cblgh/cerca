@@ -11,14 +11,14 @@ import (
 )
 
 var commandExplanations = map[string]string{
-	"run":        "run the forum",
-	"adduser":    "create a new user",
-	"makeadmin":  "make an existing user an admin",
-	"migrate":    "manage database migrations",
-	"resetpw":    "reset a user's password",
-	"genauthkey": "generate and output an authkey for use with `cerca run`",
-	"version":    "output version information",
-	"write-defaults":  "output and save a default cerca config file and associated content files",
+	"run":            "run the forum",
+	"adduser":        "create a new user",
+	"makeadmin":      "make an existing user an admin",
+	"migrate":        "manage database migrations",
+	"resetpw":        "reset a user's password",
+	"genauthkey":     "generate and output an authkey for use with `cerca run`",
+	"version":        "output version information",
+	"write-defaults": "output and save a default cerca config file and associated content files",
 }
 
 func createHelpString(commandName string, usageExamples []string) string {

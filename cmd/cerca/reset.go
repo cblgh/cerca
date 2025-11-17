@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"gomod.cblgh.org/cerca/constants"
 	"gomod.cblgh.org/cerca/database"
-	"flag"
 	"os"
 )
 

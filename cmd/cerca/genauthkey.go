@@ -1,10 +1,10 @@
 package main
 
 import (
-	"gomod.cblgh.org/cerca/crypto"
 	"crypto/sha256"
-	"fmt"
 	"flag"
+	"fmt"
+	"gomod.cblgh.org/cerca/crypto"
 )
 
 func runAuthKeyGenFunction() string {

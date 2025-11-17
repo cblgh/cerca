@@ -1,9 +1,9 @@
 package types
 
 import (
-	"path/filepath"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -22,7 +22,7 @@ type Config struct {
 	} `json:"rss"`
 }
 
-// Ensure that, at the very least, default paths exist for each expected document path. 
+// Ensure that, at the very least, default paths exist for each expected document path.
 func (c *Config) EnsureDefaultPaths() {
 	docsPath := filepath.Join(c.General.DataDir, "docs")
 	assetsPath := filepath.Join(c.General.DataDir, "assets")
