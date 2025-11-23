@@ -3,9 +3,12 @@ package limiter
 import (
 	"context"
 	"golang.org/x/time/rate"
+	"sync"
 	"time"
 )
 
+// TODO (2025-11-17): wrap all manipulation of timers / identifiers in a mutex :) 
+// c.f. https://github.com/cespare/pastedown/blob/main/lru/lru.go
 type TimedRateLimiter struct {
 	// periodic forgetting of identifiers that have been seen & assigned a rate limiter to prevent bloat over time
 	timers map[string]*time.Timer
@@ -17,6 +20,7 @@ type TimedRateLimiter struct {
 	refreshPeriod  time.Duration
 	timeToRemember time.Duration
 	burst          int
+	rwmu sync.RWMutex
 }
 
 func NewTimedRateLimiter(limitedRoutes []string, refresh, remember time.Duration) *TimedRateLimiter {
@@ -74,13 +78,18 @@ func (rl *TimedRateLimiter) BlockUntilAllowed(identifier, route string, ctx cont
 
 func (rl *TimedRateLimiter) getLimiter(identifier string) *rate.Limiter {
 	// limiter doesn't yet exist for this identifier
-	if _, exists := rl.limiters[identifier]; !exists {
+	rl.rwmu.RLock()
+	_, exists := rl.limiters[identifier] 
+	rl.rwmu.RUnlock()
+	if !exists {
 		// create a rate limit for it
 		rl.createRateLimit(identifier)
 		// remember this identifier (remote ip) for rl.timeToRemember before forgetting
 		rl.rememberIdentifier(identifier)
 	}
+	rl.rwmu.RLock()
 	limiter := rl.limiters[identifier]
+	rl.rwmu.RUnlock()
 	return limiter
 }
 
@@ -95,26 +104,35 @@ func (rl *TimedRateLimiter) access(identifier string) bool {
 func (rl *TimedRateLimiter) createRateLimit(identifier string) {
 	accessRate := rate.Every(rl.refreshPeriod)
 	limit := rate.NewLimiter(accessRate, rl.burst)
+	rl.rwmu.Lock()
 	rl.limiters[identifier] = limit
+	rl.rwmu.Unlock()
 }
 
 func (rl *TimedRateLimiter) rememberIdentifier(identifier string) {
 	// timer already exists; refresh it
-	if timer, exists := rl.timers[identifier]; exists {
+	rl.rwmu.RLock()
+	timer, exists := rl.timers[identifier]
+	rl.rwmu.RUnlock()
+	if exists {
 		timer.Reset(rl.timeToRemember)
 		return
 	}
 	// new timer
-	timer := time.AfterFunc(rl.timeToRemember, func() {
+	timer = time.AfterFunc(rl.timeToRemember, func() {
 		rl.forgetLimiter(identifier)
 	})
 	// map timer to its identifier
+	rl.rwmu.Lock()
 	rl.timers[identifier] = timer
+	rl.rwmu.Unlock()
 }
 
 // forget the rate limiter associated for this identifier (to prevent memory growth over time)
 func (rl *TimedRateLimiter) forgetLimiter(identifier string) {
+	rl.rwmu.Lock()
 	if _, exists := rl.limiters[identifier]; exists {
 		delete(rl.limiters, identifier)
 	}
+	rl.rwmu.Unlock()
 }
