@@ -130,7 +130,7 @@ func main() {
 	case "write-defaults":
 		writeDefaults()
 	default:
-		fmt.Printf("ERR: no such subcommand '%s'\n", command)
+		fmt.Printf("ERR: no such subcommand %q\n", command)
 		run()
 	}
 }
