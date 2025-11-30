@@ -58,6 +58,23 @@
                 {{ end }}
             </ul>
             </details>
+            <details>
+            <summary> Invites as QR code</summary>
+            <ul>
+		{{ $lenInvites := len $batch.UnclaimedInvites }}
+                {{ range $index, $invite := $batch.UnclaimedInvites }}
+		{{ $inviteURL := print $forumRoot "/register?invite=" $invite }}
+		{{ $base64Data := $inviteURL | generateQR }}
+		{{ if (gt $lenInvites 1) }} 
+		<details><summary>Invite #{{$index | inc}}</summary>
+		{{ end }}
+		<li><img src="data:image/png;base64,{{$base64Data}}"></li>
+		{{ if (gt $lenInvites 1) }} 
+		</details>
+		{{ end }}
+                {{ end }}
+            </ul>
+            </details>
         {{ end }}
 
     </section>

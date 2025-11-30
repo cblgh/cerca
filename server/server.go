@@ -26,6 +26,9 @@ import (
 	"gomod.cblgh.org/cerca/types"
 	"gomod.cblgh.org/cerca/util"
 
+	qrcode "github.com/skip2/go-qrcode"
+	"encoding/base64"
+
 	"github.com/cblgh/plain/rss"
 )
 
@@ -182,6 +185,19 @@ func generateTemplates(config types.Config, files map[string][]byte, translator 
 	templateFuncs := template.FuncMap{
 		"dumpLogo": func() template.HTML {
 			return template.HTML(files["logo"])
+		},
+		"inc": func (n int) int {
+			return n+1
+		},
+		// takes a string and returns a base64 PNG of a QR code representing the input
+		"generateQR": func(input string) string {
+			var png []byte
+			png, err := qrcode.Encode(input, qrcode.Medium, 96)
+			if err != nil {
+				dump(util.Eout(err, "generateQR could not encode input %q", input))
+				return ""
+			}
+			return base64.StdEncoding.EncodeToString(png)
 		},
 		"formatDateTime": func(t time.Time) string {
 			return t.Format("2006-01-02 15:04:05")

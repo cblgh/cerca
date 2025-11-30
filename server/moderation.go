@@ -481,6 +481,7 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 	data.CreateRoute = INVITES_CREATE_ROUTE
 	data.DeleteRoute = INVITES_DELETE_ROUTE
 	data.Batches = batches
+
 	// reuse the root url to better display registration links on the invites panel
 	if h.config.RSS.URL != "" {
 		data.ForumRootURL = h.config.RSS.URL
