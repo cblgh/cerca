@@ -148,12 +148,23 @@ func Hex2Base64(s string) (string, error) {
 	return b64, nil
 }
 
+var sanitizePattern = regexp.MustCompile(`\:|\;|\.|\(|\)|\+|\?|,|\!|\||_|\<|\>|\[|\]|\\|\/|\'|"|'`)
+var dashPattern = regexp.MustCompile(`-+`)
+
 // make a string be suitable for use as part of a url
 func SanitizeURL(input string) string {
-	input = strings.ReplaceAll(input, " ", "-")
-	input = url.PathEscape(input)
-	// TODO(2022-01-08): evaluate use of strict content guardian?
-	return strings.ToLower(input)
+	// replace as many problematic characters as possible to make urls nicer
+	output := string(sanitizePattern.ReplaceAll([]byte(input), []byte("")))
+	output = strings.TrimSpace(output)
+	// replace spaces with dashes
+	output = strings.ReplaceAll(output, " ", "-")
+	// collapse multiple dashes in a row to a single dash
+	output = string(dashPattern.ReplaceAll([]byte(output), []byte("-")))
+	// make sure we can never get XSS'd :)
+	output = SanitizeStringStrict(output)
+	// escape any characters that haven't been caught
+	output = url.PathEscape(output)
+	return strings.ToLower(output)
 }
 
 // returns an id from a url path, and a boolean. the boolean is true if we're returning what we expect; false if the
