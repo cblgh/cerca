@@ -766,7 +766,7 @@ func (h RequestHandler) AccountRoute(res http.ResponseWriter, req *http.Request)
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(res, "User-agent: *\nDisallow: /")
+	fmt.Fprintln(res, "User-agent: Lieu\nAllow: /\n\nUser-agent: *\nDisallow: /")
 }
 
 func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Request) {
