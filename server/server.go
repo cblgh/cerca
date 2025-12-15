@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"io"
 
 	"gomod.cblgh.org/cerca/crypto"
 	"gomod.cblgh.org/cerca/database"
@@ -520,7 +521,11 @@ func (h *RequestHandler) RSSRoute(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res.Header().Set("Content-Type", "application/xml")
-	res.Write([]byte(h.rssFeed))
+	_, err := io.WriteString(res, h.rssFeed)
+	if err != nil {
+		dump(err)
+		http.Error(res, "An error occured", http.StatusInternalServerError)
+	}
 }
 
 func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) {
