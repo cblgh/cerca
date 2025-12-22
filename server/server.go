@@ -84,7 +84,9 @@ type AccountData struct {
 	ChangePasswordRoute string
 	ChangeUsernameRoute string
 	DeleteAccountRoute  string
+	RefreshAPIKeyRoute string
 	LoggedInUsername    string
+	APIKey string
 }
 
 type LoginData struct {
@@ -111,6 +113,7 @@ type RequestHandler struct {
 	translator i18n.Translator
 	templates  *template.Template
 	rssFeed    string
+	privateRSSFeed string
 }
 
 var developing bool
@@ -352,8 +355,9 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 		}
 
 		newSlug := util.GetThreadSlug(threadid, posts[0].ThreadTitle, len(posts))
-		// update the rss feed
-		h.rssFeed = GenerateRSS(h.db, h.config)
+		// update the rss feed (public + private copy)
+		h.rssFeed = GenerateRSS(h.db, h.config, false)
+		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) 
 		http.Redirect(res, req, newSlug, http.StatusFound)
 		return
 	}
@@ -489,14 +493,13 @@ func joinPath(host, upath string) string {
 	return fmt.Sprintf("%s/%s", host, upath)
 }
 
-func GenerateRSS(db *database.DB, config types.Config) string {
+func GenerateRSS(db *database.DB, config types.Config, includePrivateThreads bool) string {
 	if config.RSS.URL == "" {
 		return "feed not configured"
 	}
 	// TODO (2022-12-08): augment ListThreads to choose getting author of latest post or thread creator (currently latest
 	// post always)
 	sortByPost := true
-	includePrivateThreads := false
 	threads := db.ListThreads(sortByPost, includePrivateThreads)
 	entries := make([]string, len(threads))
 	for i, t := range threads {
@@ -526,6 +529,35 @@ func (h *RequestHandler) RSSRoute(res http.ResponseWriter, req *http.Request) {
 		dump(err)
 		http.Error(res, "An error occured", http.StatusInternalServerError)
 	}
+}
+
+func (h *RequestHandler) RSSPrivateRoute(res http.ResponseWriter, req *http.Request) {
+	// error if feed not configured (e.g. config.RSS.URL not set)
+	if h.config.RSS.URL == "" {
+		http.Error(res, "Feed Not Configured", http.StatusNotFound)
+		return
+	}
+	apikey := req.PathValue("apikey")
+	apiKeyValid, err := h.db.CheckAPIKeyValid(apikey)
+	if err != nil  {
+		dump(err)
+		http.Error(res, "An error occured", http.StatusInternalServerError)
+	}
+	if apiKeyValid {
+		// generate feed wasn't populated; generate it and include private threads
+		if len(h.privateRSSFeed) == 0 {
+			h.privateRSSFeed = GenerateRSS(h.db, h.config, true) 
+		}
+		res.Header().Set("Content-Type", "application/xml")
+		_, err = io.WriteString(res, h.privateRSSFeed)
+		if err != nil {
+			dump(err)
+			http.Error(res, "An error occured", http.StatusInternalServerError)
+		}
+		return
+	}
+	http.Error(res, "Your credentials are not valid to view the private RSS feed", http.StatusForbidden)
+	return
 }
 
 func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) {
@@ -762,12 +794,25 @@ func (h RequestHandler) AboutRoute(res http.ResponseWriter, req *http.Request) {
 
 func (h RequestHandler) AccountRoute(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
+	if !loggedIn {
+		title := h.translator.Translate("NotLoggedIn")
+		data := GenericMessageData{
+			Title:       title,
+			Message:     "You are not logged in",
+			Link:        "/login",
+			LinkMessage: "Log in to view the account page",
+			LinkText:    h.translator.Translate("LogIn"),
+		}
+		h.renderGenericMessage(res, req, data)
+		return
+	}
 	username, err := h.db.GetUsername(userid)
 	var errMessage string
 	if err != nil {
 		errMessage = "Could not get the username for the logged-in user"
 	}
-	h.renderView(res, "account", TemplateData{Data: AccountData{LoggedInUsername: username, ErrorMessage: errMessage, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
+	apikey := h.db.GetAPIKey(userid)
+	h.renderView(res, "account", TemplateData{Data: AccountData{APIKey: apikey, LoggedInUsername: username, ErrorMessage: errMessage, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE, RefreshAPIKeyRoute: ACCOUNT_REFRESH_API_KEY_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
 
 func (h RequestHandler) RobotsRoute(res http.ResponseWriter, req *http.Request) {
@@ -837,8 +882,9 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 			h.renderGenericMessage(res, req, data)
 			return
 		}
-		// update the rss feed
-		h.rssFeed = GenerateRSS(h.db, h.config)
+		// update the rss feed (public version and private version)
+		h.rssFeed = GenerateRSS(h.db, h.config, false) // do not include private threads
+		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) // include private threads
 		// when data has been stored => redirect to thread
 		slug := fmt.Sprintf("thread/%d/%s/", threadid, util.SanitizeURL(title))
 		http.Redirect(res, req, "/"+slug, http.StatusSeeOther)
@@ -898,7 +944,8 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 			return
 		}
 		// update the rss feed, in case the deleted post was present in feed
-		h.rssFeed = GenerateRSS(h.db, h.config)
+		h.rssFeed = GenerateRSS(h.db, h.config, false) // exclude private threads
+		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) // include private threads
 	}
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
 }
@@ -999,6 +1046,7 @@ const INVITES_DELETE_ROUTE = "/invites/delete"
 const ACCOUNT_CHANGE_PASSWORD_ROUTE = "/account/change-password"
 const ACCOUNT_CHANGE_USERNAME_ROUTE = "/account/change-username"
 const ACCOUNT_DELETE_ROUTE = "/account/delete"
+const ACCOUNT_REFRESH_API_KEY_ROUTE = "/account/refresh-api-key"
 
 // NewServer sets up a new CercaForum object. Always use this to initialize
 // new CercaForum objects. Pass the result to http.Serve() with your choice
@@ -1041,8 +1089,9 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	// for currently translated languages, see i18n/i18n.go
 	translator := i18n.Init(config.General.Language)
 	templates := template.Must(generateTemplates(config, files, translator))
-	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
+	publicFeed := GenerateRSS(&db, config, false)
+	privateFeed := GenerateRSS(&db, config, true)
+	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, publicFeed, privateFeed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes
@@ -1059,6 +1108,7 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	s.ServeMux.HandleFunc("/proposal-veto", handler.VetoProposal)
 	s.ServeMux.HandleFunc("/proposal-confirm", handler.ConfirmProposal)
 	// self-service account changes a user can tend to on their own behalf
+	s.ServeMux.HandleFunc(ACCOUNT_REFRESH_API_KEY_ROUTE, handler.AccountRefreshAPIKey)
 	s.ServeMux.HandleFunc(ACCOUNT_CHANGE_PASSWORD_ROUTE, handler.AccountChangePassword)
 	s.ServeMux.HandleFunc(ACCOUNT_CHANGE_USERNAME_ROUTE, handler.AccountChangeUsername)
 	s.ServeMux.HandleFunc(ACCOUNT_DELETE_ROUTE, handler.AccountSelfServiceDelete)
@@ -1074,7 +1124,8 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	s.ServeMux.HandleFunc("/thread/", handler.ThreadRoute)
 	s.ServeMux.HandleFunc("/robots.txt", handler.RobotsRoute)
 	s.ServeMux.HandleFunc("/", handler.IndexRoute)
-	s.ServeMux.HandleFunc("/rss/", handler.RSSRoute)
+	s.ServeMux.HandleFunc("GET /rss/{apikey}", handler.RSSPrivateRoute)
+	s.ServeMux.HandleFunc("GET /rss/", handler.RSSRoute)
 	s.ServeMux.HandleFunc("/rss.xml", handler.RSSRoute)
 
 	fileserver := http.FileServer(http.Dir(assetsPath))

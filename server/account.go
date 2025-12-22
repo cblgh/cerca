@@ -11,9 +11,37 @@ import (
 func renderMsgAccountView(h *RequestHandler, res http.ResponseWriter, req *http.Request, caller, errInput string) {
 	errMessage := fmt.Sprintf("%s: %s", caller, errInput)
 	loggedIn, userid := h.IsLoggedIn(req)
+	if !loggedIn {
+		IndexRedirect(res, req)
+		return
+	}
 	username, _ := h.db.GetUsername(userid)
-	h.renderView(res, "account", TemplateData{Data: AccountData{ErrorMessage: errMessage, LoggedInUsername: username, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
+	apikey := h.db.GetAPIKey(userid)
+	h.renderView(res, "account", TemplateData{Data: AccountData{APIKey: apikey, ErrorMessage: errMessage, LoggedInUsername: username, DeleteAccountRoute: ACCOUNT_DELETE_ROUTE, ChangeUsernameRoute: ACCOUNT_CHANGE_USERNAME_ROUTE, ChangePasswordRoute: ACCOUNT_CHANGE_PASSWORD_ROUTE, RefreshAPIKeyRoute: ACCOUNT_REFRESH_API_KEY_ROUTE}, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, Title: "Account"})
 }
+
+func (h *RequestHandler) AccountRefreshAPIKey(res http.ResponseWriter, req *http.Request) {
+	loggedIn, userid := h.IsLoggedIn(req)
+	sectionTitle := "Refresh API Key"
+	renderErr := func(errMsg string) {
+		renderMsgAccountView(h, res, req, sectionTitle, errMsg)
+	}
+	// simple alias for the same thing, to make it less confusing in the different cases :) might be changed into some
+	// other success behaviour at some future point
+	renderSuccess := renderErr
+	if req.Method == "GET" {
+		if !loggedIn {
+			IndexRedirect(res, req)
+			return
+		}
+		http.Redirect(res, req, "/account", http.StatusSeeOther)
+		return
+	} else if req.Method == "POST" {
+		_ = h.db.RefreshAPIKey(userid)
+		renderSuccess("api key has been refreshed!")
+	}
+}
+
 
 func (h *RequestHandler) AccountChangePassword(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
@@ -64,6 +92,7 @@ func (h *RequestHandler) AccountChangePassword(res http.ResponseWriter, req *htt
 		}
 	}
 }
+
 func (h *RequestHandler) AccountChangeUsername(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Change username"

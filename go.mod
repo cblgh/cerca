@@ -1,6 +1,6 @@
 module gomod.cblgh.org/cerca
 
-go 1.21
+go 1.22
 
 toolchain go1.23.0
 

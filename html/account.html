@@ -9,6 +9,26 @@
     </div>
     {{ end }}
 
+    <h2>Private RSS feed</h2>
+    <p>This RSS feed is private to you and will let you subscribe to see when private threads have new posts or are
+    created. Please do not share it</p>
+
+    <form method="POST" action="{{ .Data.RefreshAPIKeyRoute }}">
+        <!-- <div> -->
+        <!--     <label for id="apikey">API Key</label> -->
+        <!--     <input type="text" readonly value="{{ .Data.APIKey }}"> -->
+        <!-- </div> -->
+        <div>
+            <a href="/rss/{{ .Data.APIKey }}">Copy this link and put it in your rss reader</a>
+        </div>
+        <p style="margin-top: 1rem;">Click the button below to generate a new link for your private RSS feed. This can be useful if you
+        accidentally shared it and want to inactivate that link.</p>
+        <div>
+            <input type="submit" value='Generate new RSS link'>
+        </div>
+    </form>
+    </section>
+
     <h2>Change password</h2>
 
     <form method="POST" action="{{ .Data.ChangePasswordRoute }}">

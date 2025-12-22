@@ -148,6 +148,7 @@ func createTables(db *sql.DB) {
   `,
 
 		/* also known as forum categories; buckets of threads */
+		/* NOTE: this is unused. we use categories as [name in thread title] instead
 		`
   CREATE TABLE IF NOT EXISTS topics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -168,6 +169,15 @@ func createTables(db *sql.DB) {
     FOREIGN KEY(authorid) REFERENCES users(id)
   );
   `,
+	`
+  CREATE TABLE IF NOT EXISTS apikeys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    apikey TEXT NOT NULL,
+    publishtime DATE,
+    userid INTEGER,
+    FOREIGN KEY(userid) REFERENCES users(id)
+  );
+		`,
 		`
   CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -513,6 +523,51 @@ func (d DB) CheckUsernameExists(username string) (bool, error) {
 func (d DB) CheckThreadExists(threadid int) (bool, error) {
 	stmt := `SELECT 1 FROM threads WHERE id = ?`
 	return d.existsQuery(stmt, threadid)
+}
+
+func (d DB) CheckUserHasAPIKey(userid int) (bool, error) {
+	stmt := `SELECT 1 FROM apikeys WHERE userid = ?`
+	return d.existsQuery(stmt, userid)
+}
+
+func (d DB) CheckAPIKeyValid(apikey string) (bool, error) {
+	stmt := `SELECT 1 FROM apikeys WHERE apikey = ?`
+	return d.existsQuery(stmt, apikey)
+}
+
+func (d DB) GetAPIKey(userid int) string {
+	ed := util.Describe("get api key")
+	exists, err := d.CheckUserHasAPIKey(userid)
+	ed.Check(err, "check api key exists")
+	if exists {
+		var apikey string
+		stmt := `SELECT apikey FROM apikeys WHERE userid = ?`
+		err := d.db.QueryRow(stmt, userid).Scan(&apikey)
+		ed.Check(err, "query row for existing key")
+		return apikey
+	}
+	// apikey doesn't appear to exist, let's create it!
+	return d.RefreshAPIKey(userid)
+}
+
+func (d DB) RefreshAPIKey(userid int) string {
+	ed := util.Describe("set api key")
+	exists, err := d.CheckUserHasAPIKey(userid)
+	ed.Check(err, "check api key exists")
+	apikey := util.GetUUIDv4()
+	publishtime := time.Now()
+	// we create it
+	if !exists {
+		stmt := `INSERT INTO apikeys (apikey, publishtime, userid) VALUES (?, ?, ?)`
+		_, err := d.Exec(stmt, apikey, publishtime, userid)
+		ed.Check(err, "insert new key")
+	} else {
+	// otherwise we update it 
+		stmt := `UPDATE apikeys SET apikey = ?, publishtime = ? WHERE userid = ?`
+		_, err = d.Exec(stmt, apikey, publishtime, userid)
+		ed.Check(err, "update existing key")
+	}
+	return apikey
 }
 
 func (d DB) UpdateUsername(userid int, newname string) {
