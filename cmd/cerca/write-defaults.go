@@ -59,7 +59,7 @@ func writeDefaults() {
 
 	// create the initial database and tables
 	_ = database.InitDB(dbPath)
-	fmt.Printf("wrote database at %s", dbPath)
+	fmt.Printf("wrote database at %s\n", dbPath)
 
 	// write the default documents
 	type triple struct{ key, docpath, content string }
