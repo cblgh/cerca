@@ -2,7 +2,7 @@ PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 DATADIR = /var/lib/cerca
 CONFDIR = /etc/cerca
-CONF_FILE = ${CONFDIR}/cerca.toml
+CONF_FILE = ${CONFDIR}/config.toml
 
 cerca:
 	go build ./cmd/cerca
