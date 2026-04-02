@@ -2,7 +2,7 @@ package i18n
 
 import (
 	"fmt"
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 	"html/template"
 	"log"
 	"strings"
@@ -633,7 +633,7 @@ type TranslationData struct {
 func (tr *Translator) TranslateWithData(key string, data TranslationData) string {
 	phrase := translations[tr.Language][key]
 	t, err := template.New(key).Parse(phrase)
-	ed := util.Describe("i18n translation")
+	ed := eout.Describe("i18n translation")
 	ed.Check(err, "parse translation phrase")
 	sb := new(strings.Builder)
 	err = t.Execute(sb, data)

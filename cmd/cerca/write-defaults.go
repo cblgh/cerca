@@ -10,10 +10,11 @@ import (
 	"gomod.cblgh.org/cerca/database"
 	"gomod.cblgh.org/cerca/defaults"
 	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 )
 
 func writeDefaults() {
-	ed := util.Describe("write defaults")
+	ed := eout.Describe("write defaults")
 
 	var confpath string
 	var dataDir string

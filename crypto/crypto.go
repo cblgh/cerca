@@ -3,13 +3,13 @@ package crypto
 import (
 	"crypto/rand"
 	"github.com/matthewhartstonge/argon2"
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 	"math/big"
 	"strings"
 )
 
 func HashPassword(s string) (string, error) {
-	ed := util.Describe("hash password")
+	ed := eout.Describe("hash password")
 	config := argon2.MemoryConstrainedDefaults()
 	hash, err := config.HashEncoded([]byte(s))
 	if err != nil {
@@ -19,7 +19,7 @@ func HashPassword(s string) (string, error) {
 }
 
 func ValidatePasswordHash(password, passwordHash string) bool {
-	ed := util.Describe("validate password hash")
+	ed := eout.Describe("validate password hash")
 	hashStruct, err := argon2.Decode([]byte(passwordHash))
 	ed.Check(err, "argon2.decode")
 	correct, err := hashStruct.Verify([]byte(password))
@@ -40,7 +40,7 @@ func GeneratePassword() string {
 	for i := 0; i < pwlength; i++ {
 		max := big.NewInt(maxChar)
 		bigN, err := rand.Int(rand.Reader, max)
-		util.Check(err, "randomly generate int")
+		eout.Check(err, "randomly generate int")
 		n := bigN.Int64()
 		password.WriteString(string(characterSet[n]))
 	}

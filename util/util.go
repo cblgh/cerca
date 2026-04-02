@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,59 +27,8 @@ import (
 	"golang.org/x/exp/utf8string"
 
 	"gomod.cblgh.org/cerca/types"
+	"gomod.cblgh.org/cerca/util/eout"
 )
-
-/* util.Eout example invocations
-if err != nil {
-  return util.Eout(err, "reading data")
-}
-if err = util.Eout(err, "reading data"); err != nil {
-  return nil, err
-}
-*/
-
-type ErrorDescriber struct {
-	environ string // the basic context that is potentially generating errors (like a GetThread function, the environ would be "get thread")
-}
-
-// parametrize Eout/Check such that error messages contain a defined context/environ
-func Describe(environ string) ErrorDescriber {
-	return ErrorDescriber{environ}
-}
-
-func (ed ErrorDescriber) Eout(err error, msg string, args ...interface{}) error {
-	msg = fmt.Sprintf("%s: %s", ed.environ, msg)
-	return Eout(err, msg, args...)
-}
-
-func (ed ErrorDescriber) Check(err error, msg string, args ...interface{}) {
-	msg = fmt.Sprintf("%s: %s", ed.environ, msg)
-	Check(err, msg, args...)
-}
-
-// format all errors consistently, and provide context for the error using the string `msg`
-func Eout(err error, msg string, args ...interface{}) error {
-	if err != nil {
-		// received an invocation of e.g. format:
-		// Eout(err, "reading data for %s and %s", "database item", "weird user")
-		if len(args) > 0 {
-			return fmt.Errorf("%s (%w)", fmt.Sprintf(msg, args...), err)
-		}
-		return fmt.Errorf("%s (%w)", msg, err)
-	}
-	return nil
-}
-
-func Check(err error, msg string, args ...interface{}) {
-	if len(args) > 0 {
-		err = Eout(err, msg, args...)
-	} else {
-		err = Eout(err, msg)
-	}
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
 
 func Contains(slice []string, s string) bool {
 	for _, item := range slice {
@@ -242,7 +190,7 @@ func RelativeTime(t time.Time) string {
 }
 
 func ReadConfig(confpath string) types.Config {
-	ed := Describe("config")
+	ed := eout.Describe("config")
 
 	data, err := os.ReadFile(confpath)
 	ed.Check(err, "read config file")
@@ -257,7 +205,7 @@ func ReadConfig(confpath string) types.Config {
 }
 
 func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
-	ed := Describe("load file")
+	ed := eout.Describe("load file")
 	data, err := os.ReadFile(docpath)
 	err = ed.Eout(err, "read %s", docpath)
 	if err != nil {
@@ -268,6 +216,6 @@ func LoadFile(key, docpath, defaultContent string) ([]byte, error) {
 
 func GetUUIDv4() string {
 	identifier, err := uuid.NewRandom()
-	Check(err, "generated invites using uuid v4")
+	eout.Check(err, "generated invites using uuid v4")
 	return identifier.String()
 }

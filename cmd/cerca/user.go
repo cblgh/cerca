@@ -6,7 +6,7 @@ import (
 	"gomod.cblgh.org/cerca/constants"
 	"gomod.cblgh.org/cerca/crypto"
 	"gomod.cblgh.org/cerca/database"
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 	"os"
 )
 
@@ -16,7 +16,7 @@ type UserInfo struct {
 }
 
 func createUser(username, password string, db *database.DB) UserInfo {
-	ed := util.Describe("admin reset")
+	ed := eout.Describe("admin reset")
 	// make sure username is not registered already
 	var err error
 	if exists, err := db.CheckUsernameExists(username); err != nil {

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"time"
 
+	"gomod.cblgh.org/cerca/util/eout"
 	"gomod.cblgh.org/cerca/util"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -38,7 +39,7 @@ func InitDB(filepath string) DB {
 	}
 
 	db, err := sql.Open("sqlite3", filepath)
-	util.Check(err, "opening sqlite3 database at %s", filepath)
+	eout.Check(err, "opening sqlite3 database at %s", filepath)
 	if db == nil {
 		log.Fatalln("db is nil")
 	}
@@ -52,7 +53,7 @@ const DELETED_USER_NAME = "deleted user"
 const SYSTEM_USER_NAME = "CERCA_CMD"
 
 func (d DB) makeSureDefaultUsersExist() {
-	ed := util.Describe("create default users")
+	ed := eout.Describe("create default users")
 	for _, defaultUser := range []string{DELETED_USER_NAME, SYSTEM_USER_NAME} {
 		userExists, err := d.CheckUsernameExists(defaultUser)
 		if err != nil {
@@ -183,7 +184,7 @@ func createTables(db *sql.DB) {
 
 	for _, query := range queries {
 		if _, err := db.Exec(query); err != nil {
-			log.Fatalln(util.Eout(err, "creating database table %s", query))
+			log.Fatalln(eout.Eout(err, "creating database table %s", query))
 		}
 	}
 }
@@ -204,7 +205,7 @@ func (d DB) Exec(stmt string, args ...interface{}) (sql.Result, error) {
 }
 
 func (d DB) CreateThread(title, content string, authorid, topicid int, isPrivate bool) (int, error) {
-	ed := util.Describe("create thread")
+	ed := eout.Describe("create thread")
 	// create the new thread in a transaction spanning two statements
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{}) // proper tx options?
 	ed.Check(err, "start transaction")
@@ -276,18 +277,18 @@ func (d DB) GetThread(threadid int) ([]Post, error) {
   ORDER BY p.publishtime
   `
 	stmt, err := d.db.Prepare(query)
-	util.Check(err, "get thread: prepare query")
+	eout.Check(err, "get thread: prepare query")
 	defer stmt.Close()
 
 	rows, err := stmt.Query(threadid)
-	util.Check(err, "get thread: query")
+	eout.Check(err, "get thread: query")
 	defer rows.Close()
 
 	var data Post
 	var posts []Post
 	for rows.Next() {
 		if err := rows.Scan(&data.ID, &data.ThreadTitle, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit); err != nil {
-			log.Fatalln(util.Eout(err, "get data for thread %d", threadid))
+			log.Fatalln(eout.Eout(err, "get data for thread %d", threadid))
 		}
 		posts = append(posts, data)
 	}
@@ -304,7 +305,7 @@ func (d DB) GetPost(postid int) (Post, error) {
   `
 	var data Post
 	err := d.db.QueryRow(stmt, postid).Scan(&data.ID, &data.ThreadTitle, &data.ThreadID, &data.Content, &data.Author, &data.AuthorID, &data.Publish, &data.LastEdit)
-	err = util.Eout(err, "get data for thread %d", postid)
+	err = eout.Eout(err, "get data for thread %d", postid)
 	return data, err
 }
 
@@ -353,11 +354,11 @@ func (d DB) ListThreads(sortByPost bool, includePrivate bool) []Thread {
 	query = fmt.Sprintf(query, where, orderBy)
 
 	stmt, err := d.db.Prepare(query)
-	util.Check(err, "list threads: prepare query")
+	eout.Check(err, "list threads: prepare query")
 	defer stmt.Close()
 
 	rows, err := stmt.Query()
-	util.Check(err, "list threads: query")
+	eout.Check(err, "list threads: query")
 	defer rows.Close()
 
 	var postCount int
@@ -366,7 +367,7 @@ func (d DB) ListThreads(sortByPost bool, includePrivate bool) []Thread {
 	var threads []Thread
 	for rows.Next() {
 		if err := rows.Scan(&postCount, &data.Title, &data.ID, &isPrivate, &data.Author, &data.Publish, &data.PostID); err != nil {
-			log.Fatalln(util.Eout(err, "list threads: read in data via scan"))
+			log.Fatalln(eout.Eout(err, "list threads: read in data via scan"))
 		}
 		data.Private = (isPrivate == 1)
 		data.Slug = util.GetThreadSlug(data.ID, data.Title, postCount)
@@ -385,7 +386,7 @@ func (d DB) IsThreadPrivate(threadid int) (bool, error) {
 	var private int
 	stmt := `SELECT private FROM threads where id = ?`
 	err = d.db.QueryRow(stmt, threadid).Scan(&private)
-	util.Check(err, "querying if private thread %d", threadid)
+	eout.Check(err, "querying if private thread %d", threadid)
 	return private == 1, nil
 }
 
@@ -393,7 +394,7 @@ func (d DB) AddPost(content string, threadid, authorid int) (postID int) {
 	stmt := `INSERT INTO posts (content, publishtime, threadid, authorid) VALUES (?, ?, ?, ?) RETURNING id`
 	publish := time.Now()
 	err := d.db.QueryRow(stmt, content, publish, threadid, authorid).Scan(&postID)
-	util.Check(err, "add post to thread %d (author %d)", threadid, authorid)
+	eout.Check(err, "add post to thread %d (author %d)", threadid, authorid)
 	return
 }
 
@@ -401,42 +402,42 @@ func (d DB) EditPost(content, title string, postid, threadid int) {
 	stmt := `UPDATE posts set content = ?, lastedit = ? WHERE id = ?`
 	edit := time.Now()
 	_, err := d.Exec(stmt, content, edit, postid)
-	util.Check(err, "edit post %d", postid)
+	eout.Check(err, "edit post %d", postid)
 
 	stmt = `UPDATE threads set title = ? WHERE id = ?`
 	edit = time.Now()
 	_, err = d.Exec(stmt, title, threadid)
-	util.Check(err, "edit post title %d", postid)
+	eout.Check(err, "edit post title %d", postid)
 }
 
 func (d DB) DeletePost(postid int) error {
 	stmt := `DELETE FROM posts WHERE id = ?`
 	_, err := d.Exec(stmt, postid)
-	return util.Eout(err, "deleting post %d", postid)
+	return eout.Eout(err, "deleting post %d", postid)
 }
 
 func (d DB) CreateTopic(title, description string) {
 	stmt := `INSERT INTO topics (name, description) VALUES (?, ?)`
 	_, err := d.Exec(stmt, title, description)
-	util.Check(err, "creating topic %s", title)
+	eout.Check(err, "creating topic %s", title)
 }
 
 func (d DB) UpdateTopicName(topicid int, newname string) {
 	stmt := `UPDATE topics SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, topicid)
-	util.Check(err, "changing topic %d's name to %s", topicid, newname)
+	eout.Check(err, "changing topic %d's name to %s", topicid, newname)
 }
 
 func (d DB) UpdateTopicDescription(topicid int, newdesc string) {
 	stmt := `UPDATE topics SET description = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newdesc, topicid)
-	util.Check(err, "changing topic %d's description to %s", topicid, newdesc)
+	eout.Check(err, "changing topic %d's description to %s", topicid, newdesc)
 }
 
 func (d DB) DeleteTopic(topicid int) {
 	stmt := `DELETE FROM topics WHERE id = ?`
 	_, err := d.Exec(stmt, topicid)
-	util.Check(err, "deleting topic %d", topicid)
+	eout.Check(err, "deleting topic %d", topicid)
 }
 
 func (d DB) CreateUser(name, hash string) (int, error) {
@@ -444,7 +445,7 @@ func (d DB) CreateUser(name, hash string) (int, error) {
 	var userid int
 	err := d.db.QueryRow(stmt, name, hash).Scan(&userid)
 	if err != nil {
-		return -1, util.Eout(err, "creating user %s", name)
+		return -1, eout.Eout(err, "creating user %s", name)
 	}
 	return userid, nil
 }
@@ -454,7 +455,7 @@ func (d DB) GetUserID(name string) (int, error) {
 	var userid int
 	err := d.db.QueryRow(stmt, name).Scan(&userid)
 	if err != nil {
-		return -1, util.Eout(err, "get user id")
+		return -1, eout.Eout(err, "get user id")
 	}
 	return userid, nil
 }
@@ -464,7 +465,7 @@ func (d DB) GetUsername(uid int) (string, error) {
 	var username string
 	err := d.db.QueryRow(stmt, uid).Scan(&username)
 	if err != nil {
-		return "", util.Eout(err, "get username")
+		return "", eout.Eout(err, "get username")
 	}
 	return username, nil
 }
@@ -475,7 +476,7 @@ func (d DB) GetPasswordHash(username string) (string, int, error) {
 	var userid int
 	err := d.db.QueryRow(stmt, username).Scan(&hash, &userid)
 	if err != nil {
-		return "", -1, util.Eout(err, "get password hash")
+		return "", -1, eout.Eout(err, "get password hash")
 	}
 	return hash, userid, nil
 }
@@ -485,7 +486,7 @@ func (d DB) GetPasswordHashByUserID(userid int) (string, error) {
 	var hash string
 	err := d.db.QueryRow(stmt, userid).Scan(&hash)
 	if err != nil {
-		return "", util.Eout(err, "get password hash by userid")
+		return "", eout.Eout(err, "get password hash by userid")
 	}
 	return hash, nil
 }
@@ -495,7 +496,7 @@ func (d DB) existsQuery(substmt string, args ...interface{}) (bool, error) {
 	var exists bool
 	err := d.db.QueryRow(stmt, args...).Scan(&exists)
 	if err != nil {
-		return false, util.Eout(err, "exists: %s", substmt)
+		return false, eout.Eout(err, "exists: %s", substmt)
 	}
 	return exists, nil
 }
@@ -518,17 +519,17 @@ func (d DB) CheckThreadExists(threadid int) (bool, error) {
 func (d DB) UpdateUsername(userid int, newname string) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newname, userid)
-	util.Check(err, "changing user %d's name to %s", userid, newname)
+	eout.Check(err, "changing user %d's name to %s", userid, newname)
 }
 
 func (d DB) UpdateUserPasswordHash(userid int, newhash string) {
 	stmt := `UPDATE users SET passwordhash = ? WHERE id = ?`
 	_, err := d.Exec(stmt, newhash, userid)
-	util.Check(err, "changing user %d's description to %s", userid, newhash)
+	eout.Check(err, "changing user %d's description to %s", userid, newhash)
 }
 
 func (d DB) GetSystemUserID() int {
-	ed := util.Describe("get system user id")
+	ed := eout.Describe("get system user id")
 	systemUserid, err := d.GetUserID(SYSTEM_USER_NAME)
 	// it should always exist
 	if err != nil {
@@ -538,7 +539,7 @@ func (d DB) GetSystemUserID() int {
 }
 
 func (d DB) AddRegistration(userid int, registrationOrigin string) error {
-	ed := util.Describe("add registration")
+	ed := eout.Describe("add registration")
 	stmt := `INSERT INTO registrations (userid, link, time) VALUES (?, ?, ?)`
 	t := time.Now()
 	_, err := d.Exec(stmt, userid, registrationOrigin, t)
@@ -551,7 +552,7 @@ func (d DB) AddRegistration(userid int, registrationOrigin string) error {
 /* for moderation operations and queries, see database/moderation.go */
 
 func (d DB) GetUsers(includeAdmin bool) []User {
-	ed := util.Describe("get users")
+	ed := eout.Describe("get users")
 	query := `SELECT u.name, u.id, r.link
   FROM users u LEFT OUTER JOIN registrations r on u.id = r.userid
 	%s
@@ -569,7 +570,7 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 	defer stmt.Close()
 
 	rows, err := stmt.Query()
-	util.Check(err, "run query")
+	eout.Check(err, "run query")
 	defer rows.Close()
 
 	var user User
@@ -590,7 +591,7 @@ func (d DB) GetUsers(includeAdmin bool) []User {
 }
 
 func (d DB) ResetPassword(userid int) (string, error) {
-	ed := util.Describe("reset password")
+	ed := eout.Describe("reset password")
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
 		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))

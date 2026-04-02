@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 	"errors"
 	"fmt"
 	"net/http"
@@ -65,7 +65,7 @@ func New(authKey string, developing bool) *Session {
 }
 
 func (s *Session) Delete(res http.ResponseWriter, req *http.Request) error {
-	ed := util.Describe("delete session cookie")
+	ed := eout.Describe("delete session cookie")
 	clearSession := func(store *sessions.CookieStore) error {
 		session, err := store.Get(req, cookieName)
 		if err != nil {
@@ -91,7 +91,7 @@ func getValueFromSession(req *http.Request, store *sessions.CookieStore, key str
 	value, ok := session.Values[key]
 	if !ok {
 		err := errors.New(fmt.Sprintf("extracting %s from session; no such value", key))
-		return nil, util.Eout(err, "get session")
+		return nil, eout.Eout(err, "get session")
 	}
 	return value, nil
 }

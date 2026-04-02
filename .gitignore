@@ -6,3 +6,4 @@ pwtool
 admin-reset
 *.json
 /cerca
+cmd/cerca/cerca

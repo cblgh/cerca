@@ -26,6 +26,7 @@ import (
 	"gomod.cblgh.org/cerca/server/session"
 	"gomod.cblgh.org/cerca/types"
 	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 
 	qrcode "github.com/skip2/go-qrcode"
 	"encoding/base64"
@@ -150,7 +151,7 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 		}
 		err := ware.limiter.BlockUntilAllowed(ip, req.URL.String(), req.Context())
 		if err != nil {
-			err = util.Eout(err, "RateLimitingWare")
+			err = eout.Eout(err, "RateLimitingWare")
 			dump(err)
 			http.Error(res, "An error occured", http.StatusInternalServerError)
 			return
@@ -162,7 +163,7 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 // returns true if logged in, and the userid of the logged in user.
 // returns false (and userid set to -1) if not logged in
 func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
-	ed := util.Describe("IsLoggedIn")
+	ed := eout.Describe("IsLoggedIn")
 	userid, err := h.session.Get(req)
 	err = ed.Eout(err, "getting userid from session cookie")
 	if err != nil {
@@ -195,7 +196,7 @@ func generateTemplates(config types.Config, files map[string][]byte, translator 
 			var png []byte
 			png, err := qrcode.Encode(input, qrcode.Medium, 96)
 			if err != nil {
-				dump(util.Eout(err, "generateQR could not encode input %q", input))
+				dump(eout.Eout(err, "generateQR could not encode input %q", input))
 				return ""
 			}
 			return base64.StdEncoding.EncodeToString(png)
@@ -299,7 +300,7 @@ func (h RequestHandler) renderView(res http.ResponseWriter, viewName string, dat
 			fmt.Println("recovering from broken pipe")
 			return
 		} else {
-			util.Check(err, "rendering %q view", view)
+			eout.Check(err, "rendering %q view", view)
 		}
 	}
 }
@@ -391,7 +392,7 @@ func (h RequestHandler) ErrorRoute(res http.ResponseWriter, req *http.Request, s
 }
 
 func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("IndexRoute")
+	ed := eout.Describe("IndexRoute")
 	var err error
 	// handle 404
 	if req.URL.Path != "/" {
@@ -537,7 +538,7 @@ func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("LoginRoute")
+	ed := eout.Describe("LoginRoute")
 	loggedIn, _ := h.IsLoggedIn(req)
 	switch req.Method {
 	case "GET":
@@ -583,7 +584,7 @@ func (h RequestHandler) handleChangePassword(res http.ResponseWriter, req *http.
 	}
 	_, uid := h.IsLoggedIn(req)
 
-	ed := util.Describe("change password")
+	ed := eout.Describe("change password")
 	switch req.Method {
 	case "GET":
 		switch req.URL.Path {
@@ -648,7 +649,7 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 }
 
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("register route")
+	ed := eout.Describe("register route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	if loggedIn {
 		// TODO (2022-09-20): translate
@@ -957,12 +958,12 @@ func Serve(port int, isdev bool, conf types.Config) {
 
 	forum, err := NewServer(conf.General.AuthKey, conf.General.DataDir, conf)
 	if err != nil {
-		util.Check(err, "instantiate CercaForum")
+		eout.Check(err, "instantiate CercaForum")
 	}
 
 	l, err := net.Listen("tcp", portString)
 	if err != nil {
-		util.Check(err, "setting up tcp listener")
+		eout.Check(err, "setting up tcp listener")
 	}
 	fmt.Println("Serving forum on", portString)
 

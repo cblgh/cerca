@@ -13,6 +13,7 @@ import (
 	"gomod.cblgh.org/cerca/constants"
 	"gomod.cblgh.org/cerca/crypto"
 	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -41,7 +42,7 @@ type RemoveUserOptions struct {
 func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 	keepContent := options.KeepContent
 	keepUsername := options.KeepUsername
-	ed := util.Describe("remove user")
+	ed := eout.Describe("remove user")
 	// there is a single user we call the "deleted user", and we make sure this deleted user exists on startup
 	// they will take the place of the old user when they remove their account.
 	deletedUserID, err := d.GetUserID(DELETED_USER_NAME)
@@ -143,7 +144,7 @@ func (d DB) RemoveUser(userid int, options RemoveUserOptions) (finalErr error) {
 }
 
 func (d DB) AddModerationLog(actingid, recipientid, action int) error {
-	ed := util.Describe("add moderation log")
+	ed := eout.Describe("add moderation log")
 	t := time.Now()
 	// we have a recipient
 	var err error
@@ -169,7 +170,7 @@ type ModerationEntry struct {
 }
 
 func (d DB) GetModerationLogs() []ModerationEntry {
-	ed := util.Describe("moderation log")
+	ed := eout.Describe("moderation log")
 	query := `SELECT uact.name, urecp.name, uquorum.name, q.decision, m.action, m.time 
 	FROM moderation_LOG m 
 
@@ -187,7 +188,7 @@ func (d DB) GetModerationLogs() []ModerationEntry {
 
 	rows, err := stmt.Query()
 	defer rows.Close()
-	util.Check(err, "run query")
+	eout.Check(err, "run query")
 
 	var logs []ModerationEntry
 	for rows.Next() {
@@ -215,7 +216,7 @@ func (d DB) GetModerationLogs() []ModerationEntry {
 }
 
 func (d DB) ProposeModerationAction(proposerid, recipientid, action int) (finalErr error) {
-	ed := util.Describe("propose mod action")
+	ed := eout.Describe("propose mod action")
 
 	t := time.Now()
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
@@ -282,7 +283,7 @@ type ModProposal struct {
 }
 
 func (d DB) GetProposedActions() []ModProposal {
-	ed := util.Describe("get moderation proposals")
+	ed := eout.Describe("get moderation proposals")
 	stmt, err := d.db.Prepare(`SELECT mp.id, proposerid, up.name, recipientid, ur.name, action, mp.time 
 	FROM moderation_proposals mp
 	INNER JOIN users up on mp.proposerid = up.id 
@@ -308,7 +309,7 @@ func (d DB) GetProposedActions() []ModProposal {
 // finalize a proposal by either confirming or vetoing it, logging the requisite information and then finally executing
 // the proposed action itself
 func (d DB) FinalizeProposedAction(proposalid, adminid int, decision bool) (finalErr error) {
-	ed := util.Describe("finalize proposed mod action")
+	ed := eout.Describe("finalize proposed mod action")
 
 	t := time.Now()
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
@@ -444,7 +445,7 @@ type User struct {
 }
 
 func (d DB) AddAdmin(userid int) error {
-	ed := util.Describe("add admin")
+	ed := eout.Describe("add admin")
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
@@ -471,7 +472,7 @@ func (d DB) AddAdmin(userid int) error {
 }
 
 func (d DB) DemoteAdmin(userid int) error {
-	ed := util.Describe("demote admin")
+	ed := eout.Describe("demote admin")
 	// make sure the id exists
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
@@ -508,7 +509,7 @@ func (d DB) QuorumActivated() bool {
 }
 
 func (d DB) GetAdmins() []User {
-	ed := util.Describe("get admins")
+	ed := eout.Describe("get admins")
 	query := `SELECT u.name, a.id 
   FROM users u 
   INNER JOIN admins a ON u.id = a.id 
@@ -520,7 +521,7 @@ func (d DB) GetAdmins() []User {
 
 	rows, err := stmt.Query()
 	defer rows.Close()
-	util.Check(err, "run query")
+	eout.Check(err, "run query")
 
 	var user User
 	var admins []User
@@ -543,7 +544,7 @@ type InviteBatch struct {
 }
 
 func (d DB) ClaimInvite(invite string) (bool, string, error) {
-	ed := util.Describe("claim invite")
+	ed := eout.Describe("claim invite")
 	var err error
 	var tx *sql.Tx
 	tx, err = d.db.BeginTx(context.Background(), &sql.TxOptions{})
@@ -616,7 +617,7 @@ const maxBatchAmount = 100
 const maxUnclaimedAmount = 500
 
 func (d DB) CreateInvites(adminid int, amount int, label string, reusable bool) error {
-	ed := util.Describe("create invites")
+	ed := eout.Describe("create invites")
 	isAdmin, err := d.IsUserAdmin(adminid)
 	if err != nil {
 		return ed.Eout(err, "IsUserAdmin")
@@ -659,7 +660,7 @@ func (d DB) CreateInvites(adminid int, amount int, label string, reusable bool) 
 	batchid := util.GetUUIDv4()
 	creationTime := time.Now()
 	preparedStmt, err := d.db.Prepare("INSERT INTO invites (batchid, adminid, invite, label, time, reusable) VALUES (?, ?, ?, ?, ?, ?)")
-	util.Check(err, "prepare invite insert stmt")
+	eout.Check(err, "prepare invite insert stmt")
 	defer preparedStmt.Close()
 	for _, invite := range invites {
 		// create a batch
@@ -670,7 +671,7 @@ func (d DB) CreateInvites(adminid int, amount int, label string, reusable bool) 
 }
 
 func (d DB) DestroyInvites(invites []string) {
-	ed := util.Describe("destroy invites")
+	ed := eout.Describe("destroy invites")
 	stmt := "DELETE FROM invites WHERE invite = ?"
 	for _, invite := range invites {
 		_, err := d.Exec(stmt, invite)
@@ -683,18 +684,18 @@ func (d DB) DestroyInvites(invites []string) {
 }
 
 func (d DB) DeleteInvitesBatch(batchid string) {
-	ed := util.Describe("delete invites by batchid")
+	ed := eout.Describe("delete invites by batchid")
 
 	stmt, err := d.db.Prepare("DELETE FROM invites where batchid = ?")
 	ed.Check(err, "prep stmt")
 	defer stmt.Close()
 
 	_, err = stmt.Exec(batchid)
-	util.Check(err, "execute delete")
+	eout.Check(err, "execute delete")
 }
 
 func (d DB) GetAllInvites() []InviteBatch {
-	ed := util.Describe("get all invites")
+	ed := eout.Describe("get all invites")
 
 	rows, err := d.db.Query("SELECT i.batchid, u.name, i.invite, i.time, i.label, i.reusable FROM invites i INNER JOIN users u ON i.adminid = u.id")
 	ed.Check(err, "create query")
@@ -737,7 +738,7 @@ type RegisteredInvite struct {
 }
 
 func (d DB) CountRegistrationsByInviteBatch() []RegisteredInvite {
-	ed := util.Describe("database/moderation.go: count registrations by invite batch")
+	ed := eout.Describe("database/moderation.go: count registrations by invite batch")
 	stmt := `SELECT i.label, i.batchid, COUNT(*) 
 	FROM registrations r INNER JOIN invites i 
 	ON r.link == i.batchid 

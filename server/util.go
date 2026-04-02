@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"gomod.cblgh.org/cerca/crypto"
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 )
 
 func (h *RequestHandler) checkPasswordIsCorrect(userid int, password string) error {
-	ed := util.Describe("checkPasswordIsCorrect")
+	ed := eout.Describe("checkPasswordIsCorrect")
 	// * hash received password and compare to stored hash
 	passwordHash, err := h.db.GetPasswordHashByUserID(userid)
 	if err = ed.Eout(err, "getting password hash and uid"); err == nil && !crypto.ValidatePasswordHash(password, passwordHash) {

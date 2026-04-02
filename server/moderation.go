@@ -12,6 +12,7 @@ import (
 	"gomod.cblgh.org/cerca/database"
 	"gomod.cblgh.org/cerca/i18n"
 	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 )
 
 type AdminData struct {
@@ -35,7 +36,7 @@ type PendingProposal struct {
 }
 
 func (h RequestHandler) displayErr(res http.ResponseWriter, req *http.Request, err error, title string) {
-	errMsg := util.Eout(err, fmt.Sprintf("%s failed", title))
+	errMsg := eout.Eout(err, fmt.Sprintf("%s failed", title))
 	fmt.Println(errMsg)
 	data := GenericMessageData{
 		Title:   title,
@@ -56,7 +57,7 @@ func (h RequestHandler) displaySuccess(res http.ResponseWriter, req *http.Reques
 
 // TODO (2023-12-10): any vulns with this approach? could a user forge a session cookie with the user id of an admin?
 func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
-	ed := util.Describe("IsAdmin")
+	ed := eout.Describe("IsAdmin")
 	userid, err := h.session.Get(req)
 	err = ed.Eout(err, "getting userid from session cookie")
 	if err != nil {
@@ -91,7 +92,7 @@ func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
 
 // note: there is only a 2-quorum constraint imposed if there are actually 2 admins. an admin may also confirm their own
 // proposal if constants.PROPOSAL_SELF_CONFIRMATION_WAIT seconds have passed (1 week)
-func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, targetUserId, proposedAction int) error {
+func performQuorumCheck(ed eout.ErrorDescriber, db *database.DB, adminUserId, targetUserId, proposedAction int) error {
 	// checks if a quorum is necessary for the proposed action: if a quorum constarin is in effect, a proposal is created
 	// otherwise (if no quorum threshold has been achieved) the action is taken directly
 	quorumActivated := db.QuorumActivated()
@@ -124,7 +125,7 @@ func performQuorumCheck(ed util.ErrorDescriber, db *database.DB, adminUserId, ta
 }
 
 func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Request, targetUserId int) {
-	ed := util.Describe("Admin remove user")
+	ed := eout.Describe("Admin remove user")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 
@@ -145,7 +146,7 @@ func (h *RequestHandler) AdminRemoveUser(res http.ResponseWriter, req *http.Requ
 }
 
 func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.Request, targetUserId int) {
-	ed := util.Describe("make user admin")
+	ed := eout.Describe("make user admin")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
@@ -173,7 +174,7 @@ func (h *RequestHandler) AdminMakeUserAdmin(res http.ResponseWriter, req *http.R
 }
 
 func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("demote admin route")
+	ed := eout.Describe("demote admin route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 
@@ -186,7 +187,7 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 
 	useridString := req.PostFormValue("userid")
 	targetUserId, err := strconv.Atoi(useridString)
-	util.Check(err, "convert user id string to a plain userid")
+	eout.Check(err, "convert user id string to a plain userid")
 
 	err = performQuorumCheck(ed, h.db, adminUserId, targetUserId, constants.MODLOG_ADMIN_PROPOSE_DEMOTE_ADMIN)
 
@@ -206,7 +207,7 @@ func (h *RequestHandler) AdminDemoteAdmin(res http.ResponseWriter, req *http.Req
 }
 
 func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("admin manually add user")
+	ed := eout.Describe("admin manually add user")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 
@@ -262,7 +263,7 @@ func (h *RequestHandler) AdminManualAddUserRoute(res http.ResponseWriter, req *h
 /* TODO (2024-12-02): make it possible for an admin to reset another admin's password; maybe using quorum? */
 
 func (h *RequestHandler) AdminResetUserPassword(res http.ResponseWriter, req *http.Request, targetUserId int) {
-	ed := util.Describe("admin reset password")
+	ed := eout.Describe("admin reset password")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
@@ -298,7 +299,7 @@ func (h *RequestHandler) VetoProposal(res http.ResponseWriter, req *http.Request
 }
 
 func (h *RequestHandler) HandleProposal(res http.ResponseWriter, req *http.Request, decision bool) {
-	ed := util.Describe("handle proposal proposal")
+	ed := eout.Describe("handle proposal proposal")
 	isAdmin, adminUserId := h.IsAdmin(req)
 
 	if !isAdmin {
@@ -406,7 +407,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 		action := req.PostFormValue("admin-action")
 		useridString := req.PostFormValue("userid")
 		targetUserId, err := strconv.Atoi(useridString)
-		util.Check(err, "convert user id string to a plain userid")
+		eout.Check(err, "convert user id string to a plain userid")
 
 		switch action {
 		case "reset-password":
@@ -458,7 +459,7 @@ func (h *RequestHandler) AdminRoute(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Request) {
-	// ed := util.Describe("admin invites route")
+	// ed := eout.Describe("admin invites route")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, _ := h.IsAdmin(req)
 
@@ -499,7 +500,7 @@ func (h *RequestHandler) AdminInvitesRoute(res http.ResponseWriter, req *http.Re
 }
 
 func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("server: admin generate invites")
+	ed := eout.Describe("server: admin generate invites")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {
@@ -507,7 +508,7 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 		return
 	}
 	amount, err := strconv.Atoi(req.PostFormValue("amount"))
-	util.Check(err, "parse amount as int")
+	eout.Check(err, "parse amount as int")
 	var label string
 	label = req.PostFormValue("label")
 	reusable := (req.PostFormValue("reusable") == "true")
@@ -527,7 +528,7 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 }
 
 func (h *RequestHandler) AdminInvitesDeleteBatch(res http.ResponseWriter, req *http.Request) {
-	ed := util.Describe("server: admin delete invites")
+	ed := eout.Describe("server: admin delete invites")
 	loggedIn, _ := h.IsLoggedIn(req)
 	isAdmin, adminUserId := h.IsAdmin(req)
 	if req.Method == "GET" || !loggedIn || !isAdmin {

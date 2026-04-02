@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/matthewhartstonge/argon2"
-	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 	"log"
 	"regexp"
 	"strconv"
@@ -61,7 +61,7 @@ import (
 
 func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 	d := InitDB(filepath)
-	ed := util.Describe("pwhash migration")
+	ed := eout.Describe("pwhash migration")
 
 	// the encoding defined in the old hashing library for string representations
 	// https://github.com/synacor/argon2id/blob/18569dfc600ba1ba89278c3c4789ad81dcab5bfb/argon2id.go#L48
@@ -161,9 +161,9 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 			// decode the old format's had a custom encoding t
 			// the correctly access the underlying buffers
 			saltBuf, err := encoding.DecodeString(salt)
-			util.Check(err, "decode salt using old format encoding")
+			eout.Check(err, "decode salt using old format encoding")
 			hashBuf, err := encoding.DecodeString(hash)
-			util.Check(err, "decode hash using old format encoding")
+			eout.Check(err, "decode hash using old format encoding")
 
 			config.TimeCost = uint32(time) // note this change, to match old time cost (necessary!)
 			raw := argon2.Raw{Config: config, Salt: saltBuf, Hash: hashBuf}
