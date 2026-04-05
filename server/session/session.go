@@ -2,7 +2,7 @@ package session
 
 /*
 Copyright (c) 2019 m15o <m15o@posteo.net> . All rights reserved.
-Copyright (c) 2022 cblgh <m15o@posteo.net> . All rights reserved.
+Copyright (c) 2022 cblgh <source-code@cblgh.org> . All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -55,7 +55,7 @@ func New(authKey string, developing bool) *Session {
 	short := sessions.NewCookieStore([]byte(authKey))
 	short.Options = &sessions.Options{
 		HttpOnly: true,
-		// Secure: true, // TODO (2022-01-05): uncomment when served over https
+		Secure:   !developing,
 		MaxAge: 600, // 10 minutes
 	}
 	return &Session{
