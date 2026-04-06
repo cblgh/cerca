@@ -24,6 +24,15 @@ func Describe(environ string) ErrorDescriber {
 	return ErrorDescriber{environ}
 }
 
+func ErrNew(title, msg string, args ...interface{}) error {
+	msg = fmt.Sprintf(msg, args...)
+	return fmt.Errorf("%s: %s", title, msg)
+}
+
+func (ed ErrorDescriber) ErrNew( msg string, args ...interface{}) error {
+	return ErrNew(ed.environ, msg, args...)
+}
+
 func (ed ErrorDescriber) Eout(err error, msg string, args ...interface{}) error {
 	msg = fmt.Sprintf("%s: %s", ed.environ, msg)
 	return Eout(err, msg, args...)
