@@ -7,3 +7,6 @@ admin-reset
 *.json
 /cerca
 cmd/cerca/cerca
+cerca-data/
+cerca.toml
+content/
