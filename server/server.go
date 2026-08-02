@@ -34,6 +34,11 @@ import (
 	"github.com/cblgh/plain/rss"
 )
 
+// session cookie data
+const cookieName = "cerca"
+const INDEX_SETTINGS = "IndexSettings"
+const USER_ID = "userid"
+
 /* TODO (2022-01-03): include csrf token via gorilla, or w/e, when rendering */
 
 type TemplateData struct {
@@ -164,7 +169,7 @@ func (ware *RateLimitingWare) Handler(next http.Handler) http.Handler {
 // returns false (and userid set to -1) if not logged in
 func (h RequestHandler) IsLoggedIn(req *http.Request) (bool, int) {
 	ed := eout.Describe("IsLoggedIn")
-	userid, err := h.session.Get(req)
+	userid, err := h.session.GetInt(req, USER_ID)
 	err = ed.Eout(err, "getting userid from session cookie")
 	if err != nil {
 		dump(err)
@@ -407,7 +412,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 
 	// we store "session settings" for the index page by using the url.Values map.
 	// first: get any stored settings
-	paramsString, _ := h.session.GetIndexSettings(req)
+	paramsString, _ := h.session.GetString(req, INDEX_SETTINGS)
 	var sessionParams url.Values
 	if paramsString != "" {
 		sessionParams, err = url.ParseQuery(paramsString)
@@ -437,7 +442,7 @@ func (h RequestHandler) IndexRoute(res http.ResponseWriter, req *http.Request) {
 	// TODO (2024-11-20): session.saveURLParams + use params to set sort, use params to set categories
 	paramsString = sessionParams.Encode()
 	if len(sessionParams) > 0 {
-		err = h.session.SaveIndexSettings(req, res, paramsString)
+		err = h.session.SaveString(req, res, INDEX_SETTINGS, paramsString)
 		ed.Check(err, "save new url params to session store")
 	}
 
@@ -562,7 +567,7 @@ func (h RequestHandler) LoginRoute(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// save user id in cookie
-		err = h.session.Save(req, res, userid)
+		err = h.session.SaveInt(req, res, USER_ID, userid)
 		ed.Check(err, "saving session cookie")
 		IndexRedirect(res, req)
 	default:
@@ -731,7 +736,7 @@ func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request
 			return
 		}
 		// log the new user in
-		h.session.Save(req, res, userID)
+		h.session.SaveInt(req, res, USER_ID, userID)
 		// log where the registration is coming from, in the case of indirect invites && for curiosity
 
 		// save which invite batchid was used to register, so we can at least trace which invite code is bringing people in
@@ -1046,7 +1051,7 @@ func NewServer(authKey string, dir string, config types.Config) (*CercaForum, er
 	translator := i18n.Init(config.General.Language)
 	templates := template.Must(generateTemplates(config, files, translator))
 	feed := GenerateRSS(&db, config)
-	handler := RequestHandler{&db, session.New(authKey, developing), files, config, translator, templates, feed}
+	handler := RequestHandler{&db, session.New(authKey, cookieName, developing), files, config, translator, templates, feed}
 
 	/* note: be careful with trailing slashes; go's default handler is a bit sensitive */
 	// TODO (2022-01-10): introduce middleware to make sure there is never an issue with trailing slashes

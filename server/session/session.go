@@ -35,17 +35,13 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-const cookieName = "cerca"
-
-const INDEX_SETTINGS = "IndexSettings"
-const USER_ID = "userid"
-
 type Session struct {
+	cookieName string
 	Store           *sessions.CookieStore
 	ShortLivedStore *sessions.CookieStore
 }
 
-func New(authKey string, developing bool) *Session {
+func New(authKey, cookieName string, developing bool) *Session {
 	store := sessions.NewCookieStore([]byte(authKey))
 	store.Options = &sessions.Options{
 		HttpOnly: true,
@@ -61,13 +57,14 @@ func New(authKey string, developing bool) *Session {
 	return &Session{
 		Store:           store,
 		ShortLivedStore: short,
+		cookieName: cookieName,
 	}
 }
 
 func (s *Session) Delete(res http.ResponseWriter, req *http.Request) error {
 	ed := eout.Describe("delete session cookie")
 	clearSession := func(store *sessions.CookieStore) error {
-		session, err := store.Get(req, cookieName)
+		session, err := store.Get(req, s.cookieName)
 		if err != nil {
 			return ed.Eout(err, "get session")
 		}
@@ -83,8 +80,8 @@ func (s *Session) Delete(res http.ResponseWriter, req *http.Request) error {
 	return err
 }
 
-func getValueFromSession(req *http.Request, store *sessions.CookieStore, key string) (interface{}, error) {
-	session, err := store.Get(req, cookieName)
+func (s *Session) getValueFromSession(req *http.Request, store *sessions.CookieStore, key string) (interface{}, error) {
+	session, err := store.Get(req, s.cookieName)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +93,9 @@ func getValueFromSession(req *http.Request, store *sessions.CookieStore, key str
 	return value, nil
 }
 
-func (s *Session) Get(req *http.Request) (int, error) {
-	val, err := getValueFromSession(req, s.Store, USER_ID)
+
+func (s *Session) GetInt(req *http.Request, key string) (int, error) {
+	val, err := s.getValueFromSession(req, s.Store, key)
 	if val == nil || err != nil {
 		return -1, err
 	}
@@ -105,8 +103,8 @@ func (s *Session) Get(req *http.Request) (int, error) {
 }
 
 /* TODO (2024-11-20): revamp structure of this file to something less repetitive and using enum-like things instead */
-func (s *Session) GetIndexSettings(req *http.Request) (string, error) {
-	val, err := getValueFromSession(req, s.Store, INDEX_SETTINGS)
+func (s *Session) GetString(req *http.Request, key string) (string, error) {
+	val, err := s.getValueFromSession(req, s.Store, key)
 	if val == nil || err != nil {
 		return "", err
 	}
@@ -118,15 +116,15 @@ func (s *Session) genericSave(req *http.Request, res http.ResponseWriter, shortL
 	if shortLived {
 		store = s.ShortLivedStore
 	}
-	session, _ := store.Get(req, cookieName)
+	session, _ := store.Get(req, s.cookieName)
 	session.Values[key] = val
 	return session.Save(req, res)
 }
 
-func (s *Session) Save(req *http.Request, res http.ResponseWriter, userid int) error {
-	return s.genericSave(req, res, false, USER_ID, userid)
+func (s *Session) SaveInt(req *http.Request, res http.ResponseWriter, key string, val int) error {
+	return s.genericSave(req, res, false, key, val)
 }
 
-func (s *Session) SaveIndexSettings(req *http.Request, res http.ResponseWriter, params string) error {
-	return s.genericSave(req, res, false, INDEX_SETTINGS, params)
+func (s *Session) SaveString(req *http.Request, res http.ResponseWriter, key, val string) error {
+	return s.genericSave(req, res, false, key, val)
 }

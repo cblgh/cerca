@@ -58,7 +58,7 @@ func (h RequestHandler) displaySuccess(res http.ResponseWriter, req *http.Reques
 // TODO (2023-12-10): any vulns with this approach? could a user forge a session cookie with the user id of an admin?
 func (h RequestHandler) IsAdmin(req *http.Request) (bool, int) {
 	ed := eout.Describe("IsAdmin")
-	userid, err := h.session.Get(req)
+	userid, err := h.session.GetInt(req, USER_ID)
 	err = ed.Eout(err, "getting userid from session cookie")
 	if err != nil {
 		dump(err)
