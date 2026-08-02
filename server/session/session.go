@@ -44,12 +44,14 @@ type Session struct {
 func New(authKey, cookieName string, developing bool) *Session {
 	store := sessions.NewCookieStore([]byte(authKey))
 	store.Options = &sessions.Options{
+		Path: "/",
 		HttpOnly: true,
 		Secure:   !developing,
 		MaxAge:   86400 * 30,
 	}
 	short := sessions.NewCookieStore([]byte(authKey))
 	short.Options = &sessions.Options{
+		Path: "/",
 		HttpOnly: true,
 		Secure:   !developing,
 		MaxAge: 600, // 10 minutes
