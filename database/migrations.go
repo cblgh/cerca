@@ -89,6 +89,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 
 	// always perform migrations in a single transaction
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
+	ed.Check(err, "begin tx")
 	rollbackOnErr := func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()
@@ -183,7 +184,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 			ok := newRegex.MatchString(records[i].oldFormat)
 			if !ok {
 				// can't parse with regex matching old format or the new format
-				if rollbackOnErr(errors.New(fmt.Sprintf("unknown record format: %s", records[i].oldFormat))) {
+				if rollbackOnErr(fmt.Errorf("unknown record format: %s", records[i].oldFormat)) {
 					return
 				}
 			}
@@ -199,6 +200,9 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 		}
 		// update each row with the password hash in the new format
 		stmt, err := tx.Prepare("UPDATE users SET passwordhash = ? WHERE id = ?")
+		if rollbackOnErr(err) {
+			return
+		}
 		defer stmt.Close()
 		_, err = stmt.Exec(record.newFormat, record.id)
 		if rollbackOnErr(err) {
@@ -206,7 +210,7 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 		}
 	}
 	fmt.Println("all records were updated without any error")
-	// when everything is done and dudsted insert schemaversion and set its value to 1
+	// when everything is done and dusted insert schemaversion and set its value to 1
 	// _, err = tx.Exec(`INSERT INTO meta (schemaversion) VALUES (1)`)
 	// if rollbackOnErr(err) {
 	// 	return
@@ -217,9 +221,11 @@ func Migration20240116_PwhashChange(filepath string) (finalErr error) {
 
 func Migration20240720_ThreadPrivateChange(filepath string) (finalErr error) {
 	d := InitDB(filepath)
+	ed := eout.Describe("ThreadPrivateChange")
 
 	// always perform migrations in a single transaction
 	tx, err := d.db.BeginTx(context.Background(), &sql.TxOptions{})
+	ed.Check(err, "begin tx")
 	rollbackOnErr := func(incomingErr error) bool {
 		if incomingErr != nil {
 			_ = tx.Rollback()

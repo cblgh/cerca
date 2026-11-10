@@ -40,7 +40,7 @@ func createHelpString(commandName string, usageExamples []string) string {
 }
 
 func usage(help string, fset *flag.FlagSet) {
-	fmt.Fprintf(os.Stderr, help)
+	fmt.Fprint(os.Stderr, help)
 	if fset != nil {
 		fset.PrintDefaults()
 		return

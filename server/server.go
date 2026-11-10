@@ -328,7 +328,6 @@ func (h RequestHandler) renderGenericMessage(res http.ResponseWriter, req *http.
 		IsAdmin:  isAdmin,
 	}
 	h.renderView(res, "generic-message", data)
-	return
 }
 
 func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request) {
@@ -566,7 +565,6 @@ func (h *RequestHandler) RSSPrivateRoute(res http.ResponseWriter, req *http.Requ
 		return
 	}
 	http.Error(res, "Your credentials are not valid to view the private RSS feed", http.StatusForbidden)
-	return
 }
 
 func (h RequestHandler) LogoutRoute(res http.ResponseWriter, req *http.Request) {
@@ -685,7 +683,6 @@ func (h RequestHandler) ResetPasswordRoute(res http.ResponseWriter, req *http.Re
 		h.renderView(res, "generic-message", TemplateData{Data: data, Title: title})
 	}
 	renderPlaceholder("Password reset under construction: please contact admin if you need help resetting yr pw :)")
-	return
 }
 
 func (h RequestHandler) RegisterRoute(res http.ResponseWriter, req *http.Request) {
@@ -995,7 +992,10 @@ func (h *RequestHandler) EditPostRoute(res http.ResponseWriter, req *http.Reques
 	}
 	view := TemplateData{Data: post, QuickNav: loggedIn, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn, LoggedInID: userid}
 	params := req.URL.Query()
+
 	posts, err := h.db.GetThread(post.ThreadID)
+	eout.Check(err, "get thread")
+
 	if _, exists := params["op"]; exists {
 		if len(posts) > 0 && posts[0].ID == post.ID {
 			view.IsOP = true

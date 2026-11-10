@@ -1,14 +1,11 @@
 package i18n
 
 import (
-	"fmt"
 	"gomod.cblgh.org/cerca/util/eout"
 	"html/template"
 	"log"
 	"strings"
 )
-
-const toolURL = "https://github.com/cblgh/cerca/releases/tag/pwtool-v1"
 
 var English = map[string]string{
 	"About":    "about",
@@ -652,7 +649,7 @@ type Translator struct {
 
 func Init(lang string) Translator {
 	if _, ok := translations[lang]; !ok {
-		log.Fatalln(fmt.Sprintf("language '%s' is not translated yet", lang))
+		log.Fatalf("language '%s' is not translated yet", lang)
 	}
 	return Translator{lang}
 }

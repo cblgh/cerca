@@ -61,6 +61,7 @@ func (d DB) makeSureDefaultUsersExist() {
 		}
 		if !userExists {
 			passwordHash, err := crypto.HashPassword(crypto.GeneratePassword())
+			ed.Check(err, "hash password")
 			_, err = d.CreateUser(defaultUser, passwordHash)
 			if err != nil {
 				log.Fatalln(ed.Eout(err, "create %s", defaultUser))
@@ -273,7 +274,7 @@ func (d DB) GetThread(threadid int) ([]Post, error) {
 
 	exists, err := d.CheckThreadExists(threadid)
 	if err != nil || !exists {
-		return []Post{}, errors.New(fmt.Sprintf("GetThread: threadid %d did not exist", threadid))
+		return []Post{}, fmt.Errorf("GetThread: threadid %d did not exist", threadid)
 	}
 	// join with:
 	//    users table to get user name
@@ -390,7 +391,7 @@ func (d DB) IsThreadPrivate(threadid int) (bool, error) {
 	exists, err := d.CheckThreadExists(threadid)
 
 	if err != nil || !exists {
-		return true, errors.New(fmt.Sprintf("IsThreadPrivate: threadid %d did not exist", threadid))
+		return true, fmt.Errorf("IsThreadPrivate: threadid %d did not exist", threadid)
 	}
 
 	var private int
@@ -415,7 +416,8 @@ func (d DB) EditPost(content, title string, postid, threadid int) {
 	eout.Check(err, "edit post %d", postid)
 
 	stmt = `UPDATE threads set title = ? WHERE id = ?`
-	edit = time.Now()
+	// TODO (2026-11-10): update lastedit in posts
+	// edit = time.Now()
 	_, err = d.Exec(stmt, title, threadid)
 	eout.Check(err, "edit post title %d", postid)
 }
@@ -649,7 +651,7 @@ func (d DB) ResetPassword(userid int) (string, error) {
 	ed := eout.Describe("reset password")
 	exists, err := d.CheckUserExists(userid)
 	if !exists {
-		return "", errors.New(fmt.Sprintf("reset password: userid %d did not exist", userid))
+		return "", fmt.Errorf("reset password: userid %d did not exist", userid)
 	} else if err != nil {
 		return "", fmt.Errorf("reset password encountered an error (%w)", err)
 	}

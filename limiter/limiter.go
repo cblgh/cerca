@@ -131,8 +131,6 @@ func (rl *TimedRateLimiter) rememberIdentifier(identifier string) {
 // forget the rate limiter associated for this identifier (to prevent memory growth over time)
 func (rl *TimedRateLimiter) forgetLimiter(identifier string) {
 	rl.rwmu.Lock()
-	if _, exists := rl.limiters[identifier]; exists {
-		delete(rl.limiters, identifier)
-	}
+	delete(rl.limiters, identifier)
 	rl.rwmu.Unlock()
 }

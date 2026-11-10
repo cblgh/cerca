@@ -28,7 +28,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import (
 	"gomod.cblgh.org/cerca/util/eout"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -89,7 +88,7 @@ func (s *Session) getValueFromSession(req *http.Request, store *sessions.CookieS
 	}
 	value, ok := session.Values[key]
 	if !ok {
-		err := errors.New(fmt.Sprintf("extracting %s from session; no such value", key))
+		err := fmt.Errorf("extracting %s from session; no such value", key)
 		return nil, eout.Eout(err, "get session")
 	}
 	return value, nil

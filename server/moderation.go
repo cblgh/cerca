@@ -509,8 +509,7 @@ func (h *RequestHandler) AdminInvitesCreateBatch(res http.ResponseWriter, req *h
 	}
 	amount, err := strconv.Atoi(req.PostFormValue("amount"))
 	eout.Check(err, "parse amount as int")
-	var label string
-	label = req.PostFormValue("label")
+	label := req.PostFormValue("label")
 	reusable := (req.PostFormValue("reusable") == "true")
 	err = h.db.CreateInvites(adminUserId, amount, label, reusable)
 	if err != nil {
@@ -552,5 +551,4 @@ func (h *RequestHandler) ListAdmins(res http.ResponseWriter, req *http.Request) 
 	data := AdminData{Admins: admins}
 	view := TemplateData{Title: h.translator.Translate("AdminForumAdministration"), Data: &data, HasRSS: h.config.RSS.URL != "", LoggedIn: loggedIn}
 	h.renderView(res, "admins-list", view)
-	return
 }
