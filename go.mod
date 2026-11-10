@@ -13,6 +13,7 @@ require (
 	github.com/matthewhartstonge/argon2 v1.0.0
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/microcosm-cc/bluemonday v1.0.26
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp v0.0.0-20221023144134-a1e5550cf13e
 	golang.org/x/time v0.3.0
 )
@@ -22,7 +23,6 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/net v0.17.0 // indirect

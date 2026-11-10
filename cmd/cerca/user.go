@@ -80,7 +80,7 @@ func user() {
 	systemUserid := db.GetSystemUserID()
 	err := db.AddModerationLog(systemUserid, userInfo.ID, constants.MODLOG_ADMIN_ADD_USER)
 	if err != nil {
-		complain("adding mod log for adding new user failed (%w)", err)
+		complain("adding mod log for adding new user failed (%s)", err)
 	}
 
 	loginRoute := fmt.Sprintf("%s/login", forumDomain)

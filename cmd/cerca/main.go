@@ -58,7 +58,7 @@ func inform(msg string, args ...interface{}) {
 
 func complain(msg string, args ...interface{}) {
 	if len(args) > 0 {
-		inform(msg, args)
+		inform(msg, args...)
 	} else {
 		inform(msg)
 	}

@@ -40,19 +40,19 @@ func reset() {
 
 	userid, err := db.GetUserID(username)
 	if err != nil {
-		complain("reset password failed (%w)", err)
+		complain("reset password failed (%s)", err)
 	}
 	newPassword, err := db.ResetPassword(userid)
 
 	if err != nil {
-		complain("reset password failed (%w)", err)
+		complain("reset password failed (%s)", err)
 	}
 
 	// log cmd actions just as admin web-actions are logged
 	systemUserid := db.GetSystemUserID()
 	err = db.AddModerationLog(systemUserid, userid, constants.MODLOG_RESETPW)
 	if err != nil {
-		complain("adding mod log for password reset failed (%w)", err)
+		complain("adding mod log for password reset failed (%s)", err)
 	}
 
 	inform("Successfully updated %s's password hash", username)

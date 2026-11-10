@@ -57,7 +57,7 @@ func admin() {
 	systemUserid := db.GetSystemUserID()
 	err = db.AddModerationLog(systemUserid, userid, constants.MODLOG_ADMIN_MAKE)
 	if err != nil {
-		complain("adding mod log for adding new admin failed (%w)", err)
+		complain("adding mod log for adding new admin failed (%s)", err)
 	}
 
 	inform("Successfully added %s (id %d) as an admin", username, userid)

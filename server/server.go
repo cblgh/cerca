@@ -239,7 +239,7 @@ func generateTemplates(config types.Config, files map[string][]byte, translator 
 				Name: config.General.Name,
 				Link: config.General.ConductLink,
 			}
-			return translator.TranslateWithData(key, i18n.TranslationData{data})
+			return translator.TranslateWithData(key, i18n.TranslationData{Data: data})
 		},
 		"capitalize": util.Capitalize,
 		"markup":     util.Markup,
