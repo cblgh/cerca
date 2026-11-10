@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// TODO (2025-11-17): wrap all manipulation of timers / identifiers in a mutex :) 
+// TODO (2025-11-17): wrap all manipulation of timers / identifiers in a mutex :)
 // c.f. https://github.com/cespare/pastedown/blob/main/lru/lru.go
 type TimedRateLimiter struct {
 	// periodic forgetting of identifiers that have been seen & assigned a rate limiter to prevent bloat over time
@@ -20,7 +20,7 @@ type TimedRateLimiter struct {
 	refreshPeriod  time.Duration
 	timeToRemember time.Duration
 	burst          int
-	rwmu sync.RWMutex
+	rwmu           sync.RWMutex
 }
 
 func NewTimedRateLimiter(limitedRoutes []string, refresh, remember time.Duration) *TimedRateLimiter {
@@ -79,7 +79,7 @@ func (rl *TimedRateLimiter) BlockUntilAllowed(identifier, route string, ctx cont
 func (rl *TimedRateLimiter) getLimiter(identifier string) *rate.Limiter {
 	// limiter doesn't yet exist for this identifier
 	rl.rwmu.RLock()
-	_, exists := rl.limiters[identifier] 
+	_, exists := rl.limiters[identifier]
 	rl.rwmu.RUnlock()
 	if !exists {
 		// create a rate limit for it

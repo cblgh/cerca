@@ -27,15 +27,15 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 import (
-	"gomod.cblgh.org/cerca/util/eout"
 	"fmt"
+	"gomod.cblgh.org/cerca/util/eout"
 	"net/http"
 
 	"github.com/gorilla/sessions"
 )
 
 type Session struct {
-	cookieName string
+	cookieName      string
 	Store           *sessions.CookieStore
 	ShortLivedStore *sessions.CookieStore
 }
@@ -43,22 +43,22 @@ type Session struct {
 func New(authKey, cookieName string, developing bool) *Session {
 	store := sessions.NewCookieStore([]byte(authKey))
 	store.Options = &sessions.Options{
-		Path: "/",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   !developing,
 		MaxAge:   86400 * 30,
 	}
 	short := sessions.NewCookieStore([]byte(authKey))
 	short.Options = &sessions.Options{
-		Path: "/",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   !developing,
-		MaxAge: 600, // 10 minutes
+		MaxAge:   600, // 10 minutes
 	}
 	return &Session{
 		Store:           store,
 		ShortLivedStore: short,
-		cookieName: cookieName,
+		cookieName:      cookieName,
 	}
 }
 
@@ -93,7 +93,6 @@ func (s *Session) getValueFromSession(req *http.Request, store *sessions.CookieS
 	}
 	return value, nil
 }
-
 
 func (s *Session) GetInt(req *http.Request, key string) (int, error) {
 	val, err := s.getValueFromSession(req, s.Store, key)

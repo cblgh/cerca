@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"time"
 
-	"gomod.cblgh.org/cerca/util/eout"
 	"gomod.cblgh.org/cerca/util"
+	"gomod.cblgh.org/cerca/util/eout"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -151,14 +151,14 @@ func createTables(db *sql.DB) {
 
 		/* also known as forum categories; buckets of threads */
 		/* NOTE: this is unused. we use categories as [name in thread title] instead
-		`
-  CREATE TABLE IF NOT EXISTS topics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    description TEXT
-  );
-  `,
-		/* thread link structure: <domain>.<tld>/thread/<id>/[<blurb>] */
+				`
+		  CREATE TABLE IF NOT EXISTS topics (
+		    id INTEGER PRIMARY KEY AUTOINCREMENT,
+		    name TEXT NOT NULL UNIQUE,
+		    description TEXT
+		  );
+		  `,
+				/* thread link structure: <domain>.<tld>/thread/<id>/[<blurb>] */
 		`
   CREATE TABLE IF NOT EXISTS threads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,7 +171,7 @@ func createTables(db *sql.DB) {
     FOREIGN KEY(authorid) REFERENCES users(id)
   );
   `,
-	`
+		`
   CREATE TABLE IF NOT EXISTS apikeys (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     apikey TEXT NOT NULL,
@@ -565,7 +565,7 @@ func (d DB) RefreshAPIKey(userid int) string {
 		_, err := d.Exec(stmt, apikey, publishtime, userid)
 		ed.Check(err, "insert new key")
 	} else {
-	// otherwise we update it 
+		// otherwise we update it
 		stmt := `UPDATE apikeys SET apikey = ?, publishtime = ? WHERE userid = ?`
 		_, err = d.Exec(stmt, apikey, publishtime, userid)
 		ed.Check(err, "update existing key")

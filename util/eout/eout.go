@@ -29,7 +29,7 @@ func ErrNew(title, msg string, args ...interface{}) error {
 	return fmt.Errorf("%s: %s", title, msg)
 }
 
-func (ed ErrorDescriber) ErrNew( msg string, args ...interface{}) error {
+func (ed ErrorDescriber) ErrNew(msg string, args ...interface{}) error {
 	return ErrNew(ed.environ, msg, args...)
 }
 

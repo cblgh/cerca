@@ -42,7 +42,6 @@ func (h *RequestHandler) AccountRefreshAPIKey(res http.ResponseWriter, req *http
 	}
 }
 
-
 func (h *RequestHandler) AccountChangePassword(res http.ResponseWriter, req *http.Request) {
 	loggedIn, userid := h.IsLoggedIn(req)
 	sectionTitle := "Change password"

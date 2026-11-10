@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"io"
 
 	"gomod.cblgh.org/cerca/crypto"
 	"gomod.cblgh.org/cerca/database"
@@ -28,8 +28,8 @@ import (
 	"gomod.cblgh.org/cerca/util"
 	"gomod.cblgh.org/cerca/util/eout"
 
-	qrcode "github.com/skip2/go-qrcode"
 	"encoding/base64"
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/cblgh/plain/rss"
 )
@@ -90,9 +90,9 @@ type AccountData struct {
 	ChangePasswordRoute string
 	ChangeUsernameRoute string
 	DeleteAccountRoute  string
-	RefreshAPIKeyRoute string
+	RefreshAPIKeyRoute  string
 	LoggedInUsername    string
-	APIKey string
+	APIKey              string
 }
 
 type LoginData struct {
@@ -112,13 +112,13 @@ type EditPostData struct {
 }
 
 type RequestHandler struct {
-	db         *database.DB
-	session    *session.Session
-	files      map[string][]byte
-	config     types.Config
-	translator i18n.Translator
-	templates  *template.Template
-	rssFeed    string
+	db             *database.DB
+	session        *session.Session
+	files          map[string][]byte
+	config         types.Config
+	translator     i18n.Translator
+	templates      *template.Template
+	rssFeed        string
 	privateRSSFeed string
 }
 
@@ -196,8 +196,8 @@ func generateTemplates(config types.Config, files map[string][]byte, translator 
 		"dumpLogo": func() template.HTML {
 			return template.HTML(files["logo"])
 		},
-		"inc": func (n int) int {
-			return n+1
+		"inc": func(n int) int {
+			return n + 1
 		},
 		// takes a string and returns a base64 PNG of a QR code representing the input
 		"generateQR": func(input string) string {
@@ -365,7 +365,7 @@ func (h *RequestHandler) ThreadRoute(res http.ResponseWriter, req *http.Request)
 		newSlug := util.GetThreadSlug(threadid, posts[0].ThreadTitle, len(posts))
 		// update the rss feed (public + private copy)
 		h.rssFeed = GenerateRSS(h.db, h.config, false)
-		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) 
+		h.privateRSSFeed = GenerateRSS(h.db, h.config, true)
 		http.Redirect(res, req, newSlug, http.StatusFound)
 		return
 	}
@@ -547,14 +547,14 @@ func (h *RequestHandler) RSSPrivateRoute(res http.ResponseWriter, req *http.Requ
 	}
 	apikey := req.PathValue("apikey")
 	apiKeyValid, err := h.db.CheckAPIKeyValid(apikey)
-	if err != nil  {
+	if err != nil {
 		dump(err)
 		http.Error(res, "An error occured", http.StatusInternalServerError)
 	}
 	if apiKeyValid {
 		// generate feed wasn't populated; generate it and include private threads
 		if len(h.privateRSSFeed) == 0 {
-			h.privateRSSFeed = GenerateRSS(h.db, h.config, true) 
+			h.privateRSSFeed = GenerateRSS(h.db, h.config, true)
 		}
 		res.Header().Set("Content-Type", "application/xml")
 		_, err = io.WriteString(res, h.privateRSSFeed)
@@ -889,7 +889,7 @@ func (h *RequestHandler) NewThreadRoute(res http.ResponseWriter, req *http.Reque
 			return
 		}
 		// update the rss feed (public version and private version)
-		h.rssFeed = GenerateRSS(h.db, h.config, false) // do not include private threads
+		h.rssFeed = GenerateRSS(h.db, h.config, false)       // do not include private threads
 		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) // include private threads
 		// when data has been stored => redirect to thread
 		slug := fmt.Sprintf("thread/%d/%s/", threadid, util.SanitizeURL(title))
@@ -950,7 +950,7 @@ func (h *RequestHandler) DeletePostRoute(res http.ResponseWriter, req *http.Requ
 			return
 		}
 		// update the rss feed, in case the deleted post was present in feed
-		h.rssFeed = GenerateRSS(h.db, h.config, false) // exclude private threads
+		h.rssFeed = GenerateRSS(h.db, h.config, false)       // exclude private threads
 		h.privateRSSFeed = GenerateRSS(h.db, h.config, true) // include private threads
 	}
 	http.Redirect(res, req, threadURL, http.StatusSeeOther)
