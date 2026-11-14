@@ -501,6 +501,14 @@ func joinPath(host, upath string) string {
 	return fmt.Sprintf("%s/%s", host, upath)
 }
 
+// escapeCDATA neutralizes the only sequence that can terminate a CDATA
+// section early ("]]>"), so that user-controlled strings embedded in the RSS
+// feed (thread titles, author names) cannot break out of their CDATA block and
+// inject arbitrary markup into the feed served to all subscribers.
+func escapeCDATA(s string) string {
+	return strings.ReplaceAll(s, "]]>", "]]]]><![CDATA[>")
+}
+
 func GenerateRSS(db *database.DB, config types.Config, includePrivateThreads bool) string {
 	if config.RSS.URL == "" {
 		return "feed not configured"
@@ -514,7 +522,7 @@ func GenerateRSS(db *database.DB, config types.Config, includePrivateThreads boo
 		fulltime := t.Publish.Format(rfc822RSS)
 		date := t.Publish.Format("2006-01-02")
 		posturl := joinPath(config.RSS.URL, fmt.Sprintf("%s#%d", t.Slug, t.PostID))
-		entry := rss.OutputRSSItem(fulltime, t.Title, fmt.Sprintf("[%s] %s posted", date, t.Author), posturl)
+		entry := rss.OutputRSSItem(fulltime, escapeCDATA(t.Title), fmt.Sprintf("[%s] %s posted", date, escapeCDATA(t.Author)), posturl)
 		entries[i] = entry
 	}
 	feedName := config.RSS.Name
